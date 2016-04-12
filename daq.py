@@ -1,7 +1,7 @@
 from classes import *
-import elementtree.ElementTree 
+import xml.etree
 from xml.dom import minidom
-from elementtree.ElementTree import Element, SubElement, Comment
+from xml.etreeimport Element, SubElement, Comment
 import ROOT
 from ROOT import TH2F, TCanvas, TTree, TBranch, TFile
 #from ROOT import TGraph

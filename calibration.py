@@ -1,8 +1,8 @@
 
 from classes import *
-import elementtree.ElementTree 
+import xml.etree.ElementTree
 from xml.dom import minidom
-from elementtree.ElementTree import Element, SubElement, Comment
+from xml.etree.ElementTree import Element, SubElement, Comment
 #import ROOT
 #from ROOT import TGraph
 import sys, select, os, array
