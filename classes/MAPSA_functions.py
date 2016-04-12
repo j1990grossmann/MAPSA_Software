@@ -5,9 +5,9 @@ import uhal
 import binascii
 from uasic import *
 import numpy as np
-import elementtree.ElementTree as ET
+import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from elementtree.ElementTree import Element, SubElement, Comment
+from xml.etree.ElementTree import Element, SubElement, Comment
 def any(iterable):
     for element in iterable:
         if element:
