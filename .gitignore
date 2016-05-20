@@ -1,2 +1,5 @@
 .kdev4/
 MAPSA_Software.kdev4
+classes/*.pyc
+data/*
+plots*
