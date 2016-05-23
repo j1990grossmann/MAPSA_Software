@@ -75,7 +75,7 @@ class MAPSA_config:
 		for conf in self._confs:
 
 #######FOR JUMPERS##########
-			if impa==5:
+			if impa==4:
 				break
 			conf.modifyperiphery(what, value[impa+1])
 #################
@@ -92,7 +92,7 @@ class MAPSA_config:
 		for conf in self._confs:
 
 #######FOR JUMPERS##########
-			if impa==5:
+			if impa==4:
 				break
 			conf.modifypixel(which, what, value[impa+1])
 #################

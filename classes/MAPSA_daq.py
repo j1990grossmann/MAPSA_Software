@@ -75,12 +75,12 @@ class MAPSA_daq:
 		dcindex=-1
 
 		for i in range(1,7):
-			#start = time.time()
+			# start = time.time()
 			counter_data  = self._counter.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(25)
 			memory_data = self._memory.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(216)
-			#end = time.time()
-			#print "reading MPA " + str(i) 
-			#print (end - start)*1000
+			# end = time.time()
+			print "reading MPA " + str(i) 
+			# print (end - start)*1000
 			counts.append(counter_data) 
 			mems.append(memory_data)
 		self._hw.dispatch()
@@ -89,8 +89,15 @@ class MAPSA_daq:
 		for i in range(0,len(counts)):
 			counts[i],mems[i] = MPA(self._hw,i).daq().format(counts[i],mems[i],Fast)
 
+		print "counts"
+		for i in range(0,len(counts)):
+			print counts[i]
 
+		print "mem"
+		for i in range(0,len(mems)):
+			print mems[i]
 
+			
 		return counts,mems
 
 	def read_trig(self,buffer_num=1):
