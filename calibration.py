@@ -132,7 +132,7 @@ for x in range(0,256):
 			p.pop(0)
 			y1.append([])
 			y1[ipix].append(array('d',p))
-			print "%d %d," % (ipix ,p )
+			print '%f %f ,' % ipix ,p 
 
 			ipix+=1
 	x1.append(x)
