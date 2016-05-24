@@ -349,6 +349,7 @@ for x in range(0,256):
 				#print p
 				y1.append([])
 				y1[ipix].append(array('d',p))
+				print str(p)
 
 				ipix+=1
 			x1.append(x)
