@@ -74,7 +74,7 @@ class MAPSA_daq:
 
 		dcindex=-1
 
-		for i in range(1,6):
+		for i in range(1,7):
 			# start = time.time()
 			counter_data  = self._counter.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(25)
 			memory_data = self._memory.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(216)
