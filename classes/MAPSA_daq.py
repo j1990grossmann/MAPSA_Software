@@ -93,9 +93,9 @@ class MAPSA_daq:
 		for i in range(0,len(counts)):
 			print counts[i]
 
-		print "mem"
-		for i in range(0,len(mems)):
-			print mems[i]
+		#print "mem"
+		#for i in range(0,len(mems)):
+			#print mems[i]
 
 			
 		return counts,mems

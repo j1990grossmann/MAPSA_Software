@@ -125,16 +125,18 @@ for x in range(0,256):
 
 	pix,mem = mapsa.daq().read_data(buffnum)
 	ipix=0
+	print "("
 	for p in pix:
 
 			p.pop(0)
 			p.pop(0)
 			y1.append([])
 			y1[ipix].append(array('d',p))
+			print "%d %d," % ipix % p
 
 			ipix+=1
 	x1.append(x)
-	
+	print ")"
 print "Generating nominal per pixel trimdac values"
 
 calibconfs = config._confs
