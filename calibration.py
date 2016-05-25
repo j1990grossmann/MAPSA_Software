@@ -86,7 +86,7 @@ buffnum=1
 
 	
 mpa = []  
-for i in range(1,7):
+for i in range(1,6):
 		mpa.append(mapsa.getMPA(i))
 
 
@@ -152,7 +152,7 @@ yarrv = []
 grarr = []
 xdvals = []
 
-for i in range(0,6):
+for i in range(0,5):
 	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 	calibconfxmlroot	=	calibconfsxmlroot[i]
 	xdvals.append(0.)
