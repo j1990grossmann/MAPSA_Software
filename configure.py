@@ -32,6 +32,10 @@ read = a._hw.getNode("Control").getNode('firm_ver').read()
 a._hw.dispatch()
 print "Running firmware version " + str(read)
 
+read = a._hw.getNode("Configuration").getNode('num_MPA').read()
+a._hw.dispatch()
+print "num_MPA " + str(read)
+
 mpa_number = options.mpa
 if mpa_number ==0:
 	config = mapsa.config(Config=options.number,string=options.setting)
