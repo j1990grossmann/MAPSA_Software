@@ -152,7 +152,7 @@ yarrv = []
 grarr = []
 xdvals = []
 
-for i in range(0,5):
+for i in range(0,no_mpa_light):
 	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 	calibconfxmlroot	=	calibconfsxmlroot[i]
 	xdvals.append(0.)
