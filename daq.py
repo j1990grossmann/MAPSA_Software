@@ -553,15 +553,15 @@ if options.setting == 'strip':
 
 			mpasettingsread = a._hw.getNode("Utility").getNode("MPA_settings_read").read()
 			a._hw.dispatch()
-			#print "MPA settings"
-			#print binary(mpasettings)
-			#print "MPA settings read"
-			#print binary(mpasettingsread)
-			#print "strip enable register"
-			#print binary(stripread)
-			#print "Current Configuration:"
-			#print confdict
-			#print 
+			print "MPA settings"
+			print binary(mpasettings)
+			print "MPA settings read"
+			print binary(mpasettingsread)
+			print "strip enable register"
+			print binary(stripread)
+			print "Current Configuration:"
+			print confdict
+			print 
 			
 
 			mapsa.daq().Sequencer_init(0x0,sdur,mem=1)
