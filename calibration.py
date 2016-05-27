@@ -66,7 +66,7 @@ a._hw.getNode("Control").getNode("MPA_clock_enable").write(0x1)
 a._hw.dispatch()
 
 
-no_mpa_light = 5
+no_mpa_light = 6
 smode = 0x0
 sdur = options.shutterdur
 
