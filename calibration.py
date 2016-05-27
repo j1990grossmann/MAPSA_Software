@@ -66,7 +66,7 @@ a._hw.getNode("Control").getNode("MPA_clock_enable").write(0x1)
 a._hw.dispatch()
 
 
-
+no_mpa_light = 5
 smode = 0x0
 sdur = options.shutterdur
 
@@ -235,7 +235,7 @@ ave/=6.
 offset = []
 avearr = []
 mpacorr = []
-for i in range(0,6):
+for i in range(0,no_mpa_light):
 	thdacv = thdacvv[i]
 	ave15 = 0
 	for j in thdacvv[i]:
@@ -247,7 +247,7 @@ for i in range(0,6):
 #print 'average correction'
 #print avearr
 #print mpacorr
-for i in range(0,6):
+for i in range(0,no_mpa_light):
 	thdacv = thdacvv[i]
 	range1 = min(thdacv)	
 	range2 = max(thdacv)	
@@ -259,7 +259,7 @@ cols = [[],[],[],[],[],[]]
 for iy1 in range(0,len(yarrv[0][0,:])):
 	thdacvvorg.append(np.array(thdacvv)[:,iy1])
 	upldac = []
-	for i in range(0,6):
+	for i in range(0,no_mpa_light):
 		thdacv = thdacvv[i]
 		upldac.append(thdacv[iy1]+offset[i])
 
@@ -287,7 +287,7 @@ c1.Print('plots/Scurve_Calibration'+options.string+'_pre.png', 'png')
 config.modifyperiphery('THDAC',[100]*6)
 #config.upload()
 #config.write()
-for i in range(0,6):
+for i in range(0,no_mpa_light):
 	xmlrootfile = config._confsxmltree[i]
 	print xmlrootfile
 	a = config._confsxmlroot[i]
@@ -364,7 +364,7 @@ xvec =  np.array(x1)
 yarrv = []
 gr2arr = []
 means = []
-for i in range(0,6):
+for i in range(0,no_mpa_light):
 		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 		
 		c2.cd(i+1)
