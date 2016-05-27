@@ -134,7 +134,7 @@ class MAPSA_config:
 
 	def write(self):
   
-		self._hw.getNode("Configuration").getNode("num_MPA").write(0x6)
+		self._hw.getNode("Configuration").getNode("num_MPA").write(0x5)
 		self._hw.getNode("Configuration").getNode("mode").write(0x5)
 		self._hw.dispatch()
 		self._spi_wait()
