@@ -86,7 +86,7 @@ buffnum=1
 
 	
 mpa = []  
-for i in range(1,6):
+for i in range(1,no_mpa_light+1):
 		mpa.append(mapsa.getMPA(i))
 
 
