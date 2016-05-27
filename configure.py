@@ -32,6 +32,8 @@ read = a._hw.getNode("Control").getNode('firm_ver').read()
 a._hw.dispatch()
 print "Running firmware version " + str(read)
 
+a._hw.getNode("Configuration").getNode('num_MPA').write(5)
+a._hw.dispatch()
 read = a._hw.getNode("Configuration").getNode('num_MPA').read()
 a._hw.dispatch()
 print "num_MPA " + str(read)
