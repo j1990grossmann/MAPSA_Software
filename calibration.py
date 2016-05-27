@@ -111,7 +111,7 @@ config.modifyfull(confdict)
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
 x1 = array('d')
 y1 = []
-for x in range(80,120):
+for x in range(0,256):
 	if x%options.res!=0:
 		continue
 	if x%10==0:
@@ -324,7 +324,7 @@ config1.write()
 
 x1 = array('d')
 y1 = []
-for x in range(80,120):
+for x in range(0,256):
 			if x%options.res!=0:
 				continue
 			if x%10==0:
