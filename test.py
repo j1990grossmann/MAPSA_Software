@@ -58,8 +58,9 @@ mapsa = MAPSA(a)
 read = a._hw.getNode("Control").getNode('firm_ver').read()
 a._hw.dispatch()
 print "Running firmware version " + str(read)
+no_mpa_light = 2
 
-a._hw.getNode("Configuration").getNode('num_MPA').write(0x4)
+a._hw.getNode("Configuration").getNode('num_MPA').write(0x2)
 a._hw.dispatch()
 read = a._hw.getNode("Configuration").getNode('num_MPA').read()
 a._hw.dispatch()
@@ -75,7 +76,6 @@ a._hw.getNode("Control").getNode("MPA_clock_enable").write(0x1)
 a._hw.dispatch()
 
 
-no_mpa_light = 5
 smode = 0x0
 sdur = options.shutterdur
 
