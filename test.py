@@ -156,156 +156,156 @@ calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
 		
-c1 = TCanvas('c1', '', 700, 900)
-c1.Divide(2,3)
-#gr1 = []
-xvec =  np.array(x1)
-thdacvv = []
-yarrv = []
-grarr = []
-xdvals = []
+#c1 = TCanvas('c1', '', 700, 900)
+#c1.Divide(2,3)
+##gr1 = []
+#xvec =  np.array(x1)
+#thdacvv = []
+#yarrv = []
+#grarr = []
+#xdvals = []
 
-for i in range(0,no_mpa_light):
-	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
-	calibconfxmlroot	=	calibconfsxmlroot[i]
-	xdvals.append(0.)
-	c1.cd(i+1)
-	thdacv = []
-	yarr =  np.array(y1[i])
-	grarr.append([])
-	gr1 = []
-	yarrv.append(yarr)
-	for iy1 in range(0,len(yarr[0,:])):
-		yvec = yarr[:,iy1]
-		if max(yvec)==0:
-			print "zero"
-		gr1.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
-		if iy1==0:
+#for i in range(0,no_mpa_light):
+	#backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
+	#calibconfxmlroot	=	calibconfsxmlroot[i]
+	#xdvals.append(0.)
+	#c1.cd(i+1)
+	#thdacv = []
+	#yarr =  np.array(y1[i])
+	#grarr.append([])
+	#gr1 = []
+	#yarrv.append(yarr)
+	#for iy1 in range(0,len(yarr[0,:])):
+		#yvec = yarr[:,iy1]
+		#if max(yvec)==0:
+			#print "zero"
+		#gr1.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
+		#if iy1==0:
 			
-			gr1[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
-			grarr[i].append(gr1[iy1])
-			grarr[i][iy1].Draw()
-			gr1[iy1].Write(str(iy1))
-		else:
-			grarr[i].append(gr1[iy1])
-			grarr[i][iy1].Draw('same')
-			gr1[iy1].Write(str(iy1))
-			gPad.Update()
+			#gr1[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
+			#grarr[i].append(gr1[iy1])
+			#grarr[i][iy1].Draw()
+			#gr1[iy1].Write(str(iy1))
+		#else:
+			#grarr[i].append(gr1[iy1])
+			#grarr[i][iy1].Draw('same')
+			#gr1[iy1].Write(str(iy1))
+			#gPad.Update()
 
 
 
-		halfmax = max(yvec)/2.0
-		maxbin = np.where(yvec==max(yvec))
-		for ibin in range(0,len(xvec)-1):
+		#halfmax = max(yvec)/2.0
+		#maxbin = np.where(yvec==max(yvec))
+		#for ibin in range(0,len(xvec)-1):
 
-			xval = xvec[ibin]
-			xval1 = xvec[ibin+1]
-			yval = yvec[ibin]
-			yval1 = yvec[ibin+1]
+			#xval = xvec[ibin]
+			#xval1 = xvec[ibin+1]
+			#yval = yvec[ibin]
+			#yval1 = yvec[ibin+1]
 	
-			if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
-				if iy1%2==0:
-					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-				else:
-					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-				#print "ptrim " + str(prev_trim)
-				#print "halfmax " +  str(halfmax)
-				
-				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
-
-				#if abs(yval-halfmax)<abs(yval1-halfmax):
-				#	xdacval = xval
+			#if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
+				#if iy1%2==0:
+					#prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
 				#else:
-				#	xdacval = xval1
-				#print "xdacval " + str(xdacval)
-				trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
-				xdvals[i] += xdacval*1.456/3.75
-				#print trimdac
+					#prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
+				##print "ptrim " + str(prev_trim)
+				##print "halfmax " +  str(halfmax)
+				
+				#xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
 
-				thdacv.append(trimdac)
-				break	
-			if ibin==len(xvec)-2:
-				if iy1%2==0:
-					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-				else:
-					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
+				##if abs(yval-halfmax)<abs(yval1-halfmax):
+				##	xdacval = xval
+				##else:
+				##	xdacval = xval1
+				##print "xdacval " + str(xdacval)
+				#trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
+				#xdvals[i] += xdacval*1.456/3.75
+				##print trimdac
+
+				#thdacv.append(trimdac)
+				#break	
+			#if ibin==len(xvec)-2:
+				#if iy1%2==0:
+					#prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
+				#else:
+					#prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
 	
-				trimdac = int(prev_trim)
-				thdacv.append(trimdac)
-				print "UNTRIMMED"
-				break
+				#trimdac = int(prev_trim)
+				#thdacv.append(trimdac)
+				#print "UNTRIMMED"
+				#break
 		
-	thdacvv.append(thdacv)
+	#thdacvv.append(thdacv)
 
-	print thdacv
+	#print thdacv
 
-ave = 0
-for x in xdvals:
-	ave+=x/48.
-ave/=6.
+#ave = 0
+#for x in xdvals:
+	#ave+=x/48.
+#ave/=6.
 
 
-offset = []
-avearr = []
-mpacorr = []
-for i in range(0,no_mpa_light):
-	thdacv = thdacvv[i]
-	ave15 = 0
-	for j in thdacvv[i]:
-		ave15+=j
-	ave15/=len(thdacvv[i])
-	avearr.append(ave15)
-	mpacorr.append(xdvals[i]/48.-ave)
+#offset = []
+#avearr = []
+#mpacorr = []
+#for i in range(0,no_mpa_light):
+	#thdacv = thdacvv[i]
+	#ave15 = 0
+	#for j in thdacvv[i]:
+		#ave15+=j
+	#ave15/=len(thdacvv[i])
+	#avearr.append(ave15)
+	#mpacorr.append(xdvals[i]/48.-ave)
 	
-#print 'average correction'
-#print avearr
-#print mpacorr
-for i in range(0,no_mpa_light):
-	thdacv = thdacvv[i]
-	range1 = min(thdacv)	
-	range2 = max(thdacv)	
-	offset.append(15-int(round(avearr[i]+mpacorr[i])))
-#print offset
+##print 'average correction'
+##print avearr
+##print mpacorr
+#for i in range(0,no_mpa_light):
+	#thdacv = thdacvv[i]
+	#range1 = min(thdacv)	
+	#range2 = max(thdacv)	
+	#offset.append(15-int(round(avearr[i]+mpacorr[i])))
+##print offset
 
-thdacvvorg = []
-cols = [[],[],[],[],[],[]]
-for iy1 in range(0,len(yarrv[0][0,:])):
-	thdacvvorg.append(np.array(thdacvv)[:,iy1])
-	upldac = []
-	for i in range(0,no_mpa_light):
-		thdacv = thdacvv[i]
-		upldac.append(thdacv[iy1]+offset[i])
-
-
-	for u in range(0,len(upldac)):
-		upldac[u] = max(0,upldac[u])
-		upldac[u] = min(31,upldac[u])
-		if upldac[u]==31:
-			cols[u].append(2)
-		elif upldac[u]==0:
-			cols[u].append(4)
-		else:
-			cols[u].append(1)
-	#print upldac
-
-	if iy1%2==0:
-		config.modifypixel((iy1)/2+1,'TRIMDACL',upldac)
-	else:
-		config.modifypixel((iy1+1)/2,'TRIMDACR',upldac)
+#thdacvvorg = []
+#cols = [[],[],[],[],[],[]]
+#for iy1 in range(0,len(yarrv[0][0,:])):
+	#thdacvvorg.append(np.array(thdacvv)[:,iy1])
+	#upldac = []
+	#for i in range(0,no_mpa_light):
+		#thdacv = thdacvv[i]
+		#upldac.append(thdacv[iy1]+offset[i])
 
 
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.root', 'root')
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.pdf', 'pdf')
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.png', 'png')
-config.modifyperiphery('THDAC',[100]*6)
+	#for u in range(0,len(upldac)):
+		#upldac[u] = max(0,upldac[u])
+		#upldac[u] = min(31,upldac[u])
+		#if upldac[u]==31:
+			#cols[u].append(2)
+		#elif upldac[u]==0:
+			#cols[u].append(4)
+		#else:
+			#cols[u].append(1)
+	##print upldac
+
+	#if iy1%2==0:
+		#config.modifypixel((iy1)/2+1,'TRIMDACL',upldac)
+	#else:
+		#config.modifypixel((iy1+1)/2,'TRIMDACR',upldac)
+
+
+#c1.Print('plots/Scurve_Calibration'+options.string+'_pre.root', 'root')
+#c1.Print('plots/Scurve_Calibration'+options.string+'_pre.pdf', 'pdf')
+#c1.Print('plots/Scurve_Calibration'+options.string+'_pre.png', 'png')
+#config.modifyperiphery('THDAC',[100]*6)
 #config.upload()
 #config.write()
-for i in range(0,no_mpa_light):
-	xmlrootfile = config._confsxmltree[i]
-	print xmlrootfile
-	a = config._confsxmlroot[i]
-	print "writing data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml"
-	xmlrootfile.write("data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml")
+#for i in range(0,no_mpa_light):
+	#xmlrootfile = config._confsxmltree[i]
+	#print xmlrootfile
+	#a = config._confsxmlroot[i]
+	#print "writing data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml"
+	#xmlrootfile.write("data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml")
 
 
 #print "Testing Calibration"
