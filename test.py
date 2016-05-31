@@ -60,7 +60,7 @@ a._hw.dispatch()
 print "Running firmware version " + str(read)
 no_mpa_light = 2
 
-a._hw.getNode("Configuration").getNode('num_MPA').write(0x2)
+a._hw.getNode("Configuration").getNode('num_MPA').write(0x0)
 a._hw.dispatch()
 read = a._hw.getNode("Configuration").getNode('num_MPA').read()
 a._hw.dispatch()
