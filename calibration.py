@@ -195,10 +195,11 @@ for i in range(0,no_mpa_light):
 					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
 				else:
 					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-				#print "ptrim " + str(prev_trim)
-				#print "halfmax " +  str(halfmax)
+				print "ptrim " + str(prev_trim)
+				print "halfmax " +  str(halfmax)
 				
 				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
+				print "xdacval "+ str(xdacval)
 
 				#if abs(yval-halfmax)<abs(yval1-halfmax):
 				#	xdacval = xval
