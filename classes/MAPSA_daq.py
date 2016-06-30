@@ -89,9 +89,9 @@ class MAPSA_daq:
 		for i in range(0,len(counts)):
 			counts[i],mems[i] = MPA(self._hw,i).daq().format(counts[i],mems[i],Fast)
 
-		print "counts"
-		for i in range(0,len(counts)):
-			print counts[i]
+		#print "counts"
+		#for i in range(0,len(counts)):
+			#print counts[i]
 
 		#print "mem"
 		#for i in range(0,len(mems)):
