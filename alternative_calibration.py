@@ -154,6 +154,8 @@ for x in range(0,256):
 calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
+c3 = TCanvas('c3', '', 700, 900)
+c3.Divide(2,3)
 		
 c1 = TCanvas('c1', '', 700, 900)
 c1.Divide(2,3)
