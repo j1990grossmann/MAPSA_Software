@@ -150,7 +150,7 @@ for x in range(0,256):
 				y1[ipix].append(array('d',count_arr[ipix][x]))
 			ipix+=1
 	x1.append(x)
-
+	
 calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
@@ -346,86 +346,86 @@ config1.write()
 
 x1 = array('d')
 y1 = []
-# for x in range(0,256):
-# 			if x%options.res!=0:
-# 				continue
-# 			if x%10==0:
-# 				print "THDAC " + str(x)
+for x in range(0,256):
+			if x%options.res!=0:
+				continue
+			if x%10==0:
+				print "THDAC " + str(x)
 
-# 			config1.modifyperiphery('THDAC',[x]*6)
-# 			config1.upload()
-# 			config1.write()
+			config1.modifyperiphery('THDAC',[x]*6)
+			config1.upload()
+			config1.write()
 	
 
 
 
 
 
-# 			mapsa.daq().Sequencer_init(smode,sdur)
-# 			pix,mem = mapsa.daq().read_data(buffnum)
-# 			ipix=0
-# 			for p in pix:
+			mapsa.daq().Sequencer_init(smode,sdur)
+			pix,mem = mapsa.daq().read_data(buffnum)
+			ipix=0
+			for p in pix:
 
-# 				p.pop(0)
-# 				p.pop(0)
-# 				#print p
-# 				y1.append([])
-# 				y1[ipix].append(array('d',p))
-# 				# print str(p)
+				p.pop(0)
+				p.pop(0)
+				#print p
+				y1.append([])
+				y1[ipix].append(array('d',p))
+				# print str(p)
 
-# 				ipix+=1
-# 			x1.append(x)
+				ipix+=1
+			x1.append(x)
 			
 	
 
 
-# c2 = TCanvas('c2', '', 700, 900)
-# c2.Divide(2,3)
+c2 = TCanvas('c2', '', 700, 900)
+c2.Divide(2,3)
 
-# xvec =  np.array(x1)
-# yarrv = []
-# gr2arr = []
-# means = []
-# for i in range(0,no_mpa_light):
-# 		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
+xvec =  np.array(x1)
+yarrv = []
+gr2arr = []
+means = []
+for i in range(0,no_mpa_light):
+		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 		
-# 		c2.cd(i+1)
-# 		yarr =  np.array(y1[i])
-# 		gr2arr.append([])
-# 		gr2 = []
-# 		means.append(0.)
-# 		yarrv.append(yarr)
-# 		for iy1 in range(0,len(yarr[0,:])):
-# 			yvec = yarr[:,iy1]
+		c2.cd(i+1)
+		yarr =  np.array(y1[i])
+		gr2arr.append([])
+		gr2 = []
+		means.append(0.)
+		yarrv.append(yarr)
+		for iy1 in range(0,len(yarr[0,:])):
+			yvec = yarr[:,iy1]
 
-# 			gr2.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
+			gr2.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
 			
-# 			if iy1==0:
+			if iy1==0:
 
-# 				gr2[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
-# 				gr2arr[i].append(gr2[iy1])
-# 				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-# 				gr2arr[i][iy1].Draw()
-# 				gr2[iy1].Write(str(iy1))
+				gr2[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
+				gr2arr[i].append(gr2[iy1])
+				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
+				gr2arr[i][iy1].Draw()
+				gr2[iy1].Write(str(iy1))
 
-# 			else:
-# 				gr2arr[i].append(gr2[iy1])
-# 				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-# 				gr2arr[i][iy1].Draw('same')
-# 				gr2[iy1].Write(str(iy1))
-# 				gPad.Update()
-# 			means[i]+=gr2[iy1].GetMean(1)
-# print 'Means'
-# for m in means:
-# 	print m/48.
+			else:
+				gr2arr[i].append(gr2[iy1])
+				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
+				gr2arr[i][iy1].Draw('same')
+				gr2[iy1].Write(str(iy1))
+				gPad.Update()
+			means[i]+=gr2[iy1].GetMean(1)
+print 'Means'
+for m in means:
+	print m/48.
 
-# c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
-# c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
-# c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
-# #c3 = TCanvas('c2', '', 700, 600)
-# #gr2[4].Draw()
-# #gPad.Update()
-# #c3.Print('plots/test.pdf', 'pdf')
+c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
+c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
+c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
+#c3 = TCanvas('c2', '', 700, 600)
+#gr2[4].Draw()
+#gPad.Update()
+#c3.Print('plots/test.pdf', 'pdf')
 print ""
 print "Done"
 
