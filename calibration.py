@@ -125,18 +125,18 @@ for x in range(0,256):
 
 	pix,mem = mapsa.daq().read_data(buffnum)
 	ipix=0
-	print "("
+	# print "("
 	for p in pix:
 
 			p.pop(0)
 			p.pop(0)
 			y1.append([])
 			y1[ipix].append(array('d',p))
-			print str(p)
+			# print str(p)
 
 			ipix+=1
 	x1.append(x)
-	print ")"
+	# print ")"
 print "Generating nominal per pixel trimdac values"
 
 calibconfs = config._confs
@@ -189,17 +189,19 @@ for i in range(0,no_mpa_light):
 			xval1 = xvec[ibin+1]
 			yval = yvec[ibin]
 			yval1 = yvec[ibin+1]
-	
+			# print "ibin " + str(ibin)
+			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
+			if xdacval<1000:
+				print "maxbin" + str(maxbin[0][0])
+				print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 			if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
 				if iy1%2==0:
 					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
 				else:
 					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-				print "ptrim " + str(prev_trim)
-				print "halfmax " +  str(halfmax)
+				# print "ptrim " + str(prev_trim) 
+				print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
 				
-				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
-				print "xdacval "+ str(xdacval)
 
 				#if abs(yval-halfmax)<abs(yval1-halfmax):
 				#	xdacval = xval
@@ -350,7 +352,7 @@ for x in range(0,256):
 				#print p
 				y1.append([])
 				y1[ipix].append(array('d',p))
-				print str(p)
+				# print str(p)
 
 				ipix+=1
 			x1.append(x)

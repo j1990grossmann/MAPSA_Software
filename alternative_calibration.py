@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph, TCanvas, gPad, TFile
+from ROOT import TGraph, TCanvas, gPad, TFile, TLine
 
 import numpy as np
 
@@ -48,10 +48,16 @@ default	=	'',
 dest	=	'string',
 help	=	'extra string')
 
-parser.add_option('-z', '--single_strip', metavar='F', type='bool', action='store',
+parser.add_option('-t', '--type', metavar='TYPE', type='int', action='store',
+default	=	0,
+dest	=	'cal_type',
+help	=	'Type of fast calibration to be performed: 0 standard, 1 experimental')
+
+parser.add_option('-k', '--k_repetiions', metavar='REPETIONS', type='int', action='store',
 default	=	1,
-dest	=	'res',
-help	=	'resolution 1,2,3... 1 is best')
+dest	=	'k_reps',
+help	=	'K repetions of aquisitions with shutterduration s')
+
 
 (options, args) = parser.parse_args()
 
@@ -70,7 +76,7 @@ a._hw.getNode("Control").getNode("MPA_clock_enable").write(0x1)
 a._hw.dispatch()
 
 
-no_mpa_light = 5
+no_mpa_light = 6
 smode = 0x0
 sdur = options.shutterdur
 
@@ -115,6 +121,10 @@ config.modifyfull(confdict)
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
 x1 = array('d')
 y1 = []
+
+
+rangeval =10
+count_arr=np.zeros((no_mpa_light,256,48))
 for x in range(0,256):
 	if x%options.res!=0:
 		continue
@@ -124,24 +134,22 @@ for x in range(0,256):
 	config.modifyperiphery('THDAC',[x]*6)
 	config.upload()
 	config.write()
-
-	mapsa.daq().Sequencer_init(smode,sdur)
-
-	pix,mem = mapsa.daq().read_data(buffnum)
-	ipix=0
-	print "("
-	for p in pix:
-
+	for z in range (0,rangeval):
+		mapsa.daq().Sequencer_init(smode,sdur)
+		pix,mem = mapsa.daq().read_data(buffnum)
+		ipix=0
+		for p in pix:
 			p.pop(0)
 			p.pop(0)
-			y1.append([])
-			y1[ipix].append(array('d',p))
-			print str(p)
-
+			count_arr[ipix][x]=count_arr[ipix][x]+np.array(array('d',p))
+			if (x==75 and ipix==0):
+				print ipix
+				print count_arr[ipix][x]
+			if z ==(rangeval-1):
+				y1.append([])
+				y1[ipix].append(array('d',count_arr[ipix][x]))
 			ipix+=1
 	x1.append(x)
-	print ")"
-print "Generating nominal per pixel trimdac values"
 
 calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
@@ -155,7 +163,8 @@ thdacvv = []
 yarrv = []
 grarr = []
 xdvals = []
-
+linearr = []
+xdacval = 0.
 for i in range(0,no_mpa_light):
 	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 	calibconfxmlroot	=	calibconfsxmlroot[i]
@@ -164,7 +173,9 @@ for i in range(0,no_mpa_light):
 	thdacv = []
 	yarr =  np.array(y1[i])
 	grarr.append([])
+	linearr.append([])
 	gr1 = []
+	lines = []
 	yarrv.append(yarr)
 	for iy1 in range(0,len(yarr[0,:])):
 		yvec = yarr[:,iy1]
@@ -181,9 +192,8 @@ for i in range(0,no_mpa_light):
 			grarr[i].append(gr1[iy1])
 			grarr[i][iy1].Draw('same')
 			gr1[iy1].Write(str(iy1))
+		if iy1==(len(yarr[0,:])-1):
 			gPad.Update()
-
-
 
 		halfmax = max(yvec)/2.0
 		maxbin = np.where(yvec==max(yvec))
@@ -193,16 +203,20 @@ for i in range(0,no_mpa_light):
 			xval1 = xvec[ibin+1]
 			yval = yvec[ibin]
 			yval1 = yvec[ibin+1]
-	
+			# print "ibin " + str(ibin)
+			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
+			# if xdacval<1000:
+				# print "maxbin" + str(maxbin[0][0])
+				# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 			if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
 				if iy1%2==0:
 					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
 				else:
 					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-				#print "ptrim " + str(prev_trim)
-				#print "halfmax " +  str(halfmax)
+				# print "ptrim " + str(prev_trim) 
+				# print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
 				
-				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
+				# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 
 				#if abs(yval-halfmax)<abs(yval1-halfmax):
 				#	xdacval = xval
@@ -212,7 +226,11 @@ for i in range(0,no_mpa_light):
 				trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
 				xdvals[i] += xdacval*1.456/3.75
 				#print trimdac
-
+				lines.append(TLine(xdacval,0,xdacval,2*halfmax))
+				linearr[i].append(lines[iy1])
+				linearr[i][iy1].SetLineColor(2)
+				linearr[i][iy1].Draw('same')
+				linearr[i][iy1].Write(str(iy1)+'line')
 				thdacv.append(trimdac)
 				break	
 			if ibin==len(xvec)-2:
@@ -328,86 +346,86 @@ config1.write()
 
 x1 = array('d')
 y1 = []
-for x in range(0,256):
-			if x%options.res!=0:
-				continue
-			if x%10==0:
-				print "THDAC " + str(x)
+# for x in range(0,256):
+# 			if x%options.res!=0:
+# 				continue
+# 			if x%10==0:
+# 				print "THDAC " + str(x)
 
-			config1.modifyperiphery('THDAC',[x]*6)
-			config1.upload()
-			config1.write()
+# 			config1.modifyperiphery('THDAC',[x]*6)
+# 			config1.upload()
+# 			config1.write()
 	
 
 
 
 
 
-			mapsa.daq().Sequencer_init(smode,sdur)
-			pix,mem = mapsa.daq().read_data(buffnum)
-			ipix=0
-			for p in pix:
+# 			mapsa.daq().Sequencer_init(smode,sdur)
+# 			pix,mem = mapsa.daq().read_data(buffnum)
+# 			ipix=0
+# 			for p in pix:
 
-				p.pop(0)
-				p.pop(0)
-				#print p
-				y1.append([])
-				y1[ipix].append(array('d',p))
-				print str(p)
+# 				p.pop(0)
+# 				p.pop(0)
+# 				#print p
+# 				y1.append([])
+# 				y1[ipix].append(array('d',p))
+# 				# print str(p)
 
-				ipix+=1
-			x1.append(x)
+# 				ipix+=1
+# 			x1.append(x)
 			
 	
 
 
-c2 = TCanvas('c2', '', 700, 900)
-c2.Divide(2,3)
+# c2 = TCanvas('c2', '', 700, 900)
+# c2.Divide(2,3)
 
-xvec =  np.array(x1)
-yarrv = []
-gr2arr = []
-means = []
-for i in range(0,no_mpa_light):
-		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
+# xvec =  np.array(x1)
+# yarrv = []
+# gr2arr = []
+# means = []
+# for i in range(0,no_mpa_light):
+# 		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 		
-		c2.cd(i+1)
-		yarr =  np.array(y1[i])
-		gr2arr.append([])
-		gr2 = []
-		means.append(0.)
-		yarrv.append(yarr)
-		for iy1 in range(0,len(yarr[0,:])):
-			yvec = yarr[:,iy1]
+# 		c2.cd(i+1)
+# 		yarr =  np.array(y1[i])
+# 		gr2arr.append([])
+# 		gr2 = []
+# 		means.append(0.)
+# 		yarrv.append(yarr)
+# 		for iy1 in range(0,len(yarr[0,:])):
+# 			yvec = yarr[:,iy1]
 
-			gr2.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
+# 			gr2.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
 			
-			if iy1==0:
+# 			if iy1==0:
 
-				gr2[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
-				gr2arr[i].append(gr2[iy1])
-				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-				gr2arr[i][iy1].Draw()
-				gr2[iy1].Write(str(iy1))
+# 				gr2[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
+# 				gr2arr[i].append(gr2[iy1])
+# 				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
+# 				gr2arr[i][iy1].Draw()
+# 				gr2[iy1].Write(str(iy1))
 
-			else:
-				gr2arr[i].append(gr2[iy1])
-				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-				gr2arr[i][iy1].Draw('same')
-				gr2[iy1].Write(str(iy1))
-				gPad.Update()
-			means[i]+=gr2[iy1].GetMean(1)
-print 'Means'
-for m in means:
-	print m/48.
+# 			else:
+# 				gr2arr[i].append(gr2[iy1])
+# 				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
+# 				gr2arr[i][iy1].Draw('same')
+# 				gr2[iy1].Write(str(iy1))
+# 				gPad.Update()
+# 			means[i]+=gr2[iy1].GetMean(1)
+# print 'Means'
+# for m in means:
+# 	print m/48.
 
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
-#c3 = TCanvas('c2', '', 700, 600)
-#gr2[4].Draw()
-#gPad.Update()
-#c3.Print('plots/test.pdf', 'pdf')
+# c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
+# c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
+# c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
+# #c3 = TCanvas('c2', '', 700, 600)
+# #gr2[4].Draw()
+# #gPad.Update()
+# #c3.Print('plots/test.pdf', 'pdf')
 print ""
 print "Done"
 

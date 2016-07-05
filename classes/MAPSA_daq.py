@@ -79,7 +79,7 @@ class MAPSA_daq:
 			counter_data  = self._counter.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(25)
 			memory_data = self._memory.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(216)
 			# end = time.time()
-			print "reading MPA " + str(i) 
+			# print "reading MPA " + str(i) 
 			# print (end - start)*1000
 			counts.append(counter_data) 
 			mems.append(memory_data)
