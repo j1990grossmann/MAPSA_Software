@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph, TCanvas, gPad, TFile, TLine
+from ROOT import TGraph, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath
 
 import numpy as np
 
@@ -123,9 +123,10 @@ x1 = array('d')
 y1 = []
 
 
-rangeval =10
+rangeval = options.k_reps
 count_arr=np.zeros((no_mpa_light,256,48))
-for x in range(0,256):
+for xx in range(0,256):
+	x = xx
 	if x%options.res!=0:
 		continue
 	if x%10==0:
@@ -154,19 +155,20 @@ for x in range(0,256):
 calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
+
 c3 = TCanvas('c3', '', 700, 900)
 c3.Divide(2,3)
 		
 c1 = TCanvas('c1', '', 700, 900)
 c1.Divide(2,3)
-#gr1 = []
-xvec =  np.array(x1)
+
+xvec =  np.array(x1, dtype='uint16')
 thdacvv = []
 yarrv = []
-grarr = []
 xdvals = []
 linearr = []
 xdacval = 0.
+stackarr = []
 for i in range(0,no_mpa_light):
 	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 	calibconfxmlroot	=	calibconfsxmlroot[i]
@@ -174,29 +176,48 @@ for i in range(0,no_mpa_light):
 	c1.cd(i+1)
 	thdacv = []
 	yarr =  np.array(y1[i])
-	grarr.append([])
 	linearr.append([])
 	gr1 = []
 	lines = []
 	yarrv.append(yarr)
+	stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
+	# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
 	for iy1 in range(0,len(yarr[0,:])):
 		yvec = yarr[:,iy1]
 		if max(yvec)==0:
 			print "zero"
-		gr1.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
-		if iy1==0:
-			
-			gr1[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
-			grarr[i].append(gr1[iy1])
-			grarr[i][iy1].Draw()
-			gr1[iy1].Write(str(iy1))
-		else:
-			grarr[i].append(gr1[iy1])
-			grarr[i][iy1].Draw('same')
-			gr1[iy1].Write(str(iy1))
+		gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
+		gr1[iy1].Sumw2(ROOT.kFALSE)
+		for j in np.nditer(xvec):
+			gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
+		gr1[iy1].Sumw2(ROOT.kTRUE)
+		color=iy1%9+1
+		gr1[iy1].SetLineColor(color)
+		gr1[iy1].SetMarkerColor(color)
+		gr1[iy1].SetFillColor(color)
+		gr1[iy1].SetLineStyle(1)
+		gr1[iy1].SetLineWidth(1)
+		gr1[iy1].SetFillStyle(1)
+		gr1[iy1].SetMarkerStyle(1)
+		gr1[iy1].SetMarkerSize(.5)
+		gr1[iy1].SetMarkerStyle(20)
+		cloned = gr1[iy1].Clone()
+		cloned.SetDirectory(0)
+		stackarr[i].Add(cloned)
 		if iy1==(len(yarr[0,:])-1):
+			stackarr[i].Draw('nostack hist e1 x0')
+			if(stackarr[i].GetMaximum()>1):
+				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
+				stackarr[i].SetMinimum(.1)
+				stackarr[i].SetMaximum(Maximum)
+				gPad.SetLogy()
 			gPad.Update()
 
+		gr1[iy1].SetLineColor(1)
+		gr1[iy1].SetMarkerColor(1)
+		gr1[iy1].SetFillColor(1)
+		gr1[iy1].Write(str(iy1))
+		# Now we have the routine to find the midpoint
 		halfmax = max(yvec)/2.0
 		maxbin = np.where(yvec==max(yvec))
 		for ibin in range(0,len(xvec)-1):
@@ -206,11 +227,11 @@ for i in range(0,no_mpa_light):
 			yval = yvec[ibin]
 			yval1 = yvec[ibin+1]
 			# print "ibin " + str(ibin)
-			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
 			# if xdacval<1000:
 				# print "maxbin" + str(maxbin[0][0])
 				# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 			if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
+				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
 				if iy1%2==0:
 					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
 				else:
@@ -228,11 +249,10 @@ for i in range(0,no_mpa_light):
 				trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
 				xdvals[i] += xdacval*1.456/3.75
 				#print trimdac
-				lines.append(TLine(xdacval,0,xdacval,2*halfmax))
+				lines.append(TLine(xdacval,.1,xdacval,2*halfmax))
 				linearr[i].append(lines[iy1])
 				linearr[i][iy1].SetLineColor(2)
-				linearr[i][iy1].Draw('same')
-				linearr[i][iy1].Write(str(iy1)+'line')
+				# linearr[i][iy1].Draw('same')
 				thdacv.append(trimdac)
 				break	
 			if ibin==len(xvec)-2:
@@ -245,7 +265,7 @@ for i in range(0,no_mpa_light):
 				thdacv.append(trimdac)
 				print "UNTRIMMED"
 				break
-		
+			
 	thdacvv.append(thdacv)
 
 	print thdacv
@@ -415,6 +435,7 @@ for i in range(0,no_mpa_light):
 				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
 				gr2arr[i][iy1].Draw('same')
 				gr2[iy1].Write(str(iy1))
+			if(iy1==len(yarr[0,:])-1):
 				gPad.Update()
 			means[i]+=gr2[iy1].GetMean(1)
 print 'Means'
