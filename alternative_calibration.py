@@ -20,17 +20,18 @@ from optparse import OptionParser
 
 
 #The current fast trimming procedure
-def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval):
+def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval,i):
 	"This changes a passed list into this function"
 	halfmax = max(yvec)/2.0
-	print yvec
+	if i==0:
+		print yvec
 	maxbin = np.where(yvec==max(yvec))
 	for ibin in range(0,len(xvec)-1):		
 		xval = xvec[ibin]
 		xval1 = xvec[ibin+1]
 		yval = yvec[ibin]
 		yval1 = yvec[ibin+1]
-		print "ibin " + str(ibin)
+		#print "ibin " + str(ibin)
 		#if xdacval<1000:
 			#print "maxbin" + str(maxbin[0][0])
 			#print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
@@ -268,7 +269,7 @@ for i in range(0,no_mpa_light):
 			prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
 		trimdac = 0
 		# Now we have the routine to find the midpoint
-		traditional_trim(xvec,yvec,prev_trim,trimdac,xdacval)
+		traditional_trim(xvec,yvec,prev_trim,trimdac,xdacval,i)
 		xdvals[i]=xdacval
 		thdacv.append(trimdac)
 		lines.append(TLine(xdacval,.1,xdacval,cloned.GetMaximum()))
