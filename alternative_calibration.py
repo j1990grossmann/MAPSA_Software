@@ -247,9 +247,9 @@ for i in range(0,no_mpa_light):
 		stackarr[i].Add(cloned)
 		if iy1==(len(yarr[0,:])-1):
 			stackarr[i].Draw('nostack hist e1 x0')
-			for lines in linearr[i]:
+			for lines1 in linearr[i]:
 				#for j in np.nditer(xvec):
-				lines.Draw("same")
+				lines1.Draw("same")
 			if(stackarr[i].GetMaximum()>1):
 				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
 				stackarr[i].SetMinimum(.1)
