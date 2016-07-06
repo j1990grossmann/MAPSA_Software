@@ -25,6 +25,7 @@ def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval,i):
 	halfmax = max(yvec)/2.0
 	if i==0:
 		print yvec
+		print 'halfmax', halfmax
 	maxbin = np.where(yvec==max(yvec))
 	for ibin in range(0,len(xvec)-1):		
 		xval = xvec[ibin]
