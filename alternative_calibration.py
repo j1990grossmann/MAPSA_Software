@@ -23,6 +23,7 @@ from optparse import OptionParser
 def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval):
 	"This changes a passed list into this function"
 	halfmax = max(yvec)/2.0
+	print yvec
 	maxbin = np.where(yvec==max(yvec))
 	for ibin in range(0,len(xvec)-1):		
 		xval = xvec[ibin]
@@ -35,8 +36,8 @@ def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval):
 			#print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 		if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
 			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
-			print "ptrim " + str(prev_trim) 
-			print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
+			#print "ptrim " + str(prev_trim) 
+			#print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
 			#if abs(yval-halfmax)<abs(yval1-halfmax):
 			#	xdacval = xval
 			#else:
