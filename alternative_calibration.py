@@ -16,6 +16,47 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import show, plot
 
 from optparse import OptionParser
+
+
+
+#The current fast trimming procedure
+def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval):
+	"This changes a passed list into this function"
+	halfmax = max(yvec)/2.0
+	maxbin = np.where(yvec==max(yvec))
+	for ibin in range(0,len(xvec)-1):		
+		xval = xvec[ibin]
+		xval1 = xvec[ibin+1]
+		yval = yvec[ibin]
+		yval1 = yvec[ibin+1]
+		# print "ibin " + str(ibin)
+		# if xdacval<1000:
+		# print "maxbin" + str(maxbin[0][0])
+		# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
+		if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
+			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
+			# print "ptrim " + str(prev_trim) 
+			# print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
+			#if abs(yval-halfmax)<abs(yval1-halfmax):
+			#	xdacval = xval
+			#else:
+			#	xdacval = xval1
+			#print "xdacval " + str(xdacval)
+			trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
+			xdacval = xdacval*1.456/3.75
+			#print trimdac
+			break	
+		if ibin==len(xvec)-2:
+			trimdac = int(prev_trim)
+			print "UNTRIMMED"
+			break
+	return
+
+
+
+
+
+
 parser = OptionParser()
 parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
 default	=	'none',
@@ -161,7 +202,7 @@ c3.Divide(2,3)
 		
 c1 = TCanvas('c1', '', 700, 900)
 c1.Divide(2,3)
-
+#The Precalibration curves
 xvec =  np.array(x1, dtype='uint16')
 thdacvv = []
 yarrv = []
@@ -206,68 +247,33 @@ for i in range(0,no_mpa_light):
 		stackarr[i].Add(cloned)
 		if iy1==(len(yarr[0,:])-1):
 			stackarr[i].Draw('nostack hist e1 x0')
+			for lines in linearr[i]:
+				#for j in np.nditer(xvec):
+				lines.Draw("same")
 			if(stackarr[i].GetMaximum()>1):
 				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
 				stackarr[i].SetMinimum(.1)
 				stackarr[i].SetMaximum(Maximum)
 				gPad.SetLogy()
 			gPad.Update()
-
 		gr1[iy1].SetLineColor(1)
 		gr1[iy1].SetMarkerColor(1)
 		gr1[iy1].SetFillColor(1)
 		gr1[iy1].Write(str(iy1))
+		#Get prevous trim value for the channel
+		if iy1%2==0:
+			prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
+		else:
+			prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
+		trimdac = 0
 		# Now we have the routine to find the midpoint
-		halfmax = max(yvec)/2.0
-		maxbin = np.where(yvec==max(yvec))
-		for ibin in range(0,len(xvec)-1):
-
-			xval = xvec[ibin]
-			xval1 = xvec[ibin+1]
-			yval = yvec[ibin]
-			yval1 = yvec[ibin+1]
-			# print "ibin " + str(ibin)
-			# if xdacval<1000:
-				# print "maxbin" + str(maxbin[0][0])
-				# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
-			if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
-				xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
-				if iy1%2==0:
-					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-				else:
-					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-				# print "ptrim " + str(prev_trim) 
-				# print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
-				
-				# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
-
-				#if abs(yval-halfmax)<abs(yval1-halfmax):
-				#	xdacval = xval
-				#else:
-				#	xdacval = xval1
-				#print "xdacval " + str(xdacval)
-				trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
-				xdvals[i] += xdacval*1.456/3.75
-				#print trimdac
-				lines.append(TLine(xdacval,.1,xdacval,2*halfmax))
-				linearr[i].append(lines[iy1])
-				linearr[i][iy1].SetLineColor(2)
-				# linearr[i][iy1].Draw('same')
-				thdacv.append(trimdac)
-				break	
-			if ibin==len(xvec)-2:
-				if iy1%2==0:
-					prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-				else:
-					prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-	
-				trimdac = int(prev_trim)
-				thdacv.append(trimdac)
-				print "UNTRIMMED"
-				break
-			
+		traditional_trim(xvec,yvec,prev_trim,trimdac,xdacval)
+		xdvals[i]=xdacval
+		thdacv.append(trimdac)
+		lines.append(TLine(xdacval,.1,xdacval,cloned.GetMaximum()))
+		linearr[i].append(lines[iy1])
+		linearr[i][iy1].SetLineColor(2)
 	thdacvv.append(thdacv)
-
 	print thdacv
 
 ave = 0
