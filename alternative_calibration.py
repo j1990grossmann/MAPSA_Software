@@ -29,14 +29,14 @@ def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval):
 		xval1 = xvec[ibin+1]
 		yval = yvec[ibin]
 		yval1 = yvec[ibin+1]
-		# print "ibin " + str(ibin)
-		# if xdacval<1000:
-		# print "maxbin" + str(maxbin[0][0])
-		# print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
+		print "ibin " + str(ibin)
+		#if xdacval<1000:
+			#print "maxbin" + str(maxbin[0][0])
+			#print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 		if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
 			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
-			# print "ptrim " + str(prev_trim) 
-			# print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
+			print "ptrim " + str(prev_trim) 
+			print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
 			#if abs(yval-halfmax)<abs(yval1-halfmax):
 			#	xdacval = xval
 			#else:
