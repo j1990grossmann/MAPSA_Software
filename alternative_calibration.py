@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1
+from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString
 
 import numpy as np
 
@@ -115,148 +115,174 @@ def take_data(config, rangeval, mapsa, buffnum, x1, y1):
 		x1.append(x)
 
 
-def plot_results(switch_pre_post):
-for i in range(0,no_mpa_light):
-	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
-	calibconfxmlroot	=	calibconfsxmlroot[i]
-	xdvals.append(0.)
-	c1.cd(i+1)
-	thdacv = []
-	yarr =  np.array(y1[i])
-	linearr.append([])
-	gr1 = []
-	lines = []
-	fitfuncarr.append([])
-	fitfuncs = []
-	fitparameterarray.append([])
-	fitparams = []
-	yarrv.append(yarr)
-	stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
-	# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
-	for iy1 in range(0,len(yarr[0,:])):
-		yvec = yarr[:,iy1]
-		if max(yvec)==0:
-			print "zero"
-		gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
-		gr1[iy1].Sumw2(ROOT.kFALSE)
-		for j in np.nditer(xvec):
-			gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
-		gr1[iy1].Sumw2(ROOT.kTRUE)
-		color=iy1%9+1
-		gr1[iy1].SetLineColor(color)
-		gr1[iy1].SetMarkerColor(color)
-		gr1[iy1].SetFillColor(color)
-		gr1[iy1].SetLineStyle(1)
-		gr1[iy1].SetLineWidth(1)
-		gr1[iy1].SetFillStyle(1)
-		gr1[iy1].SetMarkerStyle(1)
-		gr1[iy1].SetMarkerSize(.5)
-		gr1[iy1].SetMarkerStyle(20)
-		fitfuncs.append(TF1('gaus','gaus', 0,256))
-		fitfuncs[iy1].SetNpx(256)
-		fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
-		cloned = gr1[iy1].Clone()
-		cloned.SetDirectory(0)
-		fitparams.append([])
-		if gr1[iy1].GetMaximum()>1:
-			gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
-			fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
-		else:
-			for kk in range(0,7):
-				fitparams[iy1].append(0)
-		fitparameterarray[i].append(fitparams[iy1])
-		fitfuncarr[i].append(fitfuncs[iy1])
-		stackarr[i].Add(cloned)
-		if iy1==(len(yarr[0,:])-1):
-			stackarr[i].Draw('nostack hist e1 x0')
-			for fitfuncs1 in fitfuncarr[i]:
-				fitfuncs1.Draw("same")
-			for lines1 in linearr[i]:
-				lines1.Draw("same")
-			if(stackarr[i].GetMaximum()>1):
-				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
-				stackarr[i].SetMinimum(.1)
-				stackarr[i].SetMaximum(Maximum)
-				gPad.SetLogy()
-			gPad.Update()
-		gr1[iy1].SetLineColor(1)
-		gr1[iy1].SetMarkerColor(1)
-		gr1[iy1].SetFillColor(1)
-		gr1[iy1].Write(str(iy1))
-		fitfuncs[iy1].Write(str(iy1)+'fit')
-		#Get prevous trim value for the channel
-		if iy1%2==0:
-			prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-		else:
-			prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-		trimdac = 0
-		# Now we have the routine to find the midpoint
-		# dummy = []
-		dummy = traditional_trim(xvec,yvec,prev_trim,i)
-		xdacval = dummy[0]
-		trimdac = dummy[1]
-		xdvals[i]= xdacval
-		thdacv.append(trimdac)
-		lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
-		linearr[i].append(lines[iy1])
-		linearr[i][iy1].SetLineColor(2)
-	thdacvv.append(thdacv)
-	print thdacv
+def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev_fit_mat):
+	drawstr = ''
+	savestr =''
+	col=1
+	if switch_pre_post==0:
+		  savestr='pre'
+	else :
+		  savestr='post'
+		  col=2
+		  drawstr=' same'
 
-ave = 0
-for x in xdvals:
-	ave+=x/48.
-ave/=6.
-
-
-normgraph = TGraphErrors(no_mpa_light*48)
-meangraph =  TGraphErrors(no_mpa_light*48) 
-sigmagraph =  TGraphErrors(no_mpa_light*48) 
-chisquaregraph = TGraphErrors(no_mpa_light*48) 
-meanhist  = TH1F('meanhist','mean; DAC Value (1.456 mV); counts', 256,0,255)
-sigmahist = TH1F('sigmahist','sigma; DAC Value (1.456 mV), counts', 100,0,10)
-normgraph.SetTitle('Normalization; channel; Normalization')
-meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
-sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
-chisquaregraph.SetTitle('Chisquared/NDF;channel; Chisquared/NDF ')
-A = np.array(fitparameterarray)
-pointno = 0
-for j in range(0,A.shape[0]):
-	for j1 in range (0, A.shape[1]):
-		print A[j][j1][2]
-		normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
-		normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
-		meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
-		meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
-		sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
-		sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
-		chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
-		chisquaregraph.SetPointError(pointno, 0 ,0)
-		if(A[j][j1][1]>0):
-			meanhist.Fill(A[j][j1][1])
-		if(A[j][j1][2]>0):
-			sigmahist.Fill(A[j][j1][2])
-		pointno+=1
-c3.cd(1)
-normgraph.Draw('ap')
-c3.cd(2)
-meangraph.Draw('ap')
-c3.cd(3)
-sigmagraph.Draw('ap')
-c3.cd(4)
-chisquaregraph.Draw('ap')
-c3.cd(5)
-meanhist.Draw()
-c3.cd(6)
-sigmahist.Draw()
-c3.SaveAs('./plots/c3.root')
-
+	xvec =  np.array(x1, dtype='uint16')
+	xdacval = 0.
+	thdacvv = []
+	yarrv = []
+	xdvals = []
+	linearr = []
+	stackarr = []
+	fitfuncarr = []
+	fitparameterarray = []
+	c1 = TCanvas('c1', 'Pixel Monitor '+savestr, 700, 900)
+	c1.Divide(3,2)
+	for i in range(0,no_mpa_light):
+		backup=TFile("plots/backup_"+savestr+"Calibration_"+options.string+"_MPA"+str(i)+".root","recreate")
+		calibconfxmlroot	=	calibconfsxmlroot[i]
+		xdvals.append(0.)
+		c1.cd(i+1)
+		thdacv = []
+		yarr =  np.array(y1[i])
+		linearr.append([])
+		gr1 = []
+		lines = []
+		fitfuncarr.append([])
+		fitfuncs = []
+		fitparameterarray.append([])
+		fitparams = []
+		yarrv.append(yarr)
+		stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
+		# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
+		for iy1 in range(0,len(yarr[0,:])):
+			yvec = yarr[:,iy1]
+			if max(yvec)==0:
+				print "zero"
+			gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
+			gr1[iy1].Sumw2(ROOT.kFALSE)
+			for j in np.nditer(xvec):
+				gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
+			gr1[iy1].Sumw2(ROOT.kTRUE)
+			color=iy1%9+1
+			gr1[iy1].SetLineColor(color)
+			gr1[iy1].SetMarkerColor(color)
+			gr1[iy1].SetFillColor(color)
+			gr1[iy1].SetLineStyle(1)
+			gr1[iy1].SetLineWidth(1)
+			gr1[iy1].SetFillStyle(1)
+			gr1[iy1].SetMarkerStyle(1)
+			gr1[iy1].SetMarkerSize(.5)
+			gr1[iy1].SetMarkerStyle(20)
+			fitfuncs.append(TF1('gaus','gaus', 0,256))
+			fitfuncs[iy1].SetNpx(256)
+			fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
+			cloned = gr1[iy1].Clone()
+			cloned.SetDirectory(0)
+			fitparams.append([])
+			if gr1[iy1].GetMaximum()>1:
+				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
+				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
+				fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
+				fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
+				fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
+				fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
+				fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
+				fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
+			else:
+				for kk in range(0,7):
+					fitparams[iy1].append(0)
+			fitparameterarray[i].append(fitparams[iy1])
+			fitfuncarr[i].append(fitfuncs[iy1])
+			stackarr[i].Add(cloned)
+			if iy1==(len(yarr[0,:])-1):
+				stackarr[i].Draw('nostack hist e1 x0')
+				for fitfuncs1 in fitfuncarr[i]:
+					fitfuncs1.Draw("same")
+				for lines1 in linearr[i]:
+					lines1.Draw("same")
+				if(stackarr[i].GetMaximum()>1):
+					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
+					stackarr[i].SetMinimum(.1)
+					stackarr[i].SetMaximum(Maximum)
+					gPad.SetLogy()
+				gPad.Update()
+			gr1[iy1].SetLineColor(1)
+			gr1[iy1].SetMarkerColor(1)
+			gr1[iy1].SetFillColor(1)
+			gr1[iy1].Write(str(iy1))
+			fitfuncs[iy1].Write(str(iy1)+'fit')
+			#Get prevous trim value for the channel
+			if iy1%2==0:
+				prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
+			else:
+				prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
+			trimdac = 0
+			# Now we have the routine to find the midpoint
+			# dummy = []
+			dummy = traditional_trim(xvec,yvec,prev_trim,i)
+			xdacval = dummy[0]
+			trimdac = dummy[1]
+			xdvals[i]= xdacval
+			thdacv.append(trimdac)
+			lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
+			linearr[i].append(lines[iy1])
+			linearr[i][iy1].SetLineColor(2)
+		thdacvv.append(thdacv)
+		print thdacv
+	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.root', 'root')
+	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.pdf', 'pdf')
+	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.png', 'png')
+	backup.Close()
+	ave = 0
+	for x in xdvals:
+		ave+=x/48.
+	ave/=6.
+	objarr= []
+	normgraph      = TGraphErrors(no_mpa_light*48)
+	meangraph      = TGraphErrors(no_mpa_light*48) 
+	sigmagraph     = TGraphErrors(no_mpa_light*48) 
+	chisquaregraph = TGraphErrors(no_mpa_light*48)
+	mean_corrgraph = TGraphErrors(no_mpa_light*48)
+	meanhist       = TH1F('meanhist','Mean; DAC Value (1.456 mV); counts', 256,0,255)
+	sigmahist      = TH1F('sigmahist','Sigma; DAC Value (1.456 mV); counts', 100,0,10)
+	normgraph.SetTitle('Normalization; Channel; Normalization')
+	meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
+	sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
+	chisquaregraph.SetTitle('Chisquared/NDF; Channel; Chisquared/NDF ')
+	mean_corrgraph.SetTitle('Correction; chann; DAC Value (1.456 mV)')
+	objarr.append([normgraph,meangraph,sigmagraph,chisquaregraph,meanhist,sigmahist,mean_corrgraph])
+	A = np.array(fitparameterarray)
+	pointno = 0
+	for j in range(0,A.shape[0]):
+		for j1 in range (0, A.shape[1]):
+			print A[j][j1][2]
+			normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
+			normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
+			meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
+			meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
+			sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
+			sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
+			chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
+			chisquaregraph.SetPointError(pointno, 0 ,0)
+			if(switch_pre_post==1):
+				mean_corrgraph.SetPoint(pointno,pointno+1,A[j][j1][1]-prev_fit_mat[j][j1][1])
+				mean_corrgraph.SetPointError(pointno,0,A[j][j1][4]-prev_fit_mat[j][j1][4])
+			if(A[j][j1][1]>0):
+				meanhist.Fill(A[j][j1][1])
+			if(A[j][j1][2]>0):
+				sigmahist.Fill(A[j][j1][2])
+			pointno+=1
+	canvasind = 0
+	for objs in objarr[0]:
+		objs.SetLineColor(col)
+		objs.SetMarkerColor(col)
+		canvasind+=1
+		c3.cd(canvasind)
+		if (TString)(objs.GetClassName()).Contains("TGraph"):
+			objs.Draw('ap'+drawstr)
+		elif (TString)(objs.GetClassName()).Contains("TH1"):
+			objs.Draw(drawstr)
+	return A
 
 
 parser = OptionParser()
@@ -375,160 +401,161 @@ calibconfsxmlroot = config._confsxmlroot
 
 c3 = TCanvas('c3', 'Calibration Monitor', 700, 900)
 c3.Divide(3,2)
+plot_results(0, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev_fit_mat)
 		
-c1 = TCanvas('c1', 'Pixel Monitor', 700, 900)
-c1.Divide(3,2)
-#The Precalibration curves
-xvec =  np.array(x1, dtype='uint16')
-thdacvv = []
-yarrv = []
-xdvals = []
-linearr = []
-xdacval = 0.
-stackarr = []
-fitfuncarr = []
-fitparameterarray = []
+#c1 = TCanvas('c1', 'Pixel Monitor', 700, 900)
+#c1.Divide(3,2)
+##The Precalibration curves
+#xvec =  np.array(x1, dtype='uint16')
+#thdacvv = []
+#yarrv = []
+#xdvals = []
+#linearr = []
+#xdacval = 0.
+#stackarr = []
+#fitfuncarr = []
+#fitparameterarray = []
 
-for i in range(0,no_mpa_light):
-	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
-	calibconfxmlroot	=	calibconfsxmlroot[i]
-	xdvals.append(0.)
-	c1.cd(i+1)
-	thdacv = []
-	yarr =  np.array(y1[i])
-	linearr.append([])
-	gr1 = []
-	lines = []
-	fitfuncarr.append([])
-	fitfuncs = []
-	fitparameterarray.append([])
-	fitparams = []
-	yarrv.append(yarr)
-	stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
-	# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
-	for iy1 in range(0,len(yarr[0,:])):
-		yvec = yarr[:,iy1]
-		if max(yvec)==0:
-			print "zero"
-		gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
-		gr1[iy1].Sumw2(ROOT.kFALSE)
-		for j in np.nditer(xvec):
-			gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
-		gr1[iy1].Sumw2(ROOT.kTRUE)
-		color=iy1%9+1
-		gr1[iy1].SetLineColor(color)
-		gr1[iy1].SetMarkerColor(color)
-		gr1[iy1].SetFillColor(color)
-		gr1[iy1].SetLineStyle(1)
-		gr1[iy1].SetLineWidth(1)
-		gr1[iy1].SetFillStyle(1)
-		gr1[iy1].SetMarkerStyle(1)
-		gr1[iy1].SetMarkerSize(.5)
-		gr1[iy1].SetMarkerStyle(20)
-		fitfuncs.append(TF1('gaus','gaus', 0,256))
-		fitfuncs[iy1].SetNpx(256)
-		fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
-		cloned = gr1[iy1].Clone()
-		cloned.SetDirectory(0)
-		fitparams.append([])
-		if gr1[iy1].GetMaximum()>1:
-			gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
-			fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
-			fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
-			fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
-		else:
-			for kk in range(0,7):
-				fitparams[iy1].append(0)
-		fitparameterarray[i].append(fitparams[iy1])
-		fitfuncarr[i].append(fitfuncs[iy1])
-		stackarr[i].Add(cloned)
-		if iy1==(len(yarr[0,:])-1):
-			stackarr[i].Draw('nostack hist e1 x0')
-			for fitfuncs1 in fitfuncarr[i]:
-				fitfuncs1.Draw("same")
-			for lines1 in linearr[i]:
-				lines1.Draw("same")
-			if(stackarr[i].GetMaximum()>1):
-				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
-				stackarr[i].SetMinimum(.1)
-				stackarr[i].SetMaximum(Maximum)
-				gPad.SetLogy()
-			gPad.Update()
-		gr1[iy1].SetLineColor(1)
-		gr1[iy1].SetMarkerColor(1)
-		gr1[iy1].SetFillColor(1)
-		gr1[iy1].Write(str(iy1))
-		fitfuncs[iy1].Write(str(iy1)+'fit')
-		#Get prevous trim value for the channel
-		if iy1%2==0:
-			prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-		else:
-			prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-		trimdac = 0
-		# Now we have the routine to find the midpoint
-		# dummy = []
-		dummy = traditional_trim(xvec,yvec,prev_trim,i)
-		xdacval = dummy[0]
-		trimdac = dummy[1]
-		xdvals[i]= xdacval
-		thdacv.append(trimdac)
-		lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
-		linearr[i].append(lines[iy1])
-		linearr[i][iy1].SetLineColor(2)
-	thdacvv.append(thdacv)
-	print thdacv
+#for i in range(0,no_mpa_light):
+	#backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
+	#calibconfxmlroot	=	calibconfsxmlroot[i]
+	#xdvals.append(0.)
+	#c1.cd(i+1)
+	#thdacv = []
+	#yarr =  np.array(y1[i])
+	#linearr.append([])
+	#gr1 = []
+	#lines = []
+	#fitfuncarr.append([])
+	#fitfuncs = []
+	#fitparameterarray.append([])
+	#fitparams = []
+	#yarrv.append(yarr)
+	#stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
+	## hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
+	#for iy1 in range(0,len(yarr[0,:])):
+		#yvec = yarr[:,iy1]
+		#if max(yvec)==0:
+			#print "zero"
+		#gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
+		#gr1[iy1].Sumw2(ROOT.kFALSE)
+		#for j in np.nditer(xvec):
+			#gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
+		#gr1[iy1].Sumw2(ROOT.kTRUE)
+		#color=iy1%9+1
+		#gr1[iy1].SetLineColor(color)
+		#gr1[iy1].SetMarkerColor(color)
+		#gr1[iy1].SetFillColor(color)
+		#gr1[iy1].SetLineStyle(1)
+		#gr1[iy1].SetLineWidth(1)
+		#gr1[iy1].SetFillStyle(1)
+		#gr1[iy1].SetMarkerStyle(1)
+		#gr1[iy1].SetMarkerSize(.5)
+		#gr1[iy1].SetMarkerStyle(20)
+		#fitfuncs.append(TF1('gaus','gaus', 0,256))
+		#fitfuncs[iy1].SetNpx(256)
+		#fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
+		#cloned = gr1[iy1].Clone()
+		#cloned.SetDirectory(0)
+		#fitparams.append([])
+		#if gr1[iy1].GetMaximum()>1:
+			#gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
+			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
+			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
+			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
+			#fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
+			#fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
+			#fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
+			#fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
+		#else:
+			#for kk in range(0,7):
+				#fitparams[iy1].append(0)
+		#fitparameterarray[i].append(fitparams[iy1])
+		#fitfuncarr[i].append(fitfuncs[iy1])
+		#stackarr[i].Add(cloned)
+		#if iy1==(len(yarr[0,:])-1):
+			#stackarr[i].Draw('nostack hist e1 x0')
+			#for fitfuncs1 in fitfuncarr[i]:
+				#fitfuncs1.Draw("same")
+			#for lines1 in linearr[i]:
+				#lines1.Draw("same")
+			#if(stackarr[i].GetMaximum()>1):
+				#Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
+				#stackarr[i].SetMinimum(.1)
+				#stackarr[i].SetMaximum(Maximum)
+				#gPad.SetLogy()
+			#gPad.Update()
+		#gr1[iy1].SetLineColor(1)
+		#gr1[iy1].SetMarkerColor(1)
+		#gr1[iy1].SetFillColor(1)
+		#gr1[iy1].Write(str(iy1))
+		#fitfuncs[iy1].Write(str(iy1)+'fit')
+		##Get prevous trim value for the channel
+		#if iy1%2==0:
+			#prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
+		#else:
+			#prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
+		#trimdac = 0
+		## Now we have the routine to find the midpoint
+		## dummy = []
+		#dummy = traditional_trim(xvec,yvec,prev_trim,i)
+		#xdacval = dummy[0]
+		#trimdac = dummy[1]
+		#xdvals[i]= xdacval
+		#thdacv.append(trimdac)
+		#lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
+		#linearr[i].append(lines[iy1])
+		#linearr[i][iy1].SetLineColor(2)
+	#thdacvv.append(thdacv)
+	#print thdacv
 
-ave = 0
-for x in xdvals:
-	ave+=x/48.
-ave/=6.
+#ave = 0
+#for x in xdvals:
+	#ave+=x/48.
+#ave/=6.
 
 
-normgraph = TGraphErrors(no_mpa_light*48)
-meangraph =  TGraphErrors(no_mpa_light*48) 
-sigmagraph =  TGraphErrors(no_mpa_light*48) 
-chisquaregraph = TGraphErrors(no_mpa_light*48) 
-meanhist  = TH1F('meanhist','mean; DAC Value (1.456 mV); counts', 256,0,255)
-sigmahist = TH1F('sigmahist','sigma; DAC Value (1.456 mV), counts', 100,0,10)
-normgraph.SetTitle('Normalization; channel; Normalization')
-meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
-sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
-chisquaregraph.SetTitle('Chisquared/NDF;channel; Chisquared/NDF ')
-A = np.array(fitparameterarray)
-pointno = 0
-for j in range(0,A.shape[0]):
-	for j1 in range (0, A.shape[1]):
-		print A[j][j1][2]
-		normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
-		normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
-		meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
-		meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
-		sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
-		sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
-		chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
-		chisquaregraph.SetPointError(pointno, 0 ,0)
-		if(A[j][j1][1]>0):
-			meanhist.Fill(A[j][j1][1])
-		if(A[j][j1][2]>0):
-			sigmahist.Fill(A[j][j1][2])
-		pointno+=1
-c3.cd(1)
-normgraph.Draw('ap')
-c3.cd(2)
-meangraph.Draw('ap')
-c3.cd(3)
-sigmagraph.Draw('ap')
-c3.cd(4)
-chisquaregraph.Draw('ap')
-c3.cd(5)
-meanhist.Draw()
-c3.cd(6)
-sigmahist.Draw()
-c3.SaveAs('./plots/c3.root')
+#normgraph = TGraphErrors(no_mpa_light*48)
+#meangraph =  TGraphErrors(no_mpa_light*48) 
+#sigmagraph =  TGraphErrors(no_mpa_light*48) 
+#chisquaregraph = TGraphErrors(no_mpa_light*48) 
+#meanhist  = TH1F('meanhist','mean; DAC Value (1.456 mV); counts', 256,0,255)
+#sigmahist = TH1F('sigmahist','sigma; DAC Value (1.456 mV), counts', 100,0,10)
+#normgraph.SetTitle('Normalization; channel; Normalization')
+#meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
+#sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
+#chisquaregraph.SetTitle('Chisquared/NDF;channel; Chisquared/NDF ')
+#A = np.array(fitparameterarray)
+#pointno = 0
+#for j in range(0,A.shape[0]):
+	#for j1 in range (0, A.shape[1]):
+		#print A[j][j1][2]
+		#normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
+		#normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
+		#meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
+		#meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
+		#sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
+		#sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
+		#chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
+		#chisquaregraph.SetPointError(pointno, 0 ,0)
+		#if(A[j][j1][1]>0):
+			#meanhist.Fill(A[j][j1][1])
+		#if(A[j][j1][2]>0):
+			#sigmahist.Fill(A[j][j1][2])
+		#pointno+=1
+#c3.cd(1)
+#normgraph.Draw('ap')
+#c3.cd(2)
+#meangraph.Draw('ap')
+#c3.cd(3)
+#sigmagraph.Draw('ap')
+#c3.cd(4)
+#chisquaregraph.Draw('ap')
+#c3.cd(5)
+#meanhist.Draw()
+#c3.cd(6)
+#sigmahist.Draw()
+#c3.SaveAs('./plots/c3.root')
 
 offset = []
 avearr = []
