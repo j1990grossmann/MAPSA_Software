@@ -84,6 +84,35 @@ def new_trim( xvec, yvec, prev_trim, i):
 		print "UNTRIMMED"
 	return (xdacval,trimdac)
 
+def take_data(config, rangeval, mapsa, buffnum, x1, y1):
+	count_arr=np.zeros((no_mpa_light,256,48))
+	
+	for xx in range(0,256):
+		x = xx
+		if x%options.res!=0:
+			continue
+		if x%10==0:
+			print "THDAC " + str(x)
+
+		config.modifyperiphery('THDAC',[x]*6)
+		config.upload()
+		config.write()
+		for z in range (0,rangeval):
+			mapsa.daq().Sequencer_init(smode,sdur)
+			pix,mem = mapsa.daq().read_data(buffnum)
+			ipix=0
+			for p in pix:
+				p.pop(0)
+				p.pop(0)
+				count_arr[ipix][x]=count_arr[ipix][x]+np.array(array('d',p))
+				# if (x==75 and ipix==0):
+				# 	print ipix
+				# 	print count_arr[ipix][x]
+				if z ==(rangeval-1):
+					y1.append([])
+					y1[ipix].append(array('d',count_arr[ipix][x]))
+				ipix+=1
+		x1.append(x)
 
 
 
@@ -193,47 +222,20 @@ confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0
 config.modifyfull(confdict) 
 
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
+
 x1 = array('d')
 y1 = []
-
-
 rangeval = options.k_reps
-count_arr=np.zeros((no_mpa_light,256,48))
-for xx in range(0,256):
-	x = xx
-	if x%options.res!=0:
-		continue
-	if x%10==0:
-		print "THDAC " + str(x)
-
-	config.modifyperiphery('THDAC',[x]*6)
-	config.upload()
-	config.write()
-	for z in range (0,rangeval):
-		mapsa.daq().Sequencer_init(smode,sdur)
-		pix,mem = mapsa.daq().read_data(buffnum)
-		ipix=0
-		for p in pix:
-			p.pop(0)
-			p.pop(0)
-			count_arr[ipix][x]=count_arr[ipix][x]+np.array(array('d',p))
-			# if (x==75 and ipix==0):
-			# 	print ipix
-			# 	print count_arr[ipix][x]
-			if z ==(rangeval-1):
-				y1.append([])
-				y1[ipix].append(array('d',count_arr[ipix][x]))
-			ipix+=1
-	x1.append(x)
+# Take data now 
+take_data(config, rangeval, mapsa, buffnum, x1, y1)
 	
 calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
-
-c3 = TCanvas('c3', '', 700, 900)
+c3 = TCanvas('c3', 'Calibration Monitor', 700, 900)
 c3.Divide(3,2)
 		
-c1 = TCanvas('c1', '', 700, 900)
+c1 = TCanvas('c1', 'Pixel Monitor', 700, 900)
 c1.Divide(3,2)
 #The Precalibration curves
 xvec =  np.array(x1, dtype='uint16')
@@ -480,38 +482,8 @@ config1.write()
 
 x1 = array('d')
 y1 = []
-for x in range(0,256):
-			if x%options.res!=0:
-				continue
-			if x%10==0:
-				print "THDAC " + str(x)
 
-			config1.modifyperiphery('THDAC',[x]*6)
-			config1.upload()
-			config1.write()
-	
-
-
-
-
-
-			mapsa.daq().Sequencer_init(smode,sdur)
-			pix,mem = mapsa.daq().read_data(buffnum)
-			ipix=0
-			for p in pix:
-
-				p.pop(0)
-				p.pop(0)
-				#print p
-				y1.append([])
-				y1[ipix].append(array('d',p))
-				# print str(p)
-
-				ipix+=1
-			x1.append(x)
-			
-	
-
+take_data(config, rangeval, mapsa, buffnum, x1, y1)
 
 c2 = TCanvas('c2', '', 700, 900)
 c2.Divide(3,2)
@@ -519,7 +491,6 @@ c2.Divide(3,2)
 xvec =  np.array(x1)
 yarrv = []
 gr2arr = []
-means = []
 for i in range(0,no_mpa_light):
 		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 		
@@ -527,7 +498,6 @@ for i in range(0,no_mpa_light):
 		yarr =  np.array(y1[i])
 		gr2arr.append([])
 		gr2 = []
-		means.append(0.)
 		yarrv.append(yarr)
 		for iy1 in range(0,len(yarr[0,:])):
 			yvec = yarr[:,iy1]
@@ -549,10 +519,6 @@ for i in range(0,no_mpa_light):
 				gr2[iy1].Write(str(iy1))
 			if(iy1==len(yarr[0,:])-1):
 				gPad.Update()
-			means[i]+=gr2[iy1].GetMean(1)
-print 'Means'
-for m in means:
-	print m/48.
 
 c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
 c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
