@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath
+from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1
 
 import numpy as np
 
@@ -19,24 +19,26 @@ from optparse import OptionParser
 
 
 
+scalefac = 1.456/3.75
 #The current fast trimming procedure
-def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval,i):
-	"This changes a passed list into this function"
+def traditional_trim( xvec, yvec, prev_trim, i):
+	"The traditional fast trimming algorithm, which looks for a center of gravity between the two nearest points to halfmax"
 	halfmax = max(yvec)/2.0
-	if i==0:
-		print yvec
-		print 'halfmax', halfmax
+	# if i==0:
+		# print yvec
+		# print 'halfmax', halfmax
 	maxbin = np.where(yvec==max(yvec))
 	for ibin in range(0,len(xvec)-1):		
 		xval = xvec[ibin]
 		xval1 = xvec[ibin+1]
 		yval = yvec[ibin]
 		yval1 = yvec[ibin+1]
-		#print "ibin " + str(ibin)
 		#if xdacval<1000:
 			#print "maxbin" + str(maxbin[0][0])
 			#print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 		if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
+			if i==0:
+				print "ibin " + str(ibin)
 			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
 			#print "ptrim " + str(prev_trim) 
 			#print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
@@ -45,15 +47,42 @@ def traditional_trim( xvec, yvec, prev_trim, trimdac, xdacval,i):
 			#else:
 			#	xdacval = xval1
 			#print "xdacval " + str(xdacval)
-			trimdac = 31 + prev_trim - int(round(xdacval*1.456/3.75))
-			xdacval = xdacval*1.456/3.75
+			trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
+			xdacval = xdacval*scalefac
 			#print trimdac
 			break	
 		if ibin==len(xvec)-2:
+			xdacval = 0
 			trimdac = int(prev_trim)
 			print "UNTRIMMED"
 			break
-	return
+	return (xdacval,trimdac)
+
+def peak1d(y,i,j,count):
+	m=(i+j)/2
+	if y[m-1]<y[m] and y[m+1]<y[m]:
+		return m
+	elif y[m]<=y[m-1]:
+		count+=1
+		return peak1d(y,i,m-1,count)
+	elif y[m]<=y[m+1]:
+		count+=1
+		return peak1d(y,m+1, j,count)
+	elif count ==255:
+		return 0
+
+
+def new_trim( xvec, yvec, prev_trim, i):
+	"The new trimming algorithm, which uses the divide and conquer algorithm"
+	count = 0
+	xdacval = peak1d(yvec,0,256,count)
+	if xdacval > 0:
+		trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
+		xdacval = xdacval*scalefac
+	else:
+		trimdac = int(prev_trim)
+		print "UNTRIMMED"
+	return (xdacval,trimdac)
 
 
 
@@ -159,7 +188,8 @@ config = mapsa.config(Config=1,string='default')
 config.upload()
 
 
-confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
+# confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
+confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6}
 config.modifyfull(confdict) 
 
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
@@ -187,9 +217,9 @@ for xx in range(0,256):
 			p.pop(0)
 			p.pop(0)
 			count_arr[ipix][x]=count_arr[ipix][x]+np.array(array('d',p))
-			if (x==75 and ipix==0):
-				print ipix
-				print count_arr[ipix][x]
+			# if (x==75 and ipix==0):
+			# 	print ipix
+			# 	print count_arr[ipix][x]
 			if z ==(rangeval-1):
 				y1.append([])
 				y1[ipix].append(array('d',count_arr[ipix][x]))
@@ -201,10 +231,10 @@ calibconfsxmlroot = config._confsxmlroot
 
 
 c3 = TCanvas('c3', '', 700, 900)
-c3.Divide(2,3)
+c3.Divide(3,2)
 		
 c1 = TCanvas('c1', '', 700, 900)
-c1.Divide(2,3)
+c1.Divide(3,2)
 #The Precalibration curves
 xvec =  np.array(x1, dtype='uint16')
 thdacvv = []
@@ -213,6 +243,9 @@ xdvals = []
 linearr = []
 xdacval = 0.
 stackarr = []
+fitfuncarr = []
+fitparameterarray = []
+
 for i in range(0,no_mpa_light):
 	backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
 	calibconfxmlroot	=	calibconfsxmlroot[i]
@@ -223,6 +256,10 @@ for i in range(0,no_mpa_light):
 	linearr.append([])
 	gr1 = []
 	lines = []
+	fitfuncarr.append([])
+	fitfuncs = []
+	fitparameterarray.append([])
+	fitparams = []
 	yarrv.append(yarr)
 	stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
 	# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
@@ -245,13 +282,32 @@ for i in range(0,no_mpa_light):
 		gr1[iy1].SetMarkerStyle(1)
 		gr1[iy1].SetMarkerSize(.5)
 		gr1[iy1].SetMarkerStyle(20)
+		fitfuncs.append(TF1('gaus','gaus', 0,256))
+		fitfuncs[iy1].SetNpx(256)
+		fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
 		cloned = gr1[iy1].Clone()
 		cloned.SetDirectory(0)
+		fitparams.append([])
+		if gr1[iy1].GetMaximum()>1:
+			gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
+			fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
+			fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
+			fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
+			fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
+			fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
+			fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
+			fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
+		else:
+			for kk in range(0,7):
+				fitparams[iy1].append(0)
+		fitparameterarray[i].append(fitparams[iy1])
+		fitfuncarr[i].append(fitfuncs[iy1])
 		stackarr[i].Add(cloned)
 		if iy1==(len(yarr[0,:])-1):
 			stackarr[i].Draw('nostack hist e1 x0')
+			for fitfuncs1 in fitfuncarr[i]:
+				fitfuncs1.Draw("same")
 			for lines1 in linearr[i]:
-				#for j in np.nditer(xvec):
 				lines1.Draw("same")
 			if(stackarr[i].GetMaximum()>1):
 				Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
@@ -263,6 +319,7 @@ for i in range(0,no_mpa_light):
 		gr1[iy1].SetMarkerColor(1)
 		gr1[iy1].SetFillColor(1)
 		gr1[iy1].Write(str(iy1))
+		fitfuncs[iy1].Write(str(iy1)+'fit')
 		#Get prevous trim value for the channel
 		if iy1%2==0:
 			prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
@@ -270,10 +327,13 @@ for i in range(0,no_mpa_light):
 			prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
 		trimdac = 0
 		# Now we have the routine to find the midpoint
-		traditional_trim(xvec,yvec,prev_trim,trimdac,xdacval,i)
-		xdvals[i]=xdacval
+		# dummy = []
+		dummy = traditional_trim(xvec,yvec,prev_trim,i)
+		xdacval = dummy[0]
+		trimdac = dummy[1]
+		xdvals[i]= xdacval
 		thdacv.append(trimdac)
-		lines.append(TLine(xdacval,.1,xdacval,cloned.GetMaximum()))
+		lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
 		linearr[i].append(lines[iy1])
 		linearr[i][iy1].SetLineColor(2)
 	thdacvv.append(thdacv)
@@ -284,6 +344,48 @@ for x in xdvals:
 	ave+=x/48.
 ave/=6.
 
+
+normgraph = TGraphErrors(no_mpa_light*48)
+meangraph =  TGraphErrors(no_mpa_light*48) 
+sigmagraph =  TGraphErrors(no_mpa_light*48) 
+chisquaregraph = TGraphErrors(no_mpa_light*48) 
+meanhist  = TH1F('meanhist','mean; DAC Value (1.456 mV); counts', 256,0,255)
+sigmahist = TH1F('sigmahist','sigma; DAC Value (1.456 mV), counts', 100,0,10)
+normgraph.SetTitle('Normalization; channel; Normalization')
+meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
+sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
+chisquaregraph.SetTitle('Chisquared/NDF;channel; Chisquared/NDF ')
+A = np.array(fitparameterarray)
+pointno = 0
+for j in range(0,A.shape[0]):
+	for j1 in range (0, A.shape[1]):
+		print A[j][j1][2]
+		normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
+		normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
+		meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
+		meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
+		sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
+		sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
+		chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
+		chisquaregraph.SetPointError(pointno, 0 ,0)
+		if(A[j][j1][1]>0):
+			meanhist.Fill(A[j][j1][1])
+		if(A[j][j1][2]>0):
+			sigmahist.Fill(A[j][j1][2])
+		pointno+=1
+c3.cd(1)
+normgraph.Draw('ap')
+c3.cd(2)
+meangraph.Draw('ap')
+c3.cd(3)
+sigmagraph.Draw('ap')
+c3.cd(4)
+chisquaregraph.Draw('ap')
+c3.cd(5)
+meanhist.Draw()
+c3.cd(6)
+sigmahist.Draw()
+c3.SaveAs('./plots/c3.root')
 
 offset = []
 avearr = []
@@ -297,15 +399,15 @@ for i in range(0,no_mpa_light):
 	avearr.append(ave15)
 	mpacorr.append(xdvals[i]/48.-ave)
 	
-#print 'average correction'
-#print avearr
-#print mpacorr
+print 'average correction'
+print avearr
+print mpacorr
 for i in range(0,no_mpa_light):
 	thdacv = thdacvv[i]
 	range1 = min(thdacv)	
 	range2 = max(thdacv)	
 	offset.append(15-int(round(avearr[i]+mpacorr[i])))
-#print offset
+print offset
 
 thdacvvorg = []
 cols = [[],[],[],[],[],[]]
@@ -337,6 +439,7 @@ for iy1 in range(0,len(yarrv[0][0,:])):
 c1.Print('plots/Scurve_Calibration'+options.string+'_pre.root', 'root')
 c1.Print('plots/Scurve_Calibration'+options.string+'_pre.pdf', 'pdf')
 c1.Print('plots/Scurve_Calibration'+options.string+'_pre.png', 'png')
+
 config.modifyperiphery('THDAC',[100]*6)
 #config.upload()
 #config.write()
@@ -411,7 +514,7 @@ for x in range(0,256):
 
 
 c2 = TCanvas('c2', '', 700, 900)
-c2.Divide(2,3)
+c2.Divide(3,2)
 
 xvec =  np.array(x1)
 yarrv = []
@@ -454,12 +557,13 @@ for m in means:
 c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
 c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
 c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
-#c3 = TCanvas('c2', '', 700, 600)
-#gr2[4].Draw()
-#gPad.Update()
-#c3.Print('plots/test.pdf', 'pdf')
+c3.Print('plots/Scurve_Calibration1'+options.string+'_post.root', 'root')
+gr2[4].Draw()
+gPad.Update()
+c3.Print('plots/test.pdf', 'pdf')
+
 print ""
 print "Done"
-
+	
 
 
