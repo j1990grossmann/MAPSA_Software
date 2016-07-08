@@ -8,7 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString
+from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString, TObject, TMultiGraph, TPaveText
 
 import numpy as np
 
@@ -20,7 +20,8 @@ from optparse import OptionParser
 
 
 scalefac = 1.456/3.75
-#The current fast trimming procedure
+
+#The current fast trimming procedure for data of one pixel
 def traditional_trim( xvec, yvec, prev_trim, i):
 	"The traditional fast trimming algorithm, which looks for a center of gravity between the two nearest points to halfmax"
 	halfmax = max(yvec)/2.0
@@ -37,8 +38,8 @@ def traditional_trim( xvec, yvec, prev_trim, i):
 			#print "maxbin" + str(maxbin[0][0])
 			#print "iy1 "+str(iy1)+" ibin " + str(ibin) + " xdacval "+ str(xdacval)
 		if (yval1-halfmax)<0.0 and ibin>maxbin[0][0]:
-			if i==0:
-				print "ibin " + str(ibin)
+			# if i==0:
+				# print "ibin " + str(ibin)
 			xdacval = (abs(yval-halfmax)*xval + abs(yval1-halfmax)*xval1)/(abs(yval-halfmax) + abs(yval1-halfmax))
 			#print "ptrim " + str(prev_trim) 
 			#print "halfmax " +  str(halfmax) + " xvec " + str(xvec[maxbin])
@@ -72,10 +73,27 @@ def peak1d(y,i,j,count):
 		return 0
 
 
+def new_trim1( xvec, yvec, prev_trim, i, mean):
+	"The new trimming algorithm, which uses the divide and conquer algorithm"
+	count = 0
+	# xdacval = peak1d(yvec,0,256,count)
+	# xdacval = (np.where(yvec==max(yvec)))[0][0]
+	# xdacval = ROOT.TMath.Median(256,array('d',xvec),array('d',yvec))
+	xdacval=mean
+	if xdacval > 0:
+		trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
+		xdacval = xdacval*scalefac
+	else:
+		trimdac = int(prev_trim)
+		print "UNTRIMMED"
+	return (xdacval,trimdac)
+
 def new_trim( xvec, yvec, prev_trim, i):
 	"The new trimming algorithm, which uses the divide and conquer algorithm"
 	count = 0
-	xdacval = peak1d(yvec,0,256,count)
+	# xdacval = peak1d(yvec,0,256,count)
+	# xdacval = (np.where(yvec==max(yvec)))[0][0]
+	xdacval = ROOT.TMath.Median(256,array('d',xvec),array('d',yvec))
 	if xdacval > 0:
 		trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
 		xdacval = xdacval*scalefac
@@ -115,8 +133,8 @@ def take_data(config, rangeval, mapsa, buffnum, x1, y1):
 		x1.append(x)
 
 
-def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev_fit_mat):
-	drawstr = ''
+def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit_mat):
+	drawstr = ""
 	savestr =''
 	col=1
 	if switch_pre_post==0:
@@ -124,7 +142,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 	else :
 		  savestr='post'
 		  col=2
-		  drawstr=' same'
+		  drawstr=" same"
 
 	xvec =  np.array(x1, dtype='uint16')
 	xdacval = 0.
@@ -179,6 +197,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 			cloned = gr1[iy1].Clone()
 			cloned.SetDirectory(0)
 			fitparams.append([])
+			mean=0
 			if gr1[iy1].GetMaximum()>1:
 				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
@@ -188,6 +207,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 				fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
 				fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
 				fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
+				mean=fitfuncs[iy1].GetParameter(1)
 			else:
 				for kk in range(0,7):
 					fitparams[iy1].append(0)
@@ -198,8 +218,8 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 				stackarr[i].Draw('nostack hist e1 x0')
 				for fitfuncs1 in fitfuncarr[i]:
 					fitfuncs1.Draw("same")
-				for lines1 in linearr[i]:
-					lines1.Draw("same")
+				# for lines1 in linearr[i]:
+					# lines1.Draw("same")
 				if(stackarr[i].GetMaximum()>1):
 					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
 					stackarr[i].SetMinimum(.1)
@@ -219,7 +239,10 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 			trimdac = 0
 			# Now we have the routine to find the midpoint
 			# dummy = []
-			dummy = traditional_trim(xvec,yvec,prev_trim,i)
+			# dummy = traditional_trim(xvec,yvec,prev_trim,i)
+			dummy = new_trim1(xvec,yvec,prev_trim,i,mean)
+			# xdacval = dummy[0]
+			# trimdac = dummy[1]
 			xdacval = dummy[0]
 			trimdac = dummy[1]
 			xdvals[i]= xdacval
@@ -228,26 +251,27 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 			linearr[i].append(lines[iy1])
 			linearr[i][iy1].SetLineColor(2)
 		thdacvv.append(thdacv)
-		print thdacv
-	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.root', 'root')
-	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.pdf', 'pdf')
-	c1.Print('plots/Scurve_Calibration'+options.string+'_'+savestr+'.png', 'png')
+		# print thdacv
+	c1.SaveAs('plots/Scurve_Calibration'+options.string+'_'+savestr+'.root', 'root')
+	c1.SaveAs('plots/Scurve_Calibration'+options.string+'_'+savestr+'.pdf', 'pdf')
+	c1.SaveAs('plots/Scurve_Calibration'+options.string+'_'+savestr+'.png', 'png')
 	backup.Close()
-	ave = 0
-	for x in xdvals:
-		ave+=x/48.
-	ave/=6.
 	objarr= []
 	normgraph      = TGraphErrors(no_mpa_light*48)
 	meangraph      = TGraphErrors(no_mpa_light*48) 
 	sigmagraph     = TGraphErrors(no_mpa_light*48) 
 	chisquaregraph = TGraphErrors(no_mpa_light*48)
 	mean_corrgraph = TGraphErrors(no_mpa_light*48)
-	meanhist       = TH1F('meanhist','Mean; DAC Value (1.456 mV); counts', 256,0,255)
-	sigmahist      = TH1F('sigmahist','Sigma; DAC Value (1.456 mV); counts', 100,0,10)
+	normgraph      .SetName('normgraph_' +savestr)
+	meangraph      .SetName('meangraph_' +savestr)
+	sigmagraph     .SetName('sigmagraph_'+savestr)
+	chisquaregraph .SetName('chisquare_' +savestr)
+	mean_corrgraph .SetName('mean_corr_' +savestr)
+	meanhist       = TH1F('meanhist_'+savestr,'Mean DAC; DAC Value (1.456 mV); counts', 256,0,255)
+	sigmahist      = TH1F('sigmahist_'+savestr,'Sigma DAC; DAC Value (1.456 mV); counts', 250,0,10)
 	normgraph.SetTitle('Normalization; Channel; Normalization')
-	meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
-	sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
+	meangraph.SetTitle('Mean; Channel; DAC Value (1.456 mV)')
+	sigmagraph.SetTitle('Sigma; Channel; DAC Value (1.456 mV)')
 	chisquaregraph.SetTitle('Chisquared/NDF; Channel; Chisquared/NDF ')
 	mean_corrgraph.SetTitle('Correction; chann; DAC Value (1.456 mV)')
 	objarr.append([normgraph,meangraph,sigmagraph,chisquaregraph,meanhist,sigmahist,mean_corrgraph])
@@ -255,7 +279,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 	pointno = 0
 	for j in range(0,A.shape[0]):
 		for j1 in range (0, A.shape[1]):
-			print A[j][j1][2]
+			# print A[j][j1][2]
 			normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
 			normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
 			meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
@@ -272,18 +296,8 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev
 			if(A[j][j1][2]>0):
 				sigmahist.Fill(A[j][j1][2])
 			pointno+=1
-	canvasind = 0
-	for objs in objarr[0]:
-		objs.SetLineColor(col)
-		objs.SetMarkerColor(col)
-		canvasind+=1
-		c3.cd(canvasind)
-		if (TString)(objs.GetClassName()).Contains("TGraph"):
-			objs.Draw('ap'+drawstr)
-		elif (TString)(objs.GetClassName()).Contains("TH1"):
-			objs.Draw(drawstr)
-	return A
-
+	length = len(yarrv[0][0,:])
+	return thdacvv, xdvals, A, length, objarr
 
 parser = OptionParser()
 parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
@@ -384,8 +398,8 @@ config = mapsa.config(Config=1,string='default')
 config.upload()
 
 
-# confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
-confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6}
+confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
+# confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6}
 config.modifyfull(confdict) 
 
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
@@ -400,162 +414,20 @@ calibconfs = config._confs
 calibconfsxmlroot = config._confsxmlroot
 
 c3 = TCanvas('c3', 'Calibration Monitor', 700, 900)
-c3.Divide(3,2)
-plot_results(0, no_mpa_light,x1,y1,calibconfsxmlroot, c3, prev_fit_mat)
-		
-#c1 = TCanvas('c1', 'Pixel Monitor', 700, 900)
-#c1.Divide(3,2)
-##The Precalibration curves
-#xvec =  np.array(x1, dtype='uint16')
-#thdacvv = []
-#yarrv = []
-#xdvals = []
-#linearr = []
-#xdacval = 0.
-#stackarr = []
-#fitfuncarr = []
-#fitparameterarray = []
+c3.Divide(3,3)
+prev_fit_mat = []
+# Plot the Results 
+dummyarr = plot_results(0, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit_mat)
 
-#for i in range(0,no_mpa_light):
-	#backup=TFile("plots/backup_preCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
-	#calibconfxmlroot	=	calibconfsxmlroot[i]
-	#xdvals.append(0.)
-	#c1.cd(i+1)
-	#thdacv = []
-	#yarr =  np.array(y1[i])
-	#linearr.append([])
-	#gr1 = []
-	#lines = []
-	#fitfuncarr.append([])
-	#fitfuncs = []
-	#fitparameterarray.append([])
-	#fitparams = []
-	#yarrv.append(yarr)
-	#stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
-	## hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
-	#for iy1 in range(0,len(yarr[0,:])):
-		#yvec = yarr[:,iy1]
-		#if max(yvec)==0:
-			#print "zero"
-		#gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
-		#gr1[iy1].Sumw2(ROOT.kFALSE)
-		#for j in np.nditer(xvec):
-			#gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
-		#gr1[iy1].Sumw2(ROOT.kTRUE)
-		#color=iy1%9+1
-		#gr1[iy1].SetLineColor(color)
-		#gr1[iy1].SetMarkerColor(color)
-		#gr1[iy1].SetFillColor(color)
-		#gr1[iy1].SetLineStyle(1)
-		#gr1[iy1].SetLineWidth(1)
-		#gr1[iy1].SetFillStyle(1)
-		#gr1[iy1].SetMarkerStyle(1)
-		#gr1[iy1].SetMarkerSize(.5)
-		#gr1[iy1].SetMarkerStyle(20)
-		#fitfuncs.append(TF1('gaus','gaus', 0,256))
-		#fitfuncs[iy1].SetNpx(256)
-		#fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
-		#cloned = gr1[iy1].Clone()
-		#cloned.SetDirectory(0)
-		#fitparams.append([])
-		#if gr1[iy1].GetMaximum()>1:
-			#gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','same',0,256)
-			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
-			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
-			#fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
-			#fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
-			#fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
-			#fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
-			#fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
-		#else:
-			#for kk in range(0,7):
-				#fitparams[iy1].append(0)
-		#fitparameterarray[i].append(fitparams[iy1])
-		#fitfuncarr[i].append(fitfuncs[iy1])
-		#stackarr[i].Add(cloned)
-		#if iy1==(len(yarr[0,:])-1):
-			#stackarr[i].Draw('nostack hist e1 x0')
-			#for fitfuncs1 in fitfuncarr[i]:
-				#fitfuncs1.Draw("same")
-			#for lines1 in linearr[i]:
-				#lines1.Draw("same")
-			#if(stackarr[i].GetMaximum()>1):
-				#Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
-				#stackarr[i].SetMinimum(.1)
-				#stackarr[i].SetMaximum(Maximum)
-				#gPad.SetLogy()
-			#gPad.Update()
-		#gr1[iy1].SetLineColor(1)
-		#gr1[iy1].SetMarkerColor(1)
-		#gr1[iy1].SetFillColor(1)
-		#gr1[iy1].Write(str(iy1))
-		#fitfuncs[iy1].Write(str(iy1)+'fit')
-		##Get prevous trim value for the channel
-		#if iy1%2==0:
-			#prev_trim = int(calibconfxmlroot[(iy1)/2+1].find('TRIMDACL').text)
-		#else:
-			#prev_trim = int(calibconfxmlroot[(iy1+1)/2].find('TRIMDACR').text)
-		#trimdac = 0
-		## Now we have the routine to find the midpoint
-		## dummy = []
-		#dummy = traditional_trim(xvec,yvec,prev_trim,i)
-		#xdacval = dummy[0]
-		#trimdac = dummy[1]
-		#xdvals[i]= xdacval
-		#thdacv.append(trimdac)
-		#lines.append(TLine(xdacval/scalefac,.1,xdacval/scalefac,cloned.GetMaximum()))
-		#linearr[i].append(lines[iy1])
-		#linearr[i][iy1].SetLineColor(2)
-	#thdacvv.append(thdacv)
-	#print thdacv
+thdacvv = dummyarr[0]
+xdvals = dummyarr[1]
+prev_fit_mat = dummyarr[2]
+length = dummyarr[3]
 
-#ave = 0
-#for x in xdvals:
-	#ave+=x/48.
-#ave/=6.
-
-
-#normgraph = TGraphErrors(no_mpa_light*48)
-#meangraph =  TGraphErrors(no_mpa_light*48) 
-#sigmagraph =  TGraphErrors(no_mpa_light*48) 
-#chisquaregraph = TGraphErrors(no_mpa_light*48) 
-#meanhist  = TH1F('meanhist','mean; DAC Value (1.456 mV); counts', 256,0,255)
-#sigmahist = TH1F('sigmahist','sigma; DAC Value (1.456 mV), counts', 100,0,10)
-#normgraph.SetTitle('Normalization; channel; Normalization')
-#meangraph.SetTitle('Mean; channel; DAC Value (1.456 mV)')
-#sigmagraph.SetTitle('sigma; channel; DAC Value (1.456 mV)')
-#chisquaregraph.SetTitle('Chisquared/NDF;channel; Chisquared/NDF ')
-#A = np.array(fitparameterarray)
-#pointno = 0
-#for j in range(0,A.shape[0]):
-	#for j1 in range (0, A.shape[1]):
-		#print A[j][j1][2]
-		#normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
-		#normgraph.SetPointError(pointno, 0,A[j][j1][3])	  
-		#meangraph.SetPoint(pointno, pointno+1,A[j][j1][1])
-		#meangraph.SetPointError(pointno, 0,A[j][j1][4])	  
-		#sigmagraph.SetPoint(pointno, pointno+1,A[j][j1][2])
-		#sigmagraph.SetPointError(pointno, 0,A[j][j1][5])
-		#chisquaregraph.SetPoint(pointno, pointno+1,A[j][j1][6])
-		#chisquaregraph.SetPointError(pointno, 0 ,0)
-		#if(A[j][j1][1]>0):
-			#meanhist.Fill(A[j][j1][1])
-		#if(A[j][j1][2]>0):
-			#sigmahist.Fill(A[j][j1][2])
-		#pointno+=1
-#c3.cd(1)
-#normgraph.Draw('ap')
-#c3.cd(2)
-#meangraph.Draw('ap')
-#c3.cd(3)
-#sigmagraph.Draw('ap')
-#c3.cd(4)
-#chisquaregraph.Draw('ap')
-#c3.cd(5)
-#meanhist.Draw()
-#c3.cd(6)
-#sigmahist.Draw()
-#c3.SaveAs('./plots/c3.root')
+ave = 0
+for x in xdvals:
+	ave+=x/48.
+ave/=6.
 
 offset = []
 avearr = []
@@ -577,11 +449,12 @@ for i in range(0,no_mpa_light):
 	range1 = min(thdacv)	
 	range2 = max(thdacv)	
 	offset.append(15-int(round(avearr[i]+mpacorr[i])))
-print offset
+# print offset
 
 thdacvvorg = []
 cols = [[],[],[],[],[],[]]
-for iy1 in range(0,len(yarrv[0][0,:])):
+# for iy1 in range(0,len(yarrv[0][0,:])):
+for iy1 in range(0,length):
 	thdacvvorg.append(np.array(thdacvv)[:,iy1])
 	upldac = []
 	for i in range(0,no_mpa_light):
@@ -605,10 +478,6 @@ for iy1 in range(0,len(yarrv[0][0,:])):
 	else:
 		config.modifypixel((iy1+1)/2,'TRIMDACR',upldac)
 
-
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.root', 'root')
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.pdf', 'pdf')
-c1.Print('plots/Scurve_Calibration'+options.string+'_pre.png', 'png')
 
 config.modifyperiphery('THDAC',[100]*6)
 #config.upload()
@@ -653,49 +522,60 @@ y1 = []
 
 take_data(config, rangeval, mapsa, buffnum, x1, y1)
 
-c2 = TCanvas('c2', '', 700, 900)
-c2.Divide(3,2)
-
 xvec =  np.array(x1)
 yarrv = []
-gr2arr = []
 
-for i in range(0,no_mpa_light):
-		backup=TFile("plots/backup_postCalibration_"+options.string+"_MPA"+str(i)+".root","recreate")
-		
-		c2.cd(i+1)
-		yarr =  np.array(y1[i])
-		gr2arr.append([])
-		gr2 = []
-		yarrv.append(yarr)
-		for iy1 in range(0,len(yarr[0,:])):
-			yvec = yarr[:,iy1]
+dummyarr1 = plot_results(1, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit_mat)
 
-			gr2.append(TGraph(len(x1)-1,array('d',xvec),array('d',yvec)))
-			
-			if iy1==0:
+objarr=[]
+objarr.append([])
+objarr.append([])
+objarr[0]=dummyarr[4]
+objarr[1]=dummyarr1[4]
 
-				gr2[iy1].SetTitle(';DAC Value (1.456 mV);Counts (1/1.456)')
-				gr2arr[i].append(gr2[iy1])
-				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-				gr2arr[i][iy1].Draw()
-				gr2[iy1].Write(str(iy1))
+mglist = []
+stacklist = []
+listind=0
+stackind=0
 
-			else:
-				gr2arr[i].append(gr2[iy1])
-				gr2arr[i][iy1].SetLineColor(cols[i][iy1])
-				gr2arr[i][iy1].Draw('same')
-				gr2[iy1].Write(str(iy1))
-			if(iy1==len(yarr[0,:])-1):
-				gPad.Update()
+ROOT.gStyle.SetOptStat('1111')
+for index1,objs1 in enumerate(objarr[0]):
+	for index,objs in enumerate(objs1):
+		objs.SetLineColor(1)
+		objs.SetMarkerColor(1)
+		objs.SetMarkerStyle(6)
+		objarr[1][0][index].SetLineColor(2)  
+		objarr[1][0][index].SetMarkerColor(2)
+		objarr[1][0][index].SetMarkerStyle(6)
+		c3.cd(index+1)
+		print objs.GetName()
+		if objs.InheritsFrom("TGraph"):
+			mglist.append(TMultiGraph('mg_'+str(listind),objs.GetTitle()))
+			mglist[listind].Add(objarr[1][0][index],'p')
+			mglist[listind].Add(objs,'p')
+			mglist[listind].Draw('a')
+			listind+=1
+		elif objs.InheritsFrom("TH1"):
+			stacklist.append(THStack('stack_'+str(stackind),objs.GetTitle()))
+			stacklist[stackind].Add(objarr[1][0][index])
+			stacklist[stackind].Add(objs)
+			stacklist[stackind].Draw('nostack hist x0')
+			stackind+=1
+c3.Update()
+c3.cd(8)
+text = TPaveText(.05,.1,.95,.8);
+RMS1=ROOT.TMath.RMS(240,array('d',objarr[0][0][1].GetY()))
+RMS2=ROOT.TMath.RMS(240,array('d',objarr[1][0][1].GetY()))
+text.AddText("RMS (Mean) before calibration = "+str(RMS1));
+text.AddText("RMS (Mean) after  calibration = "+str(RMS2));
+text.Draw()
 
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.root', 'root')
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.pdf', 'pdf')
-c2.Print('plots/Scurve_Calibration'+options.string+'_post.png', 'png')
-c3.Print('plots/Scurve_Calibration1'+options.string+'_post.root', 'root')
-gr2[4].Draw()
-gPad.Update()
-c3.Print('plots/test.pdf', 'pdf')
+
+c3.Update()
+c3.Modified()
+c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.png' , 'png')
+c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.pdf' , 'pdf')
+c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.root', 'root')
 
 print ""
 print "Done"
