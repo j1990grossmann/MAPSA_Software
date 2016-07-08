@@ -76,9 +76,6 @@ def peak1d(y,i,j,count):
 def new_trim1( xvec, yvec, prev_trim, i, mean):
 	"The new trimming algorithm, which uses the divide and conquer algorithm"
 	count = 0
-	# xdacval = peak1d(yvec,0,256,count)
-	# xdacval = (np.where(yvec==max(yvec)))[0][0]
-	# xdacval = ROOT.TMath.Median(256,array('d',xvec),array('d',yvec))
 	xdacval=mean
 	if xdacval > 0:
 		trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
@@ -352,7 +349,7 @@ help	=	'k repetions of aquisitions with shutterduration s')
 
 (options, args) = parser.parse_args()
 
-
+datafile = open('convergence_data'+str(options.cal_type), 'w')
 
 a = uasic(connection="file://connections_test.xml",device="board0")
 mapsa = MAPSA(a)
@@ -395,11 +392,13 @@ SP=0
 
 nshut = 1
 
-if options.
-config = mapsa.config(Config=1,string='calibrated')
-
-config = mapsa.config(Config=1,string='default')
-config.upload()
+for iter in range (0,10):
+	config = mapsa.config(Config=1,string='default')
+	if(iter==0):
+		config = mapsa.config(Config=1,string='default')
+	else:
+		config = mapsa.config(Config=1,string='calibrated')
+	config.upload()
 
 
 confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
@@ -541,7 +540,7 @@ mglist = []
 stacklist = []
 listind=0
 stackind=0
-
+#Here we plot the Results of the calibration
 ROOT.gStyle.SetOptStat('1111')
 for index1,objs1 in enumerate(objarr[0]):
 	for index,objs in enumerate(objs1):
@@ -583,5 +582,6 @@ c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.png' , 'png')
 c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.pdf' , 'pdf')
 c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+'.root', 'root')
 
+datafile.close()
 print ""
 print "Done"
