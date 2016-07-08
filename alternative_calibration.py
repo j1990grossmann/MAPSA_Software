@@ -276,8 +276,10 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 	mean_corrgraph.SetTitle('Correction; chann; DAC Value (1.456 mV)')
 	objarr.append([normgraph,meangraph,sigmagraph,chisquaregraph,meanhist,sigmahist,mean_corrgraph])
 	A = np.array(fitparameterarray)
+	RMSMeanPerChip = []
 	pointno = 0
 	for j in range(0,A.shape[0]):
+		RMSMeanPerChip.append(ROOT.TMath.RMS(48,array('d',A[j,:,1])))
 		for j1 in range (0, A.shape[1]):
 			# print A[j][j1][2]
 			normgraph.SetPoint(pointno, pointno+1,A[j][j1][0])
@@ -297,7 +299,13 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				sigmahist.Fill(A[j][j1][2])
 			pointno+=1
 	length = len(yarrv[0][0,:])
-	return thdacvv, xdvals, A, length, objarr
+	RMSCorrection = []
+	if(switch_pre_post==1):
+		corr_arr = np.array(mean_corrgraph.GetY(),dtype='d')
+		for j in range (0, no_mpa_light):
+			# print j, array('d',corr_arr[(j*48):((j+1)*48):1])
+			RMSCorrection.append(ROOT.TMath.RMS(48,corr_arr[(j*48):((j+1)*48):1]))
+	return thdacvv, xdvals, A, length, objarr, RMSMeanPerChip, RMSCorrection
 
 parser = OptionParser()
 parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
@@ -339,7 +347,7 @@ help	=	'Type of fast calibration to be performed: 0 standard, 1 experimental')
 parser.add_option('-k', '--k_repetiions', metavar='REPETIONS', type='int', action='store',
 default	=	1,
 dest	=	'k_reps',
-help	=	'K repetions of aquisitions with shutterduration s')
+help	=	'k repetions of aquisitions with shutterduration s')
 
 
 (options, args) = parser.parse_args()
@@ -353,8 +361,9 @@ a._hw.dispatch()
 print "Running firmware version " + str(read)
 
 
-#a._hw.getNode("Control").getNode("logic_reset").write(0x1)
-#a._hw.dispatch()
+a._hw.getNode("Control").getNode("logic_reset").write(0x1)
+a._hw.dispatch()
+
 a._hw.getNode("Control").getNode("MPA_clock_enable").write(0x1)
 a._hw.dispatch()
 
@@ -369,19 +378,12 @@ sdel = 0xF
 slen = 0xF
 sdist = 0xFF
 
-
-
 dcindex=1
-
 buffnum=1
-
-
-
 	
 mpa = []  
 for i in range(1,no_mpa_light+1):
 		mpa.append(mapsa.getMPA(i))
-
 
 Confnum=1
 configarr = []
@@ -393,6 +395,8 @@ SP=0
 
 nshut = 1
 
+if options.
+config = mapsa.config(Config=1,string='calibrated')
 
 config = mapsa.config(Config=1,string='default')
 config.upload()
@@ -400,8 +404,7 @@ config.upload()
 
 confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
 # confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6}
-config.modifyfull(confdict) 
-
+config.modifyfull(confdict)
 mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
 
 x1 = array('d')
@@ -461,7 +464,6 @@ for iy1 in range(0,length):
 		thdacv = thdacvv[i]
 		upldac.append(thdacv[iy1]+offset[i])
 
-
 	for u in range(0,len(upldac)):
 		upldac[u] = max(0,upldac[u])
 		upldac[u] = min(31,upldac[u])
@@ -489,9 +491,7 @@ for i in range(0,no_mpa_light):
 	print "writing data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml"
 	xmlrootfile.write("data/Conf_calibrated_MPA"+str(i+1)+"_config1.xml")
 
-
 print "Testing Calibration"
-
 
 config1 = mapsa.config(Config=1,string='calibrated')
 config1.upload()
@@ -532,6 +532,10 @@ objarr.append([])
 objarr.append([])
 objarr[0]=dummyarr[4]
 objarr[1]=dummyarr1[4]
+print 'The RMS(Mean) per Chip'
+print dummyarr1[5]
+print 'The RMSCorrection(Mean) per Chip'
+print dummyarr1[6]
 
 mglist = []
 stacklist = []
@@ -564,6 +568,8 @@ for index1,objs1 in enumerate(objarr[0]):
 c3.Update()
 c3.cd(8)
 text = TPaveText(.05,.1,.95,.8);
+
+
 RMS1=ROOT.TMath.RMS(240,array('d',objarr[0][0][1].GetY()))
 RMS2=ROOT.TMath.RMS(240,array('d',objarr[1][0][1].GetY()))
 text.AddText("RMS (Mean) before calibration = "+str(RMS1));
