@@ -218,8 +218,8 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				stackarr[i].Draw('nostack hist e1 x0')
 				# for fitfuncs1 in fitfuncarr[i]:
 				# 	fitfuncs1.Draw("same")
-				for lines1 in linearr[i]:
-					lines1.Draw("same")
+				# for lines1 in linearr[i]:
+				# 	lines1.Draw("same")
 				if(stackarr[i].GetMaximum()>1):
 					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
 					stackarr[i].SetMinimum(.1)
