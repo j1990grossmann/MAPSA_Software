@@ -11,6 +11,7 @@ import ROOT
 from ROOT import TGraph,  TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString, TObject, TMultiGraph, TPaveText
 
 import numpy as np
+import time 
 
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import show, plot
@@ -115,6 +116,7 @@ def take_data(config, rangeval, mapsa, buffnum, x1, y1):
 		for z in range (0,rangeval):
 			mapsa.daq().Sequencer_init(smode,sdur)
 			pix,mem = mapsa.daq().read_data(buffnum)
+			# time.sleep(.1)
 			ipix=0
 			for p in pix:
 				p.pop(0)
@@ -221,7 +223,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				# for lines1 in linearr[i]:
 				# 	lines1.Draw("same")
 				if(stackarr[i].GetMaximum()>1):
-					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
+					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))-1))
 					stackarr[i].SetMinimum(.1)
 					stackarr[i].SetMaximum(Maximum)
 					gPad.SetLogy()
