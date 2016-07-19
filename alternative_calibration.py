@@ -197,7 +197,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 			cloned.SetDirectory(0)
 			fitparams.append([])
 			mean=0
-			if gr1[iy1].GetMaximum()<-1:
+			if gr1[iy1].GetMaximum()>1:
 				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','',0,256)
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
@@ -412,7 +412,7 @@ c3 = TCanvas('c3', 'Calibration Monitor', 700, 900)
 c3.Divide(3,3)
 
 iterarr=[]
-for it in range (0,1):
+for it in range (0,5):
 	confstr=''
 	if(it==0):
 		confstr='default'
