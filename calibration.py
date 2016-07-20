@@ -108,7 +108,7 @@ config.upload()
 confdict = {'OM':[3]*6,'RT':[0]*6,'SCW':[0]*6,'SH2':[0]*6,'SH1':[0]*6,'THDAC':[0]*6,'CALDAC':[options.charge]*6,'PML':[1]*6,'ARL':[1]*6,'CEL':[CE]*6,'CW':[0]*6,'PMR':[1]*6,'ARR':[1]*6,'CER':[CE]*6,'SP':[SP]*6,'SR':[1]*6,'TRIMDACL':[31]*6,'TRIMDACR':[31]*6}
 config.modifyfull(confdict) 
 
-mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,cal=CE)
+mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,CE)
 x1 = array('d')
 y1 = []
 for x in range(0,256):

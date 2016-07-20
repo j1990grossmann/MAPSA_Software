@@ -22,6 +22,7 @@ from optparse import OptionParser
 
 scalefac = 1.456/3.75
 
+
 #The current fast trimming procedure for data of one pixel
 def traditional_trim( xvec, yvec, prev_trim, i):
 	"The traditional fast trimming algorithm, which looks for a center of gravity between the two nearest points to halfmax"
@@ -56,38 +57,24 @@ def traditional_trim( xvec, yvec, prev_trim, i):
 		if ibin==len(xvec)-2:
 			xdacval = 0
 			trimdac = int(prev_trim)
-			print "UNTRIMMED"
+			# print "UNTRIMMED"
 			break
 	return (xdacval,trimdac)
 
-def peak1d(y,i,j,count):
-	m=(i+j)/2
-	if y[m-1]<y[m] and y[m+1]<y[m]:
-		return m
-	elif y[m]<=y[m-1]:
-		count+=1
-		return peak1d(y,i,m-1,count)
-	elif y[m]<=y[m+1]:
-		count+=1
-		return peak1d(y,m+1, j,count)
-	elif count ==255:
-		return 0
 
-
-def new_trim1( xvec, yvec, prev_trim, i, mean):
-	"The new trimming algorithm, which uses the divide and conquer algorithm"
-	count = 0
+def new_trim( xvec, yvec, prev_trim, i, mean):
+	"Trimming with the mean obtained by the LTS fit with gaussian"
 	xdacval=mean
 	if xdacval > 0:
 		trimdac = 31 + prev_trim - int(round(xdacval*scalefac))
 		xdacval = xdacval*scalefac
 	else:
 		trimdac = int(prev_trim)
-		print "UNTRIMMED"
+		# print "UNTRIMMED"
 	return (xdacval,trimdac)
 
-def new_trim( xvec, yvec, prev_trim, i):
-	"The new trimming algorithm, which uses the divide and conquer algorithm"
+def new_trim1( xvec, yvec, prev_trim, i):
+	"Trimming with the Median"
 	count = 0
 	# xdacval = peak1d(yvec,0,256,count)
 	# xdacval = (np.where(yvec==max(yvec)))[0][0]
@@ -97,7 +84,7 @@ def new_trim( xvec, yvec, prev_trim, i):
 		xdacval = xdacval*scalefac
 	else:
 		trimdac = int(prev_trim)
-		print "UNTRIMMED"
+		# print "UNTRIMMED"
 	return (xdacval,trimdac)
 
 def take_data(config, rangeval, mapsa, buffnum, x1, y1):
@@ -116,7 +103,9 @@ def take_data(config, rangeval, mapsa, buffnum, x1, y1):
 		for z in range (0,rangeval):
 			mapsa.daq().Sequencer_init(smode,sdur)
 			pix,mem = mapsa.daq().read_data(buffnum)
-			# time.sleep(.1)
+			# Here we wait for the shutter to close and add some extra 2 milliseconds
+			# time.sleep(sdur*25E-9+0.002)
+			time.sleep(0.002)
 			ipix=0
 			for p in pix:
 				p.pop(0)
@@ -173,8 +162,8 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 		# hstack = THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)')
 		for iy1 in range(0,len(yarr[0,:])):
 			yvec = yarr[:,iy1]
-			if max(yvec)==0:
-				print "zero"
+			# if max(yvec)==0:
+			# 	print "zero"
 			gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
 			gr1[iy1].Sumw2(ROOT.kFALSE)
 			for j in np.nditer(xvec):
@@ -198,7 +187,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 			fitparams.append([])
 			mean=0
 			if gr1[iy1].GetMaximum()>1:
-				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','',0,256)
+				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.9','',0,256)
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
@@ -223,11 +212,11 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				# for lines1 in linearr[i]:
 				# 	lines1.Draw("same")
 				if(stackarr[i].GetMaximum()>1):
-					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))-1))
+					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
 					stackarr[i].SetMinimum(.1)
 					stackarr[i].SetMaximum(Maximum)
 					gPad.SetLogy()
-				gPad.Update()
+					gPad.Update()
 			gr1[iy1].SetLineColor(1)
 			gr1[iy1].SetMarkerColor(1)
 			gr1[iy1].SetFillColor(1)
@@ -241,10 +230,14 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 			trimdac = 0
 			# Now we have the routine to find the midpoint
 			# dummy = []
-			dummy = traditional_trim(xvec,yvec,prev_trim,i)
-			# dummy = new_trim1(xvec,yvec,prev_trim,i,mean)
-			# xdacval = dummy[0]
-			# trimdac = dummy[1]
+			# dummy = traditional_trim(xvec,yvec,prev_trim,i)
+			if (options.cal_type==0):
+				dummy = traditional_trim(xvec,yvec,prev_trim,i)
+			elif (options.cal_type==1):
+				dummy = new_trim(xvec,yvec,prev_trim,i,mean)
+			elif (options.cal_type==2):
+				dummy = new_trim1(xvec,yvec,prev_trim,i,mean)
+
 			xdacval = dummy[0]
 			trimdac = dummy[1]
 			xdvals[i]= xdacval
@@ -303,10 +296,10 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				sigmahist.Fill(A[j][j1][2])
 			pointno+=1
 		tmpmeanarray = np.array(tmparr,dtype=np.float)
-		print tmpmeanarray
+		# print tmpmeanarray
 		# print tmpmeanarray.shape[0]
 		# tmpmeanarray.shape[]
-		print 'the array'
+		# print 'the array'
 		# print ROOT.TMath.RMS(48,tmpmeanarray)
 		RMSMeanPerChip.append(0)
 	length = len(yarrv[0][0,:])
@@ -315,7 +308,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 		corr_arr = np.array(mean_corrgraph.GetY(),dtype='d')
 		# print corr_arr
 		for j in range (0, no_mpa_light):
-			print j, array('d',corr_arr[(j*48):((j+1)*48):1])
+			# print j, array('d',corr_arr[(j*48):((j+1)*48):1])
  			RMSCorrection.append(ROOT.TMath.RMS(48,array('d',corr_arr[(j*48):((j+1)*48):1])))
 			# print ROOT.TMath.RMS(48,corr_arr[(j*48):((j+1)*48):1])
 	return thdacvv, xdvals, A, length, objarr, RMSMeanPerChip, RMSCorrection
@@ -327,7 +320,7 @@ dest	=	'setting',
 help	=	'settings ie default, calibration, testbeam etc')
 
 parser.add_option('-c', '--charge', metavar='F', type='int', action='store',
-default	=	70,
+default	=	0,
 dest	=	'charge',
 help	=	'Charge for caldac')
 
@@ -338,7 +331,7 @@ help	=	'shutter duration')
 
 
 parser.add_option('-n', '--number', metavar='F', type='int', action='store',
-default	=	0x5,
+default	=	0x0,
 dest	=	'number',
 help	=	'number of calstrobe pulses to send')
 
@@ -362,10 +355,19 @@ default	=	1,
 dest	=	'k_reps',
 help	=	'k repetions of aquisitions with shutterduration s')
 
+parser.add_option('-i', '--iterations', metavar='ITERATION', type='int', action='store',
+default	=	1,
+dest	=	'iteration',
+help	=	'iteraiont of calibration')
+
+parser.add_option('-p', '--pedestal', metavar='PEDESTAL', type='int', action='store',
+default	=	60,
+dest	=	'pedestal',
+help	=	'The target value for the pedestals')
 
 (options, args) = parser.parse_args()
 
-datafile = open('convergence_data'+str(options.cal_type), 'w')
+# datafile = open('convergence_data'+str(options.cal_type), 'w')
 
 a = uasic(connection="file://connections_test.xml",device="board0")
 mapsa = MAPSA(a)
@@ -406,13 +408,12 @@ else:
 	CE=0
 SP=0
 
-nshut = 1
 
 c3 = TCanvas('c3', 'Calibration Monitor', 700, 900)
 c3.Divide(3,3)
 
 iterarr=[]
-for it in range (0,5):
+for it in range (0,options.iteration):
 	confstr=''
 	if(it==0):
 		confstr='default'
@@ -460,27 +461,36 @@ for it in range (0,5):
 		ave15/=len(thdacvv[i])
 		avearr.append(ave15)
 		mpacorr.append(xdvals[i]/48.-ave)
-		
+	# ave_mean = np.mean(avearr,dtype=np.float64)
+	ave_mean = scalefac*(120-options.pedestal)
+	
+	print 'thdacvv'
+	print thdacvv
 	print 'average correction'
 	print avearr
 	print mpacorr
+	print 'xdvals'
+	print xdvals
+	# print 'ave mean'
+	# print ave_mean
+
+
 	for i in range(0,no_mpa_light):
 		thdacv = thdacvv[i]
 		range1 = min(thdacv)	
 		range2 = max(thdacv)	
-		offset.append(15-int(round(avearr[i]+mpacorr[i])))
-	# print offset
+		offset.append(15-int(round(ave_mean+mpacorr[i])))
+ 	print offset
 	
-	thdacvvorg = []
 	cols = [[],[],[],[],[],[]]
 	# for iy1 in range(0,len(yarrv[0][0,:])):
+	final_TRIMDAC=np.zeros((no_mpa_light*48))
 	for iy1 in range(0,length):
-		thdacvvorg.append(np.array(thdacvv)[:,iy1])
 		upldac = []
 		for i in range(0,no_mpa_light):
 			thdacv = thdacvv[i]
 			upldac.append(thdacv[iy1]+offset[i])
-	
+			final_TRIMDAC[iy1+i*48]=thdacv[iy1]+offset[i]
 		for u in range(0,len(upldac)):
 			upldac[u] = max(0,upldac[u])
 			upldac[u] = min(31,upldac[u])
@@ -490,13 +500,31 @@ for it in range (0,5):
 				cols[u].append(4)
 			else:
 				cols[u].append(1)
-		#print upldac
-	
+
+		# print 'upldac'
+		# print upldac
+				
 		if iy1%2==0:
 			config.modifypixel((iy1)/2+1,'TRIMDACL',upldac)
 		else:
 			config.modifypixel((iy1+1)/2,'TRIMDACR',upldac)
-	
+		if it==(options.iteration-1):
+			pmmask = []
+			for u in range(0,len(upldac)):
+				if upldac[u]==31:
+					print "upper TRIMDAC limit for Pixel {} MPA {} Mask this pixel".format(iy1,u)
+					pmmask.append(0)
+				elif upldac[u]==0:
+					print "lower TRIMDAC limit for Pixel {} MPA {} Mask this pixel".format(iy1,u)
+					pmmask.append(0)
+				else:
+					pmmask.append(1)
+			# Now Mask the pixel
+			if iy1%2==0:
+				config.modifypixel((iy1)/2+1,'PML',pmmask)
+			else:
+				config.modifypixel((iy1+1)/2,'PMR',pmmask)
+			
 	
 	config.modifyperiphery('THDAC',[100]*6)
 	#config.upload()
@@ -530,7 +558,6 @@ for it in range (0,5):
 		config1.modifypixel(x,'CER', [CE]*6)
 		config1.modifypixel(x,'SP',  [SP]*6) 
 		config1.modifypixel(x,'SR',  [1]*6) 
-	
 	config1.write()
 	
 	
@@ -549,10 +576,10 @@ for it in range (0,5):
 	objarr.append([])
 	objarr[0]=dummyarr[4]
 	objarr[1]=dummyarr1[4]
-	print 'The RMS(Mean) per Chip'
-	print dummyarr1[5]
-	print 'The RMSCorrection(Mean) per Chip'
-	print dummyarr1[6]
+	# print 'The RMS(Mean) per Chip'
+	# print dummyarr1[5]
+	# print 'The RMSCorrection(Mean) per Chip'
+	# print dummyarr1[6]
 	iterarr.append([it,dummyarr1[5],dummyarr1[6]])
 
 	mglist = []
@@ -570,7 +597,7 @@ for it in range (0,5):
 			objarr[1][0][index].SetMarkerColor(2)
 			objarr[1][0][index].SetMarkerStyle(6)
 			c3.cd(index+1)
-			print objs.GetName()
+			# print objs.GetName()
 			if objs.InheritsFrom("TGraph"):
 				mglist.append(TMultiGraph('mg_'+str(listind),objs.GetTitle()))
 				mglist[listind].Add(objarr[1][0][index],'p')
@@ -594,12 +621,20 @@ for it in range (0,5):
 	text.AddText("RMS (Mean) after  calibration = "+str(RMS2));
 	text.Draw()
 	
-	
+	c3.cd(9)
+	pixelvec  = np.linspace(1, 288, num=288)
+	TRIMDAC_graph  = TGraphErrors(no_mpa_light*48,pixelvec,final_TRIMDAC)
+	TRIMDAC_graph.SetTitle("TRIMDACMATRIX; channel; TRIMDACVAL (a.U)")
+	TRIMDAC_graph.SetMarkerStyle(6)
+	TRIMDAC_graph.SetMarkerColor(2)
+	TRIMDAC_graph.Draw("ap")
 	c3.Update()
 	c3.Modified()
+	time.sleep(0.5)
 	c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+str(it)+'.png' , 'png')
 	c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+str(it)+'.pdf' , 'pdf')
 	c3.SaveAs('plots/Scurve_Calibration'+options.string+'_results'+str(it)+'.root', 'root')
+	# clean up
 print 'quality of convergence'
 c4 = TCanvas('Convergence', 'Convergence',700, 900)
 tmgr = TMultiGraph('mgrms','Convergence; iteration; RMS(Mean)')
@@ -611,14 +646,14 @@ for jjj in range (0, 2*no_mpa_light):
 	grarr[jjj].SetMarkerStyle(20)
 	
 for jj in range (0, len(iterarr)):
-	print iterarr[jj][0]
+	# print iterarr[jj][0]
 	for idx, jjjj in enumerate(iterarr[jj][1]):
 		grarr[idx].SetPoint(iterarr[jj][0],iterarr[jj][0],jjjj)
-		print (idx, iterarr[jj][0], jjjj)
+		# print (idx, iterarr[jj][0], jjjj)
 	for idx, jjjj in enumerate(iterarr[jj][2]):
 		grarr[idx+no_mpa_light].SetPoint(iterarr[jj][0],iterarr[jj][0],jjjj)
-	print iterarr[jj][1]
-	print iterarr[jj][2]
+	# print iterarr[jj][1]
+	# print iterarr[jj][2]
 for jjj in range (0, 2*no_mpa_light):
 	if(jjj<no_mpa_light):
 		tmgr.Add(grarr[jjj],'p')
@@ -630,8 +665,9 @@ c4.cd(1)
 # tmgr.Draw('ap')
 # c4.cd(2)
 tmgr1.Draw('ap')
+c4.SaveAs("Caltype"+str(options.cal_type)+".root")
+c4.SaveAs("Caltype"+str(options.cal_type)+".pdf")
 
-c4.SaveAs("c4.root")
-datafile.close()
+# datafile.close()
 print ""
 print "Done"

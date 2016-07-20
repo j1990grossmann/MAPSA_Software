@@ -172,13 +172,13 @@ dest	=	'charge',
 help	=	'Charge for caldac')
 
 parser.add_option('-w', '--shutterdur', metavar='F', type='int', action='store',
-default	=	0xFFFF,
+default	=	0xFFFE,
 dest	=	'shutterdur',
 help	=	'shutter duration')
 
 
 parser.add_option('-n', '--number', metavar='F', type='int', action='store',
-default	=	0xFFF,
+default	=	0xFFE,
 dest	=	'number',
 help	=	'number of calstrobe pulses to send')
 
@@ -281,6 +281,6 @@ for it in range (0,5):
 	# Plot the Results 
 	dummyarr = plot_results(charge, no_mpa_light,x1,y1, c1, backup)
 backup.Close()
-	
+print ([31]*6)
 print ""
 print "Done"
