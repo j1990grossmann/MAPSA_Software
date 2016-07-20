@@ -17,6 +17,7 @@ class MPA_config:
 		self._Conf_busy    = self._Configuration.getNode("busy")
 
 		self._Memory_DataConf   = self._Configuration.getNode("Memory_DataConf")	
+		self._Memory_OutConf   = self._Configuration.getNode("Memory_OutConf")	
 
 		self.xmlfile = xmlfile
 		self.xmltree = ET.parse(self.xmlfile)
@@ -87,6 +88,13 @@ class MPA_config:
 		self._spi_wait()
 	
 		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
+		self._spi_wait()
+		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
+		self._spi_wait()
+		readback = self._Memory_OutConf.getNode("MPA"+str(dcindex)).getNode("config_1").readBlock(25)
+		if (show):
+			print "readback"
+			print readback
 		#self._hw.getNode("Configuration").getNode("num_MPA").write(0x1)
 		#self._hw.dispatch()
 		#self._spi_wait()
