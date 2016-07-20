@@ -67,18 +67,14 @@ class MAPSA_config:
 			#print busy
 
 	def upload(self,show = 0):
+		curr_mat = []
 		for conf in self._confs:
-			conf.upload(show=0,Config=self._Config)
+			curr_mat.append(conf.upload(show ,Config=self._Config))
+		return curr_mat
 	def modifyperiphery(self,what, value):
 
 		impa=0
 		for conf in self._confs:
-
-# #######FOR JUMPERS##########
-# 			if impa==4:
-# 				break
-# 			conf.modifyperiphery(what, value[impa+1])
-# #################
 
 
 			conf.modifyperiphery(what, value[impa])
@@ -91,11 +87,6 @@ class MAPSA_config:
 		impa=0
 		for conf in self._confs:
 
-# #######FOR JUMPERS##########
-# 			if impa==4:
-# 				break
-# 			conf.modifypixel(which, what, value[impa+1])
-# #################
 			conf.modifypixel(which, what, value[impa])
 			conf.upload(show=0,Config=self._Config)
 

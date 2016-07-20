@@ -1,6 +1,7 @@
 
 from classes import *
 import sys, select, os, array
+import numpy as np
 from array import array
 #import ROOT
 #from ROOT import TGraph
@@ -41,15 +42,24 @@ print "num_MPA " + str(read)
 mpa_number = options.mpa
 if mpa_number ==0:
 	config = mapsa.config(Config=options.number,string=options.setting)
-	config.upload(show = 0)
+	cur = config.upload()
+	print "current config"
+	print cur
 	config.write()
 	print ""
 	print "checking config"
+	prev = []
 	for i in range(1,7):
 		print i
-       		read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").read()	
+		print "read the other end of the spi daisy chain"
+		# print type(a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1")), "------------------------"
+		read = []
+       		# read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").read(i)	
+       		read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").readBlock(25)
 		a._hw.dispatch()
-		print read
+		# print read
+		prev.append(array('i',read))
+	print prev
 else:
 	mpa_index = mpa_number-1
 	
