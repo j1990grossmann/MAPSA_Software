@@ -99,9 +99,6 @@ class MPA_config:
 			print tmp
 			print "the comparison"
 			print (set(cur)==set(tmp))
-		#self._hw.getNode("Configuration").getNode("num_MPA").write(0x1)
-		#self._hw.dispatch()
-		#self._spi_wait()
 		return cur
 
 	def uploadone(self,show = 0,Config=1,dcindex=-1):
