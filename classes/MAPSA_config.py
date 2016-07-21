@@ -1,8 +1,6 @@
 #Functions related to data aquisition at the MAPSA level - starting calibration and data taking 
 #as well as loops of MPA_daq readout objects for ease of use 
 
-
-
 from MPA import *
 from MPA_daq import *
 from MAPSA_functions import *
@@ -71,6 +69,16 @@ class MAPSA_config:
 		for conf in self._confs:
 			curr_mat.append(conf.upload(show ,Config=self._Config))
 		return curr_mat
+
+	def verify(self,show = 0):
+		curr_mat = []
+		for conf in self._confs:
+			curr_mat.append((conf.verify(show ,Config=self._Config)))
+		if show:
+			print "type"
+			print curr_mat
+		return curr_mat
+
 	def modifyperiphery(self,what, value):
 
 		impa=0
@@ -94,10 +102,6 @@ class MAPSA_config:
 
 			impa+=1
 
-
-
-
-
 	def modifyfull(self, whichs,pixels=[1,25]):
 	
 
@@ -116,16 +120,32 @@ class MAPSA_config:
 		self.upload()
 		self.write()
 
-
-
-
-
-
-
-
 	def write(self):
   
 		self._hw.getNode("Configuration").getNode("num_MPA").write(0x5)
 		self._hw.getNode("Configuration").getNode("mode").write(0x4)
 		self._hw.dispatch()
 		self._spi_wait()
+	def write_verified(self,show = 0, no_mpa = 6):
+		repeat = False
+		for j in range (0,3):
+			self.upload(show)
+			self.write()
+			curr  = self.upload(show)
+			self.write()
+			prev = self.verify(show)
+		# for index, item in enumerate(curr):
+			for i in range (0,no_mpa):
+				# print i, curr[i], prev[i]
+				if not ( set(curr[i])==set(prev[i])):
+					repeat = True
+			print "repeat"
+			print repeat
+			if not repeat:
+				print "succesful"
+				break
+			
+			# ,(set(item)==set(prev(index)))
+		
+		# print (set(cur)==set(tmp))
+

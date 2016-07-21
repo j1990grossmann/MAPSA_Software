@@ -16,8 +16,8 @@ class MPA_config:
 		self._Configuration =  self._hw.getNode("Configuration")
 		self._Conf_busy    = self._Configuration.getNode("busy")
 
-		self._Memory_DataConf   = self._Configuration.getNode("Memory_DataConf")	
-		self._Memory_OutConf   = self._Configuration.getNode("Memory_OutConf")	
+		self._Memory_DataConf   = self._Configuration.getNode("Memory_DataConf")
+		self._Memory_OutConf    = self._Configuration.getNode("Memory_OutConf")
 
 		self.xmlfile = xmlfile
 		self.xmltree = ET.parse(self.xmlfile)
@@ -90,52 +90,24 @@ class MPA_config:
 		self._hw.dispatch()
 		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
 		self._spi_wait()
-		self._hw.dispatch()
-		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
-		self._spi_wait()
-		tmp = self._Memory_OutConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).readBlock(25)
-		self._hw.dispatch()
-		if(show):
-			print tmp
-			print "the comparison"
-			print (set(cur)==set(tmp))
 		return cur
-
-	def uploadone(self,show = 0,Config=1,dcindex=-1):
-		if dcindex==-1:
-			dcindex=self._nmpa
-		cur = [None]*25
-		cur[0]  = self._get_periphery_fromfile(self.xmlroot.find("periphery"))
-		for pixel in self.xmlroot.findall('pixel'):
-			cur[ int(pixel.attrib['n']) ] = self._get_pixel_fromfile(pixel)
-		if (show):
-			print "uploading:"
-			print cur
-		self._spi_wait()
-		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
-		self._spi_wait()
-		return cur
-
-	def writeone(self,dcindex=1):
-		self._hw.getNode("Configuration").getNode("num_MPA").write(0x1)
-		self._hw.dispatch()
-		self._spi_wait()
-		self._hw.getNode("Configuration").getNode("mode").write(6-dcindex)
-		self._hw.dispatch()
-
-		self._spi_wait()
-		return cur
-
-
-		
 
 	def write(self):
-
-
 		self._hw.getNode("Configuration").getNode("mode").write(0x5)
 		self._hw.dispatch()
 		self._spi_wait()
 
+	def verify(self,show=0,Config=1,dcindex=-1):
+		if dcindex==-1:
+			dcindex=self._nmpa
+		tmp = self._Memory_OutConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).readBlock(25)
+		self._hw.dispatch()
+		if(show):
+			print "Outconf register"
+			print tmp
+		return tmp
+			# print (set(cur)==set(tmp))
+		
 
 	def modifypixel(self, which, what, value):
 		pixel = self.xmlroot.findall('pixel')

@@ -558,7 +558,8 @@ for it in range (0,options.iteration):
 		config1.modifypixel(x,'CER', [CE]*6)
 		config1.modifypixel(x,'SP',  [SP]*6) 
 		config1.modifypixel(x,'SR',  [1]*6) 
-	config1.write()
+	config1.write_verified(0,5)
+	# config1.write()
 	
 	
 	x1 = array('d')
