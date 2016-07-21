@@ -42,9 +42,9 @@ print "num_MPA " + str(read)
 mpa_number = options.mpa
 if mpa_number ==0:
 	config = mapsa.config(Config=options.number,string=options.setting)
-	cur = config.upload()
+	cur = config.upload(1)
 	print "current config"
-	print cur
+	# print cur
 	config.write()
 	print ""
 	print "checking config"
@@ -55,11 +55,11 @@ if mpa_number ==0:
 		# print type(a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1")), "------------------------"
 		read = []
        		# read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").read(i)	
-       		read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").readBlock(25)
-		a._hw.dispatch()
-		# print read
-		prev.append(array('i',read))
-	print prev
+       	# 	read = a._hw.getNode("Configuration").getNode("Memory_OutConf").getNode("MPA"+str(i)).getNode("config_1").readBlock(25)
+	# 	a._hw.dispatch()
+	# 	# print read
+	# 	prev.append(array('i',read))
+	# print prev
 else:
 	mpa_index = mpa_number-1
 	

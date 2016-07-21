@@ -1,4 +1,4 @@
-
+import array as arr
 from MAPSA_functions import *
 class MPA_config:
 	def __init__(self, hw, nmpa, xmlfile ):
@@ -87,14 +87,18 @@ class MPA_config:
 			print cur
 		self._spi_wait()
 	
+		self._hw.dispatch()
 		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
 		self._spi_wait()
+		self._hw.dispatch()
 		self._Memory_DataConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).writeBlock(cur)
 		self._spi_wait()
-		readback = self._Memory_OutConf.getNode("MPA"+str(dcindex)).getNode("config_1").readBlock(25)
-		if (show):
-			print "readback"
-			print readback
+		tmp = self._Memory_OutConf.getNode("MPA"+str(dcindex)).getNode("config_"+str(Config)).readBlock(25)
+		self._hw.dispatch()
+		if(show):
+			print tmp
+			print "the comparison"
+			print (set(cur)==set(tmp))
 		#self._hw.getNode("Configuration").getNode("num_MPA").write(0x1)
 		#self._hw.dispatch()
 		#self._spi_wait()
