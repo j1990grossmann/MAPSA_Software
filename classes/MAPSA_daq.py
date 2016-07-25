@@ -48,9 +48,9 @@ class MAPSA_daq:
 			busyseq = self._sequencerbusy.read()
 			self._hw.dispatch()
 
-			time.sleep(0.001)
+			time.sleep(0.00001)
 			i+=1
-			if i>100:
+			if i> 1350000:
 				print "timeout"
 				return 0
 		
@@ -165,4 +165,4 @@ class MAPSA_daq:
 		self._Sequencer.getNode('buffers_index').write(ibuff)
 		self._hw.dispatch()
 
-		#self._waitsequencer()
+		self._waitsequencer()

@@ -1,10 +1,7 @@
-
 from classes import *
 import xml.etree.ElementTree
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, Comment
-#import ROOT
-#from ROOT import TGraph
 import sys, select, os, array
 from array import array
 import ROOT
@@ -102,9 +99,8 @@ def take_data(config, rangeval, mapsa, buffnum, x1, y1):
 		config.write()
 		for z in range (0,rangeval):
 			mapsa.daq().Sequencer_init(smode,sdur)
+			time.sleep(0.002)
 			pix,mem = mapsa.daq().read_data(buffnum)
-			# Here we wait for the shutter to close and add some extra 2 milliseconds
-			# time.sleep(sdur*25E-9+0.002)
 			time.sleep(0.002)
 			ipix=0
 			for p in pix:
@@ -187,7 +183,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 			fitparams.append([])
 			mean=0
 			if gr1[iy1].GetMaximum()>1:
-				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.9','',0,256)
+				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.8','',0,256)
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
@@ -212,7 +208,7 @@ def plot_results(switch_pre_post, no_mpa_light,x1,y1,calibconfsxmlroot, prev_fit
 				# for lines1 in linearr[i]:
 				# 	lines1.Draw("same")
 				if(stackarr[i].GetMaximum()>1):
-					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))))
+					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))-1))
 					stackarr[i].SetMinimum(.1)
 					stackarr[i].SetMaximum(Maximum)
 					gPad.SetLogy()
@@ -325,7 +321,7 @@ dest	=	'charge',
 help	=	'Charge for caldac')
 
 parser.add_option('-w', '--shutterdur', metavar='F', type='int', action='store',
-default	=	0xFFFFF,
+default	=	0xFFFFE,
 dest	=	'shutterdur',
 help	=	'shutter duration')
 
@@ -346,7 +342,7 @@ dest	=	'string',
 help	=	'extra string')
 
 parser.add_option('-t', '--type', metavar='TYPE', type='int', action='store',
-default	=	0,
+default	=	1,
 dest	=	'cal_type',
 help	=	'Type of fast calibration to be performed: 0 standard, 1 experimental')
 
@@ -367,7 +363,6 @@ help	=	'The target value for the pedestals')
 
 (options, args) = parser.parse_args()
 
-# datafile = open('convergence_data'+str(options.cal_type), 'w')
 
 a = uasic(connection="file://connections_test.xml",device="board0")
 mapsa = MAPSA(a)

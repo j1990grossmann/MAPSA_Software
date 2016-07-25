@@ -253,7 +253,7 @@ backup=TFile("plots/Caldac_"+options.string+".root","recreate")
 c1 = TCanvas('c1', 'Pixel Monitor ', 700, 900)
 c1.Divide(3,2)
 
-for it in range (0,5):
+for it in range (0,1):
 	confstr='calibrated'
 	config = mapsa.config(Config=1,string=confstr)
 	config.upload()
