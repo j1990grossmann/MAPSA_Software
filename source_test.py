@@ -19,7 +19,6 @@ from optparse import OptionParser
 
 scalefac = 1.456/3.75
 def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
-	daq.Strobe_settings(strobe_sets[0],strobe_sets[1],strobe_sets[2],strobe_sets[3],strobe_sets[4])
 	
 	direction = 1 if ((up-low)>0) else -1
 	steps=int(round(abs(low-up)/resolution))+1
@@ -51,6 +50,7 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 		if "REPETITION" in key:
 			tree.Branch(key,tree_vars[key],key+"[1]/i")
 
+	daq.Strobe_settings(strobe_sets[0],strobe_sets[1],strobe_sets[2],strobe_sets[3],strobe_sets[4])
 	for xx in range(0,steps):
 		x = xx*resolution*direction+low
 		if (x<0):
@@ -59,22 +59,22 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 			x=255
 		# if x%10==0:
 		print "THDAC " + str(x)
-		print tree_vars["THRESHOLD"]
+		# print tree_vars["THRESHOLD"]
 
-		config.modifyperiphery('THDAC',[x]*6)
-		config.upload()
-		config.write()
 		for z in range (0,rangeval):
 			# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
 			# print "Timestamp: " + tstamp
+			config.modifyperiphery('THDAC',[x]*6)
+			config.upload()
+			config.write()
 			tree_vars["REPETITION"][0] = z
 			tree_vars["THRESHOLD"][0]  = x
-			print tree_vars["REPETITION"]
-			print 'sdur', sdur
+			# print tree_vars["REPETITION"]
+			# print 'sdur', hex(sdur)
 			mapsa.daq().Sequencer_init(smode,sdur)
-			time.sleep(0.002)
+			# time.sleep(0.002)
 			pix,mem = mapsa.daq().read_data(1)
-			time.sleep(0.002)
+			# time.sleep(0.002)
 			# print "pix", pix
 			ipix=0
 			tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
