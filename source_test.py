@@ -18,6 +18,82 @@ from optparse import OptionParser
 
 
 scalefac = 1.456/3.75
+
+def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
+	direction = 1 if ((up-low)>0) else -1
+	steps=int(round(abs(low-up)/resolution))+1
+	# count_arr=np.zeros((no_mpa_light, resolution, 48))
+	
+	f = TFile( 'data_test.root', 'RECREATE' )
+	
+	tree_vars = {}			
+	tree_vars["TIMESTAMP"] = array('i',[0])
+	tree_vars["TRIG_COUNTS_SHUTTER"] = array('i',[0])
+	tree_vars["THRESHOLD"] = array('i',[0])
+	tree_vars["REPETITION"] = array('i',[0])
+	tree_vars["AR_MPA"] = array('i',[0]*288)
+	tree_vars["MEM_MPA"] = array('i',[0]*(96*no_mpa_light))
+	
+	
+	tree = TTree( 'datatree', 'datatree' )
+	for key in tree_vars.keys():
+		# if "SR" in key:
+		# 	tree.Branch(key,tree_vars[key],key+"[96]/i")
+		if "AR" in key:
+			tree.Branch(key,tree_vars[key],key+"[288]/i")
+		if "MEM" in key:
+			tree.Branch(key,tree_vars[key],key+"[384]/i")
+		if "TRIG_COUNTS" in key:
+			tree.Branch(key,tree_vars[key],key+"[1]/i")
+		if "THRESHOLD" in key:
+			tree.Branch(key,tree_vars[key],key+"[1]/i")
+		if "REPETITION" in key:
+			tree.Branch(key,tree_vars[key],key+"[1]/i")
+	
+	# daq.Strobe_settings(strobe_sets[0],strobe_sets[1],strobe_sets[2],strobe_sets[3],strobe_sets[4])
+	mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,CE)
+	
+	for xx in range(0,steps):
+		x = xx*resolution*direction+low
+		if (x<0):
+			x=0
+		if (x>255):
+			x=255
+		# if x%10==0:
+		print "THDAC " + str(x)
+		# print tree_vars["THRESHOLD"]
+	
+		for z in range (0,rangeval):
+			# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
+			# print "Timestamp: " + tstamp
+			config.modifyperiphery('THDAC',[x]*6)
+			config.upload()
+			config.write()
+			tree_vars["REPETITION"][0] = z
+			tree_vars["THRESHOLD"][0]  = x
+			# print tree_vars["REPETITION"]
+			# print 'sdur', hex(sdur)
+			mapsa.daq().Sequencer_init(smode,sdur)
+			# time.sleep(0.002)
+			pix,mem = mapsa.daq().read_data(buffnum)
+			# time.sleep(0.002)
+			# print "pix", pix
+			ipix=0
+			tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
+			# treevars["MEM"][0,384]=array('i',mem[:])
+			# print mem
+			for p in pix:
+				p.pop(0)
+				p.pop(0)
+				tree_vars["AR_MPA"][ipix*48:(ipix+1)*48] = array('i',p[:])
+				# print 'p ', p[:]
+				# print 'ipix, p ', ipix, p[:]
+				ipix+=1
+			tree.Fill()
+		tree.Write('tree',ROOT.TObject.kOverwrite)
+	f.Close()
+
+
 # def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
 
 
@@ -245,84 +321,12 @@ daq = mapsa.daq()
 rangeval = options.k_reps
 # Take data now 
 # take_data(options.res,options.l_tdac ,options.u_tdac , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode)
-# def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
 resolution= options.res
 low= options.l_tdac
 up= options.u_tdac
+take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode)
 
 
-direction = 1 if ((up-low)>0) else -1
-steps=int(round(abs(low-up)/resolution))+1
-# count_arr=np.zeros((no_mpa_light, resolution, 48))
-
-f = TFile( 'data_test.root', 'RECREATE' )
-
-tree_vars = {}			
-tree_vars["TIMESTAMP"] = array('i',[0])
-tree_vars["TRIG_COUNTS_SHUTTER"] = array('i',[0])
-tree_vars["THRESHOLD"] = array('i',[0])
-tree_vars["REPETITION"] = array('i',[0])
-tree_vars["AR_MPA"] = array('i',[0]*288)
-tree_vars["MEM_MPA"] = array('i',[0]*(96*no_mpa_light))
-
-
-tree = TTree( 'datatree', 'datatree' )
-for key in tree_vars.keys():
-	# if "SR" in key:
-	# 	tree.Branch(key,tree_vars[key],key+"[96]/i")
-	if "AR" in key:
-		tree.Branch(key,tree_vars[key],key+"[288]/i")
-	if "MEM" in key:
-		tree.Branch(key,tree_vars[key],key+"[384]/i")
-	if "TRIG_COUNTS" in key:
-		tree.Branch(key,tree_vars[key],key+"[1]/i")
-	if "THRESHOLD" in key:
-		tree.Branch(key,tree_vars[key],key+"[1]/i")
-	if "REPETITION" in key:
-		tree.Branch(key,tree_vars[key],key+"[1]/i")
-
-# daq.Strobe_settings(strobe_sets[0],strobe_sets[1],strobe_sets[2],strobe_sets[3],strobe_sets[4])
-mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,CE)
-
-for xx in range(0,steps):
-	x = xx*resolution*direction+low
-	if (x<0):
-		x=0
-	if (x>255):
-		x=255
-	# if x%10==0:
-	print "THDAC " + str(x)
-	# print tree_vars["THRESHOLD"]
-
-	for z in range (0,rangeval):
-		# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
-		# print "Timestamp: " + tstamp
-		config.modifyperiphery('THDAC',[x]*6)
-		config.upload()
-		config.write()
-		tree_vars["REPETITION"][0] = z
-		tree_vars["THRESHOLD"][0]  = x
-		# print tree_vars["REPETITION"]
-		# print 'sdur', hex(sdur)
-		mapsa.daq().Sequencer_init(smode,sdur)
-		# time.sleep(0.002)
-		pix,mem = mapsa.daq().read_data(buffnum)
-		# time.sleep(0.002)
-		# print "pix", pix
-		ipix=0
-		tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
-		# treevars["MEM"][0,384]=array('i',mem[:])
-		# print mem
-		for p in pix:
-			p.pop(0)
-			p.pop(0)
-			tree_vars["AR_MPA"][ipix*48:(ipix+1)*48] = array('i',p[:])
-			# print 'p ', p[:]
-			# print 'ipix, p ', ipix, p[:]
-			ipix+=1
-		tree.Fill()
-	tree.Write('tree',ROOT.TObject.kOverwrite)
-f.Close()
 
 
 calibconfs = config._confs
