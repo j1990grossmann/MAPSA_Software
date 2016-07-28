@@ -42,15 +42,19 @@ class MAPSA_daq:
 
 	def _waitsequencer(self):
 		i=0
-		busyseq = self._sequencerbusy.read()
+		busyseq = True
+		# True 
+		test = self._sequencerbusy.read()
 		self._hw.dispatch()
-		while busyseq:
+		time.sleep(0.002)
+		while  busyseq:
 			busyseq = self._sequencerbusy.read()
 			self._hw.dispatch()
-
-			time.sleep(0.00001)
+			# if i%500==0:
+			# 	print (i*1E-3), 'sec'
+			time.sleep(0.001)
 			i+=1
-			if i> 1350000:
+			if i> 13500:
 				print "timeout"
 				return 0
 		
@@ -156,6 +160,7 @@ class MAPSA_daq:
 
 			
 	def Sequencer_init(self,smode,sdur,mem=1,ibuff =0,sdir=0):
+		# print 'sdur',hex(sdur)
 		self._shuttertime.write(sdur)	
 	
 		self._hw.getNode("Control").getNode('testbeam_mode').write(0x0)
@@ -164,5 +169,5 @@ class MAPSA_daq:
 		self._Sequencer.getNode('datataking_continuous').write(smode)
 		self._Sequencer.getNode('buffers_index').write(ibuff)
 		self._hw.dispatch()
-
+		time.sleep(0.05)
 		self._waitsequencer()
