@@ -36,8 +36,9 @@ def take_data(caldac,config, rangeval, mapsa, buffnum, x1, y1, daq, strobe_sets)
 		config.write()
 		for z in range (0,rangeval):
 			mapsa.daq().Sequencer_init(smode,sdur)
+			time.sleep(0.002)
 			pix,mem = mapsa.daq().read_data(buffnum)
-			time.sleep(.01)
+			time.sleep(0.002)
 			ipix=0
 			for p in pix:
 				p.pop(0)
@@ -253,7 +254,7 @@ backup=TFile("plots/Caldac_"+options.string+".root","recreate")
 c1 = TCanvas('c1', 'Pixel Monitor ', 700, 900)
 c1.Divide(3,2)
 
-for it in range (0,1):
+for it in range (0,5):
 	confstr='calibrated'
 	config = mapsa.config(Config=1,string=confstr)
 	config.upload()

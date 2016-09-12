@@ -5,7 +5,7 @@ from xml.etree.ElementTree import Element, SubElement, Comment
 import sys, select, os, array
 from array import array
 import ROOT
-from ROOT import TGraph, TDirectory, TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString, TObject, TMultiGraph, TPaveText, TProfile2D, TH2I, TH2D, TTree
+from ROOT import TGraph, TDirectory, TGraphErrors, TCanvas, gPad, TFile, TLine, THStack, TH1I, TH1F, TMath, TF1, TString, TObject, TMultiGraph, TPaveText, TProfile2D, TH1I, TH2I, TH2D, TTree
 
 import numpy as np
 import time 
@@ -19,12 +19,21 @@ from optparse import OptionParser
 
 scalefac = 1.456/3.75
 
-def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
+def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr):
 	direction = 1 if ((up-low)>0) else -1
 	steps=int(round(abs(low-up)/resolution))+1
 	# count_arr=np.zeros((no_mpa_light, resolution, 48))
-	
-	f = TFile( 'data_test.root', 'RECREATE' )
+
+	c1 = TCanvas('c1', 'Source Monitor ', 700, 900)
+	c1.Divide(2,2)
+	# totalcounts = TH1I('Totalcounts','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)',(low-.5),(up+.5),steps)
+	totalcounts = TH1I('Totalcounts','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)',steps, low-.5,up+.5)
+	channelcounts = TH2I('Totalcounts_pixel','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)', 288, .5,288.5,steps, low-.5, up+.5)
+	# c1.SetDirectory(0)
+	totalcounts.SetDirectory(0)
+	channelcounts.SetDirectory(0)
+
+	f = TFile( 'sourcetest'+savestr+'.root', 'RECREATE' )
 	
 	tree_vars = {}			
 	tree_vars["TIMESTAMP"] = array('i',[0])
@@ -74,9 +83,9 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 			# print tree_vars["REPETITION"]
 			# print 'sdur', hex(sdur)
 			mapsa.daq().Sequencer_init(smode,sdur)
-			# time.sleep(0.002)
+			time.sleep(0.002)
 			pix,mem = mapsa.daq().read_data(buffnum)
-			# time.sleep(0.002)
+			time.sleep(0.002)
 			# print "pix", pix
 			ipix=0
 			tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
@@ -89,8 +98,24 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 				# print 'p ', p[:]
 				# print 'ipix, p ', ipix, p[:]
 				ipix+=1
+			sum_hits=np.sum(tree_vars["AR_MPA"][:])
+			# for i in range (0, sum_hits):
+			# 	totalcounts.Fill(x)			
+			totalcounts.Fill(x,sum_hits)
+			for counter,hits in enumerate(tree_vars["AR_MPA"]):
+				channelcounts.Fill(counter+1,x,hits)
 			tree.Fill()
 		tree.Write('tree',ROOT.TObject.kOverwrite)
+	c1.cd(1)
+	totalcounts.Draw('hist e1')
+	c1.cd(2)
+	channelcounts.Draw('colz')
+	c1.Modified()
+	c1.Update()
+	c1.Write("test")
+	channelcounts.Write("channelcounts")
+	totalcounts.Write("totalcounts")
+	time.sleep(5)	
 	f.Close()
 
 
@@ -324,7 +349,7 @@ rangeval = options.k_reps
 resolution= options.res
 low= options.l_tdac
 up= options.u_tdac
-take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode)
+take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, options.string)
 
 
 
