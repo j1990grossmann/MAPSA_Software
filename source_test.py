@@ -19,7 +19,7 @@ from optparse import OptionParser
 
 scalefac = 1.456/3.75
 
-def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr):
+def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr, singlepixel):
 	direction = 1 if ((up-low)>0) else -1
 	steps=int(round(abs(low-up)/resolution))+1
 	# count_arr=np.zeros((no_mpa_light, resolution, 48))
@@ -37,6 +37,7 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 	
 	tree_vars = {}			
 	tree_vars["TIMESTAMP"] = array('i',[0])
+	tree_vars["SEQ_PAR"] = array('i',[0])
 	tree_vars["TRIG_COUNTS_SHUTTER"] = array('i',[0])
 	tree_vars["THRESHOLD"] = array('i',[0])
 	tree_vars["REPETITION"] = array('i',[0])
@@ -61,25 +62,41 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 	
 	# daq.Strobe_settings(strobe_sets[0],strobe_sets[1],strobe_sets[2],strobe_sets[3],strobe_sets[4])
 	mapsa.daq().Strobe_settings(snum,sdel,slen,sdist,CE)
-	
-	for xx in range(0,steps):
-		x = xx*resolution*direction+low
-		if (x<0):
-			x=0
-		if (x>255):
-			x=255
-		# if x%10==0:
-		print "THDAC " + str(x)
-		# print tree_vars["THRESHOLD"]
-	
-		for z in range (0,rangeval):
+
+	if (singlepixel == True):
+		tree_vars["SEQ_PAR"][0]  = 1
+		for iy1 in range(0,no_mpa_light*48):
+			if iy1%2==0:
+				config.modifypixel((iy1)/2+1,'PML',0)
+			if iy1%2==1:
+				config.modifypixel((iy1+1)/2,'PMR',0)
+			config.modifypixel((iy1)/2+1,'PML',0)
+	if (singlepixel == False):
+		tree_vars["SEQ_PAR"][0]  = 0
+		
+	for z in range (0,rangeval):
+		for xx in range(0,steps):
+			x = xx*resolution*direction+low
+			if (x<0):
+				x=0
+			if (x>255):
+				x=255
+			# if x%10==0:
+			print "THDAC " + str(x)
+			# print tree_vars["THRESHOLD"]
+
 			# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
 			# print "Timestamp: " + tstamp
-			config.modifyperiphery('THDAC',[x]*6)
-			config.upload()
-			config.write()
 			tree_vars["REPETITION"][0] = z
 			tree_vars["THRESHOLD"][0]  = x
+			
+			#if (singlepixel == True):
+				#config.modifypixel(
+			
+			config.modifyperiphery('THDAC',[x]*6)
+			config.modifyperiphery('',[x]*6)
+			config.upload()
+			config.write()
 			# print tree_vars["REPETITION"]
 			# print 'sdur', hex(sdur)
 			mapsa.daq().Sequencer_init(smode,sdur)
@@ -106,12 +123,12 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 				channelcounts.Fill(counter+1,x,hits)
 			tree.Fill()
 		tree.Write('tree',ROOT.TObject.kOverwrite)
-	c1.cd(1)
-	totalcounts.Draw('hist e1')
-	c1.cd(2)
-	channelcounts.Draw('colz')
-	c1.Modified()
-	c1.Update()
+		c1.cd(1)
+		totalcounts.Draw('hist e1')
+		c1.cd(2)
+		channelcounts.Draw('colz')
+		c1.Modified()
+		c1.Update()
 	c1.Write("test")
 	channelcounts.Write("channelcounts")
 	totalcounts.Write("totalcounts")
@@ -233,7 +250,7 @@ parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
 # default	=	'none',
 default	=	'default',
 dest	=	'setting',
-help	=	'settings ie default, calibration, testbeam etc')
+help	=	'settings ie default, calibration, testbeam, noise etc')
 
 parser.add_option('-c', '--charge', metavar='F', type='int', action='store',
 default	=	60,
@@ -349,7 +366,12 @@ rangeval = options.k_reps
 resolution= options.res
 low= options.l_tdac
 up= options.u_tdac
-take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, options.string)
+if options.setting=='noise':
+	#CE=1
+	take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, options.string, True)
+if options.setting=='default':
+	#CE=0
+	take_data(resolution,low ,up , config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, options.string, False)
 
 
 
