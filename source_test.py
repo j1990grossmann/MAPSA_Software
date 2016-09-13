@@ -18,6 +18,8 @@ from optparse import OptionParser
 
 
 scalefac = 1.456/3.75
+pmmask=[0]*6;
+pmmaskon=[1]*6;
 
 def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr, singlepixel):
 	direction = 1 if ((up-low)>0) else -1
@@ -65,12 +67,11 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 
 	if (singlepixel == True):
 		tree_vars["SEQ_PAR"][0]  = 1
-		for iy1 in range(0,no_mpa_light*48):
+		for iy1 in range(0,50):
 			if iy1%2==0:
-				config.modifypixel((iy1)/2+1,'PML',0)
+				config.modifypixel((iy1)/2+1,'PML',pmmask)
 			if iy1%2==1:
-				config.modifypixel((iy1+1)/2,'PMR',0)
-			config.modifypixel((iy1)/2+1,'PML',0)
+				config.modifypixel((iy1+1)/2,'PMR',pmmask)
 	if (singlepixel == False):
 		tree_vars["SEQ_PAR"][0]  = 0
 		
@@ -84,44 +85,81 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 			# if x%10==0:
 			print "THDAC " + str(x)
 			# print tree_vars["THRESHOLD"]
-
 			# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
 			# print "Timestamp: " + tstamp
 			tree_vars["REPETITION"][0] = z
 			tree_vars["THRESHOLD"][0]  = x
 			
-			#if (singlepixel == True):
-				#config.modifypixel(
-			
 			config.modifyperiphery('THDAC',[x]*6)
-			config.modifyperiphery('',[x]*6)
-			config.upload()
-			config.write()
-			# print tree_vars["REPETITION"]
-			# print 'sdur', hex(sdur)
-			mapsa.daq().Sequencer_init(smode,sdur)
-			time.sleep(0.002)
-			pix,mem = mapsa.daq().read_data(buffnum)
-			time.sleep(0.002)
-			# print "pix", pix
-			ipix=0
-			tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
-			# treevars["MEM"][0,384]=array('i',mem[:])
-			# print mem
-			for p in pix:
-				p.pop(0)
-				p.pop(0)
-				tree_vars["AR_MPA"][ipix*48:(ipix+1)*48] = array('i',p[:])
-				# print 'p ', p[:]
-				# print 'ipix, p ', ipix, p[:]
-				ipix+=1
-			sum_hits=np.sum(tree_vars["AR_MPA"][:])
-			# for i in range (0, sum_hits):
-			# 	totalcounts.Fill(x)			
-			totalcounts.Fill(x,sum_hits)
-			for counter,hits in enumerate(tree_vars["AR_MPA"]):
-				channelcounts.Fill(counter+1,x,hits)
-			tree.Fill()
+			if( singlepixel == False):
+				config.upload()
+				config.write()
+				# print tree_vars["REPETITION"]
+				# print 'sdur', hex(sdur)
+				mapsa.daq().Sequencer_init(smode,sdur)
+				time.sleep(0.002)
+				pix,mem = mapsa.daq().read_data(buffnum)
+				time.sleep(0.002)
+				# print "pix", pix
+				ipix=0
+				tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
+				# treevars["MEM"][0,384]=array('i',mem[:])
+				# print mem
+				for p in pix:
+					p.pop(0)
+					p.pop(0)
+					tree_vars["AR_MPA"][ipix*48:(ipix+1)*48] = array('i',p[:])
+					# print 'p ', p[:]
+					# print 'ipix, p ', ipix, p[:]
+					ipix+=1
+					sum_hits=np.sum(tree_vars["AR_MPA"][:])
+				totalcounts.Fill(x,sum_hits)
+				for counter,hits in enumerate(tree_vars["AR_MPA"]):
+					channelcounts.Fill(counter+1,x,hits)
+				tree.Fill()
+			if( singlepixel == True):
+				count_arr=np.zeros((no_mpa_light,48))
+				# tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
+				for iy1 in range(2,50):
+					if iy1%2==1:
+						config.modifypixel((iy1-1)/2,'PML',pmmaskon)
+						config.modifypixel((iy1-1)/2,'PMR',pmmask  )
+					if iy1%2==0:
+						if iy1!=2 :
+							config.modifypixel(iy1/2-1,'PML',pmmask    )
+							config.modifypixel(iy1/2  ,'PMR',pmmaskon  )
+						else:
+							config.modifypixel(24,'PML',pmmask    )
+							config.modifypixel(24,'PMR',pmmask    )
+							config.modifypixel(1,'PML',pmmask    )
+							config.modifypixel(1,'PMR',pmmaskon  )
+					config.upload()
+					config.write()
+					mapsa.daq().Sequencer_init(smode,sdur)
+					time.sleep(0.002)
+					pix,mem = mapsa.daq().read_data(buffnum)
+					time.sleep(0.002)
+
+					ipix=0
+					# treevars["MEM"][0,384]=array('i',mem[:])
+					# print mem
+					for pixcounter,p in enumerate(pix):
+						p.pop(0)
+						p.pop(0)
+						count_arr[ipix]=count_arr[ipix]+np.array(array('d',p))
+						# print 'p ', p[:]
+						# if(pixcounter<=1 and ipix<1):
+						# if(pixcounter<=1):
+						# 	print 'iy1, ipix, p , pixcounter', iy1, ipix, p[:], pixcounter
+						ipix+=1
+						# sum_hits=np.sum(tree_vars["AR_MPA"][:])
+				tree_vars["AR_MPA"]=count_arr.flatten().tolist()
+				for counter,hits in enumerate(tree_vars["AR_MPA"]):
+					channelcounts.Fill(counter+1,x,hits)
+				# print tree_vars["AR_MPA"][:]
+				sum_hits=np.sum(tree_vars["AR_MPA"][:])
+				totalcounts.Fill(x,sum_hits)
+				tree.Fill()
 		tree.Write('tree',ROOT.TObject.kOverwrite)
 		c1.cd(1)
 		totalcounts.Draw('hist e1')
