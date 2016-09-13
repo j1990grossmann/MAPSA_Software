@@ -122,8 +122,10 @@ class MAPSA_config:
 
 	def write(self):
   
-		self._hw.getNode("Configuration").getNode("num_MPA").write(0x5)
-		self._hw.getNode("Configuration").getNode("mode").write(0x4)
+		# self._hw.getNode("Configuration").getNode("num_MPA").write(0x5)
+		# self._hw.getNode("Configuration").getNode("mode").write(0x4)
+		self._hw.getNode("Configuration").getNode("num_MPA").write(0x2)
+		self._hw.getNode("Configuration").getNode("mode").write(0x1)
 		self._hw.dispatch()
 		self._spi_wait()
 	def write_verified(self,show = 0, no_mpa = 6):
