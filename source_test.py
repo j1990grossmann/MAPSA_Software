@@ -24,14 +24,12 @@ pmmaskon=[1]*6;
 def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr, singlepixel):
 	direction = 1 if ((up-low)>0) else -1
 	steps=int(round(abs(low-up)/resolution))+1
-	# count_arr=np.zeros((no_mpa_light, resolution, 48))
 
 	c1 = TCanvas('c1', 'Source Monitor ', 700, 900)
 	c1.Divide(2,2)
-	# totalcounts = TH1I('Totalcounts','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)',(low-.5),(up+.5),steps)
+
 	totalcounts = TH1I('Totalcounts','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)',steps, low-.5,up+.5)
 	channelcounts = TH2I('Totalcounts_pixel','Totalcounts; DAC Value (1.456 mV); Counts (1/1.456)', 288, .5,288.5,steps, low-.5, up+.5)
-	# c1.SetDirectory(0)
 	totalcounts.SetDirectory(0)
 	channelcounts.SetDirectory(0)
 
@@ -82,15 +80,17 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 				x=0
 			if (x>255):
 				x=255
-			# if x%10==0:
-			print "THDAC " + str(x)
-			# print tree_vars["THRESHOLD"]
+			if(singlepixel == False and x%10==0 ):
+				print "THDAC " + str(x)
+			if(singlepixel == True):
+				print "THDAC " + str(x)
 			# tstamp = str(datetime.datetime.now().time().isoformat().replace(":","").replace(".",""))
 			# print "Timestamp: " + tstamp
 			tree_vars["REPETITION"][0] = z
 			tree_vars["THRESHOLD"][0]  = x
-			
 			config.modifyperiphery('THDAC',[x]*6)
+
+			tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
 			if( singlepixel == False):
 				config.upload()
 				config.write()
@@ -102,7 +102,6 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 				time.sleep(0.002)
 				# print "pix", pix
 				ipix=0
-				tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
 				# treevars["MEM"][0,384]=array('i',mem[:])
 				# print mem
 				for p in pix:
@@ -113,13 +112,13 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 					# print 'ipix, p ', ipix, p[:]
 					ipix+=1
 					sum_hits=np.sum(tree_vars["AR_MPA"][:])
-				totalcounts.Fill(x,sum_hits)
-				for counter,hits in enumerate(tree_vars["AR_MPA"]):
-					channelcounts.Fill(counter+1,x,hits)
-				tree.Fill()
+				# totalcounts.Fill(x,sum_hits)
+				# print tree_vars["AR_MPA"][:]
+				# print len(tree_vars["AR_MPA"][:])
+				# for counter,hits in enumerate(tree_vars["AR_MPA"]):
+				# 	channelcounts.Fill(counter+1,x,hits)
 			if( singlepixel == True):
 				count_arr=np.zeros((no_mpa_light,48))
-				# tree_vars["AR_MPA"][:]=array('i',48*no_mpa_light*[0])
 				for iy1 in range(2,50):
 					if iy1%2==1:
 						config.modifypixel((iy1-1)/2,'PML',pmmaskon)
@@ -146,20 +145,17 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 					for pixcounter,p in enumerate(pix):
 						p.pop(0)
 						p.pop(0)
-						count_arr[ipix]=count_arr[ipix]+np.array(array('d',p))
+						count_arr[ipix]=count_arr[ipix]+np.array(array('i',p))
 						# print 'p ', p[:]
-						# if(pixcounter<=1 and ipix<1):
-						# if(pixcounter<=1):
-						# 	print 'iy1, ipix, p , pixcounter', iy1, ipix, p[:], pixcounter
 						ipix+=1
-						# sum_hits=np.sum(tree_vars["AR_MPA"][:])
-				tree_vars["AR_MPA"]=count_arr.flatten().tolist()
-				for counter,hits in enumerate(tree_vars["AR_MPA"]):
-					channelcounts.Fill(counter+1,x,hits)
-				# print tree_vars["AR_MPA"][:]
-				sum_hits=np.sum(tree_vars["AR_MPA"][:])
-				totalcounts.Fill(x,sum_hits)
-				tree.Fill()
+				tree_vars["AR_MPA"][:]=array('i',count_arr.astype(int).flatten().tolist()[:])
+			# print tree_vars["AR_MPA"][:]
+			# print len(tree_vars["AR_MPA"][:])
+			for counter,hits in enumerate(tree_vars["AR_MPA"]):
+				channelcounts.Fill(counter+1,x,hits)
+			sum_hits=np.sum(tree_vars["AR_MPA"][:])
+			totalcounts.Fill(x,sum_hits)
+			tree.Fill()
 		tree.Write('tree',ROOT.TObject.kOverwrite)
 		c1.cd(1)
 		totalcounts.Draw('hist e1')
@@ -167,7 +163,7 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 		channelcounts.Draw('colz')
 		c1.Modified()
 		c1.Update()
-	c1.Write("test")
+	# c1.Write("test")
 	channelcounts.Write("channelcounts")
 	totalcounts.Write("totalcounts")
 	time.sleep(5)	
