@@ -166,7 +166,7 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 	# c1.Write("test")
 	channelcounts.Write("channelcounts")
 	totalcounts.Write("totalcounts")
-	time.sleep(5)	
+	time.sleep(2)	
 	f.Close()
 
 
