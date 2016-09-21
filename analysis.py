@@ -70,9 +70,9 @@ g = TFile("analysis.root","RECREATE")
 c1 = TCanvas('c1', 'Pixel Monitor ', 700, 900)
 c2 = TCanvas('c2', 'Pixel Monitor ', 1280, 720)
 for files in filelist:
-        channels = 256    	
-    	if "inv_" in files:
-            channels=96
+        channels = 288    	
+    	# if "inv_" in files:
+        #     channels=96
 	c2.Clear()
 	c2.Divide(3,1)
 	for i in range(1,4):
