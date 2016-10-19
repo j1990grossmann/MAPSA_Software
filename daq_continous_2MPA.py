@@ -173,7 +173,7 @@ with open(runNumberFile,'w') as newRunFile:
 print "End of Run %s" %runNumber
                
 memoryFile = open(cwd+'/readout/run%s_memory.txt' %('{0:04d}'.format(runNumber)), 'w')
-counterFile = open('/readout/run%s_counter.txt' %('{0:04d}'.format(runNumber)), 'w')
+counterFile = open(cwd+'/readout/run%s_counter.txt' %('{0:04d}'.format(runNumber)), 'w')
 
 for i, shutter in enumerate(counterArray):
     for j,mpa in enumerate(shutter):
