@@ -48,11 +48,11 @@ filelist = [
         # Source vs Noise inverted
 	# "sourcetestsourcetest_inv_100V_SR_90_not_top_ffffe_rep_10_l_0_u_100_single_pixel_16_09_10.root     ",
 	"sourcetestsourcetest_inv__100V_SR_90_not_top_ffffe_rep_100_l_0_u_255_16_08_12.root                ",
-	"sourcetestsourcetest_inv__100V_SR_90_on_top_ffffe_rep_100_l_0_u_255_16_08_12_1_1.root             ",
+	# "sourcetestsourcetest_inv__100V_SR_90_on_top_ffffe_rep_100_l_0_u_255_16_08_12_1_1.root             ",
         "sourcetestsourcetest_inv__100V_SR_90_on_top_ffffe_rep_100_l_0_u_255_16_08_16.root",
-	# "sourcetestsourcetest_inv_100V_SR_90_not_top_ffffe_rep_10_l_0_u_255_16_09_10.root                  ",
-	# "sourcetestsourcetest_inv__100V_SR_90_not_top_ffffe_rep_1_l_0_u_255_16_09_10.root                  ",
-	# "sourcetestsourcetest_inv_SR_90_not_on_top_ffffe_rep_1000_l_0_u_255.root                           ",
+	# # "sourcetestsourcetest_inv_100V_SR_90_not_top_ffffe_rep_10_l_0_u_255_16_09_10.root                  ",
+	# # "sourcetestsourcetest_inv__100V_SR_90_not_top_ffffe_rep_1_l_0_u_255_16_09_10.root                  ",
+	# # "sourcetestsourcetest_inv_SR_90_not_on_top_ffffe_rep_1000_l_0_u_255.root                           ",
 	"sourcetestsourcetest_norm__100V_SR_90_on_top_ffffe_rep_100_l_0_u_255_16_08_12.root                "
 	# "sourcetestSR_90_not_on_top_ffffe_rep_10000_l_0_u_255.root                                         ",
 	# "sourcetestSR_90_not_on_top_ffffe_rep_10_l_0_u_255.root                                            ",
@@ -69,12 +69,15 @@ ROOT.gROOT.SetBatch()
 g = TFile("analysis.root","RECREATE")
 c1 = TCanvas('c1', 'Pixel Monitor ', 700, 900)
 c2 = TCanvas('c2', 'Pixel Monitor ', 1280, 720)
+c3 = TCanvas('c3', 'Pixel Monitor ', 1280, 720)
 for files in filelist:
-        channels = 288    	
-    	# if "inv_" in files:
-        #     channels=96
+        # channels = 288    	
+        channels = 250    	
+    	if "inv_" in files:
+            channels=96
 	c2.Clear()
-	c2.Divide(3,1)
+	c2.Divide(2,1)
+        c3.Clear()
 	for i in range(1,4):
 		c2.cd(i)
 		ROOT.gPad.SetGridx()
@@ -98,7 +101,7 @@ for files in filelist:
 	# print outfile
 	g.mkdir(str(outfile))
 	g.cd(str(outfile))
-	channelcounts = TH2I('HitMap','Hits; Channel; DAC Value (1.456 mV)', 288, .5,288.5,256, .5, 256.5)
+	channelcounts = TH2I('HitMap','Counts; Channel; DAC Value (1.456 mV)', 288, .5,288.5,256, .5, 256.5)
 	normgraph      = TGraphErrors()
 	meangraph      = TGraphErrors() 
 	sigmagraph     = TGraphErrors() 
@@ -122,16 +125,20 @@ for files in filelist:
 	# meanhist       = TH1F('meanhist_'+savestr,'Mean DAC; DAC Value (1.456 mV); counts', 256,0,255)
 	# sigmahist      = TH1F('sigmahist_'+savestr,'Sigma DAC; DAC Value (1.456 mV); counts', 250,0,10)
 	normgraph.SetTitle('Normalization; Channel; Normalization')
-	meangraph.SetTitle('Mean; Channel; DAC Value (1.456 mV)')
-	sigmagraph.SetTitle('Sigma; Channel; DAC Value (1.456 mV)')
+	# meangraph.SetTitle('Mean; Channel; DAC Value (1.456 mV)')
+	meangraph.SetTitle('Mean; Channel; DAC Value (a.u.)')
+	# sigmagraph.SetTitle('Sigma; Channel; DAC Value (1.456 mV)')
+	sigmagraph.SetTitle('Sigma; Channel; DAC Value (a.u.)')
 	chisquaregraph.SetTitle('Chisquared/NDF; Channel; Chisquared/NDF ')
 	ROOT.gStyle.SetOptFit(1111)
-	stack = THStack('a','Pixel Curves;DAC Value (1.456 mV);Counts (1/1.456)')
+	# stack = THStack('a','Pixel Curves;DAC Value (1.456 mV);Counts (1/1.456)')
+	stack = THStack('a','Pixel Curves;DAC Value (a.u.);Counts ')
 	fitfuncs = []
 	fitparams = []
 	gr1 = []
 	for pixel in range(0, channels):
-		gr1.append(TH1I(str(pixel),str(pixel+1)+';DAC Value (1.456 mV);Counts (1/1.456)',256,0.5,256.5))
+		# gr1.append(TH1I(str(pixel),str(pixel+1)+';DAC Value (1.456 mV);Counts (1/1.456)',256,0.5,256.5))
+		gr1.append(TH1I(str(pixel),str(pixel+1)+';DAC Value (a.u.);Counts ',256,0.5,256.5))
 		color=pixel%9+1
 		gr1[pixel].SetLineColor(color)
 		gr1[pixel].SetMarkerColor(color)
@@ -214,12 +221,15 @@ for files in filelist:
 	# iterator.First().Print("all")
 	Maximum = TMath.Power(10,(round(TMath.Log10(stack.GetMaximum()))-1))
 
-        ROOT.gStyle.SetLabelSize(0.03,"xyz");
-        ROOT.gStyle.SetTitleSize(0.035,"xyz");
-        ROOT.gStyle.SetTitleOffset(1.4,"y");
-        ROOT.gStyle.SetPadGridX(1)
-        ROOT.gStyle.SetPadGridY(1)
-        ROOT.gStyle.SetOptStat(000)
+        ROOT.gStyle.SetLabelSize(0.06,"xyz");
+        ROOT.gStyle.SetTitleSize(0.06,"xyz");
+        ROOT.gStyle.SetTitleOffset(1.2,"y");
+        ROOT.gStyle.SetTitleOffset(.825,"x");
+        ROOT.gStyle.SetPadGridX(1);
+        ROOT.gStyle.SetPadGridY(1);
+        ROOT.gStyle.SetOptStat(0);
+        # ROOT.gStyle.SetPadLeftMargin(.2);
+        # ROOT.gStyle.SetPadRightMargin(.1);
 
 	c1.cd(1)
 
@@ -233,6 +243,9 @@ for files in filelist:
 	stack.GetXaxis().SetRangeUser(0,256)
 	stack.SetMinimum(.1)
 	stack.SetMaximum(Maximum)
+        ROOT.gPad.SetLeftMargin(.15);
+        ROOT.gPad.SetRightMargin(.05);
+
 	ROOT.gPad.SetLogy()
 	ROOT.gPad.Update()
 	for idx, it in enumerate(fitfuncs):
@@ -256,6 +269,9 @@ for files in filelist:
 	sigmagraph.GetXaxis().SetRangeUser(0,channels+1)
         c2.cd(2)
 	sigmagraph.Draw("ap")
+        ROOT.gPad.SetLeftMargin(.15);
+        ROOT.gPad.SetRightMargin(.05);
+
 	c1.cd(5)
 	meangraph.Draw("ap")
 	c1.cd(6)
@@ -263,26 +279,30 @@ for files in filelist:
 	channelcounts.GetXaxis().SetRangeUser(0,channels+1)
         ROOT.gPad.SetLogy()
 
-        c2.cd(3)
-        ROOT.gStyle.SetOptStat(000)
+        # c2.cd(3)
+        c3.cd(0)
+        ROOT.gStyle.SetOptStat(0)
+        ROOT.gPad.SetRightMargin(.15)
+        ROOT.gPad.SetLeftMargin(.15)
+        ROOT.gPad.SetGrid(0)
 	copy = channelcounts.DrawCopy("colz")
         if(outfile.Contains("SR_90_on_top")):
             copy.SetMaximum(100)
             copy.SetMinimum(1)
+        copy.GetYaxis().SetTitle("DAC Value (a.u.)")
         # else:
             # ROOT.gPad.SetLogz()
-        ROOT.gPad.SetRightMargin(.15)
-        ROOT.gPad.SetLeftMargin(.15)
-        ROOT.gPad.SetGrid(0)
-        copy.GetYaxis().SetTitleOffset(1.5)
+        # copy.GetYaxis().SetTitleOffset(1.5)
         
 	c1.Update()
 	c1.Modified()
 	c2.Update()
 	c2.Modified()
+	c3.Update()
+	c3.Modified()
 	
 	# c1.SaveAs("double_gauss_same_mean.pdf")
-	time.sleep(2)
+	# time.sleep(2)
 	g.cd(str(outfile))
 	for objs in objarr:
 		objs.Write(objs.GetTitle())
@@ -291,6 +311,8 @@ for files in filelist:
         outfile1=outfile+TString(".pdf")
         c2.SaveAs(str(outfile1))
         c2.Write("c2")
+        c3.SaveAs("c3"+str(outfile1))
+        c3.Write("c3")
 	# while (TObject(iterator.Next())): 
 	# 	print iterator.Next().Title()
 		

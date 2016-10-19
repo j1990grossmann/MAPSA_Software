@@ -24,7 +24,6 @@ pmmaskon=[1]*6;
 def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode, savestr, singlepixel):
 	direction = 1 if ((up-low)>0) else -1
 	steps=int(round(abs(low-up)/resolution))+1
-
 	c1 = TCanvas('c1', 'Source Monitor ', 700, 900)
 	c1.Divide(2,2)
 
@@ -33,7 +32,8 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 	totalcounts.SetDirectory(0)
 	channelcounts.SetDirectory(0)
 
-	f = TFile( 'sourcetest'+savestr+'.root', 'RECREATE' )
+	# f = TFile( 'sourcetest'+savestr+'.root', 'RECREATE' )
+	f = TFile( savestr+'.root', 'RECREATE' )
 	
 	tree_vars = {}			
 	tree_vars["TIMESTAMP"] = array('i',[0])
@@ -164,120 +164,12 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 		c1.Modified()
 		c1.Update()
 	# c1.Write("test")
+	time.sleep(2)
 	channelcounts.Write("channelcounts")
 	totalcounts.Write("totalcounts")
-	time.sleep(2)	
 	f.Close()
 
-
-# def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe_sets, sdur, smode):
-
-
-# def plot_results(caldac,no_mpa_light,x1,y1, c1, backup):
-# 	savestr =str(caldac)
-# 	col=1
-# 	xvec =  np.array(x1, dtype='uint16')
-# 	xdacval = 0.
-# 	thdacvv = []
-# 	yarrv = []
-# 	xdvals = []
-# 	linearr = []
-# 	stackarr = []
-# 	fitfuncarr = []
-# 	fitparameterarray = []
-# 	for i in range(0,no_mpa_light):
-# 		if(backup.GetDirectory("MPA_"+str(i))):
-# 			backup.cd("MPA_"+str(i))
-# 		else:
-# 			backup.mkdir("MPA_"+str(i))
-# 			backup.cd("MPA_"+str(i))
-# 		calibconfxmlroot	=	calibconfsxmlroot[i]
-# 		xdvals.append(0.)
-# 		c1.cd(i+1)
-# 		thdacv = []
-# 		yarr =  np.array(y1[i])
-# 		linearr.append([])
-# 		gr1 = []
-# 		lines = []
-# 		fitfuncarr.append([])
-# 		fitfuncs = []
-# 		fitparameterarray.append([])
-# 		fitparams = []
-# 		yarrv.append(yarr)
-# 		stackarr.append(THStack('a','pixel curves;DAC Value (1.456 mV);Counts (1/1.456)'))
-# 		for iy1 in range(0,len(yarr[0,:])):
-# 			yvec = yarr[:,iy1]
-# 			# if max(yvec)==0:
-# 				# print "zero"
-# 			gr1.append(TH1I(str(iy1),';DAC Value (1.456 mV);Counts (1/1.456)',len(x1),0,x1[-1]))
-# 			gr1[iy1].Sumw2(ROOT.kFALSE)
-# 			for j in np.nditer(xvec):
-# 				gr1[iy1].SetBinContent(gr1[iy1].FindBin(j),(np.array(yvec,dtype='int')[j]))
-# 			gr1[iy1].Sumw2(ROOT.kTRUE)
-# 			color=iy1%9+1
-# 			gr1[iy1].SetLineColor(color)
-# 			gr1[iy1].SetMarkerColor(color)
-# 			gr1[iy1].SetFillColor(color)
-# 			gr1[iy1].SetLineStyle(1)
-# 			gr1[iy1].SetLineWidth(1)
-# 			gr1[iy1].SetFillStyle(1)
-# 			gr1[iy1].SetMarkerStyle(1)
-# 			gr1[iy1].SetMarkerSize(.5)
-# 			gr1[iy1].SetMarkerStyle(20)
-# 			fitfuncs.append(TF1('gaus','gaus', 0,256))
-# 			fitfuncs[iy1].SetNpx(256)
-# 			fitfuncs[iy1].SetParameters(gr1[iy1].GetMaximum(),gr1[iy1].GetMean(),gr1[iy1].GetRMS());
-# 			cloned = gr1[iy1].Clone()
-# 			cloned.SetDirectory(0)
-# 			fitparams.append([])
-# 			mean=0
-# 			if gr1[iy1].GetMaximum()<-1:
-# 				gr1[iy1].Fit(fitfuncs[iy1],'rq +rob=0.95','',0,256)
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(0))
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(1))
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParameter(2))
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParError(0))
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParError(1))
-# 				fitparams[iy1].append(fitfuncs[iy1].GetParError(2))
-# 				if(fitfuncs[iy1].GetNDF()>0):
-# 					fitparams[iy1].append(fitfuncs[iy1].GetChisquare()/fitfuncs[iy1].GetNDF())
-# 				else:
-# 					fitparams[iy1].append(0)
-# 				mean=fitfuncs[iy1].GetParameter(1)
-# 			else:
-# 				for kk in range(0,7):
-# 					fitparams[iy1].append(0)
-# 			fitparameterarray[i].append(fitparams[iy1])
-# 			fitfuncarr[i].append(fitfuncs[iy1])
-# 			stackarr[i].Add(cloned)
-# 			if iy1==(len(yarr[0,:])-1):
-# 				stackarr[i].Draw('nostack hist e1 x0')
-# 				# for fitfuncs1 in fitfuncarr[i]:
-# 				# 	fitfuncs1.Draw("same")
-# 				# for lines1 in linearr[i]:
-# 				# 	lines1.Draw("same")
-# 				if(stackarr[i].GetMaximum()>1):
-# 					Maximum = TMath.Power(10,(round(TMath.Log10(stackarr[i].GetMaximum()))-1))
-# 					stackarr[i].SetMinimum(.1)
-# 					stackarr[i].SetMaximum(Maximum)
-# 					# gPad.SetLogy()
-# 				gPad.Modified()
-# 				gPad.Update()
-# 			gr1[iy1].SetLineColor(1)
-# 			gr1[iy1].SetMarkerColor(1)
-# 			gr1[iy1].SetFillColor(1)
-# 			gr1[iy1].Write(str(iy1)+'CAL'+savestr)
-# 			# fitfuncs[iy1].Write(str(iy1)+savestr+'fit')
-# 		# print thdacv
-# 	backup.cd()
-# 	if(backup.GetDirectory("Canvas")):
-# 		backup.cd("Canvas")
-# 	else:
-# 		backup.mkdir("Canvas")
-# 		backup.cd("Canvas")
-# 	c1.Write('CALDAC_'+savestr)
-# 	c1.Clear('D')
-# 	return 0
+# ROOT.gROOT.SetBatch(True)
 
 parser = OptionParser()
 parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
