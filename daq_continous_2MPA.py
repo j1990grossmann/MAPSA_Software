@@ -160,7 +160,7 @@ except KeyboardInterrupt:
 
 runNumber = 0
 
-runNumberFile = cwd+'/currentRun.txt'
+runNumberFile = cwd+'/.currentRun.txt'
 print runNumberFile
 
 with open(runNumberFile,'r') as runFile:
@@ -172,8 +172,8 @@ with open(runNumberFile,'w') as newRunFile:
 
 print "End of Run %s" %runNumber
                
-memoryFile = open('/home/readout/TBdata/run%s_memory.txt' %('{0:04d}'.format(runNumber)), 'w')
-counterFile = open('/home/readout/TBdata/run%s_counter.txt' %('{0:04d}'.format(runNumber)), 'w')
+memoryFile = open(cwd+'/readout/run%s_memory.txt' %('{0:04d}'.format(runNumber)), 'w')
+counterFile = open('/readout/run%s_counter.txt' %('{0:04d}'.format(runNumber)), 'w')
 
 for i, shutter in enumerate(counterArray):
     for j,mpa in enumerate(shutter):
