@@ -44,10 +44,10 @@ conf = []
 mpa = []
 for iMPA, nMPA  in enumerate(assembly):
     mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
-    conf.append(mpa[iMPA].config(config_dir+"/Conf_trimcalib_MPA" + str(nMPA)+ "_masked.xml")) # Use trimcalibrated config
+    conf.append(mpa[iMPA].config(cwd+"/data/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
     #conf.append(mpa[iMPA].config("data/Conf_default_MPA" + str(nMPA)+ "_config1.xml"))
 
-threshold = 180
+threshold = 100
 
 # Define default config
 for iMPA in range(0,len(assembly)):
@@ -55,11 +55,11 @@ for iMPA in range(0,len(assembly)):
     conf[iMPA].modifypixel(range(1,25), 'SR', 1) # Enable synchronous readout on all pixels
     conf[iMPA].upload() # Push configuration to GLIB
 glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-conf[iMPA].spi_wait() # includes dispatch
+conf[iMPA]._spi_wait() # includes dispatch
 
 glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
 glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1) # This is a 'write' and pushes the configuration to the glib. Write must happen before starting the sequencer.
-conf[0].spi_wait() # includes dispatch
+conf[0]._spi_wait() # includes dispatch
 
 glib.getNode("Control").getNode('testbeam_clock').write(0x1) # Enable external clock 
 glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
@@ -75,7 +75,7 @@ counterArray = []
 memoryArray = []
 frequency = "Wait"
 
-triggerStop = 500000
+triggerStop = 1000
 
 try:
     while True:
@@ -86,6 +86,7 @@ try:
         if freeBuffers < 3: # When set to 4 this produces duplicate entries, 3 (= 2 full buffers) avoids this.  
 
             if shutterCounter%2000 == 0:
+                # print "2000 events taken"
                 startTime = time.time()
                 shutterTimeStart = shutterCounter
 
@@ -100,11 +101,11 @@ try:
                 memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
                 glib.dispatch()
 
-                #print "Buffer: %s iMPA: %s nMPA: %s" %(ibuffer, iMPA, nMPA)
-                #print counterData
-                #print '{0:032b}'.format(counterData[0])
-                #print memoryData
-                #print "\n"
+                # print "Buffer: %s iMPA: %s nMPA: %s" %(ibuffer, iMPA, nMPA)
+                # print counterData
+                # print '{0:032b}'.format(counterData[0])
+                # print memoryData
+                # print "\n"
 
                 MAPSACounter.append(counterData)
                 MAPSAMemory.append(memoryData)
