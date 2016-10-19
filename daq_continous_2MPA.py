@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import errno
 import sys
 import os
 from classes import *
@@ -6,7 +7,23 @@ from array import array
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile
 import time
 
+
+
 assembly = [2,5]
+#Get current workingdir
+def make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+cwd = os.getcwd()
+filepath = os.path.dirname(os.path.realpath(__file__))
+data_dir=cwd+"/readout_data"
+make_sure_path_exists(data_dir)
+config_dir=cwd+"/data"
+make_sure_path_exists(data_dir)
 
 # Connection and GLIB 
 a = uasic(connection="file://connections_test.xml",device="board0")
@@ -27,7 +44,7 @@ conf = []
 mpa = []
 for iMPA, nMPA  in enumerate(assembly):
     mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
-    conf.append(mpa[iMPA].config("data/Conf_trimcalib_MPA" + str(nMPA)+ "_masked.xml")) # Use trimcalibrated config
+    conf.append(mpa[iMPA].config(config_dir+"/Conf_trimcalib_MPA" + str(nMPA)+ "_masked.xml")) # Use trimcalibrated config
     #conf.append(mpa[iMPA].config("data/Conf_default_MPA" + str(nMPA)+ "_config1.xml"))
 
 threshold = 180
@@ -111,7 +128,6 @@ try:
             if shutterCounter > triggerStop:
                 if time.time() - endTimeStamp > 2:
                     break
-
         
 except KeyboardInterrupt:
     pass
@@ -142,7 +158,9 @@ except KeyboardInterrupt:
 #
 
 runNumber = 0
-runNumberFile = '/home/readout/TBdata/currentRun.txt'
+
+runNumberFile = cwd+'/currentRun.txt'
+print runNumberFile
 
 with open(runNumberFile,'r') as runFile:
     runNumber = int(runFile.read())
