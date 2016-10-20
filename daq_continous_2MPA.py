@@ -1,3 +1,4 @@
+import pdb
 import errno
 import sys
 import os
@@ -6,7 +7,9 @@ from array import array
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile
 import time
 
+
 def start_daq ():
+    pdb.set_trace()
     assembly = [2,5]
     #Get current workingdir
     def make_sure_path_exists(path):
@@ -65,6 +68,7 @@ def start_daq ():
     
     #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
     shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
+    
     mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
     
     ibuffer = 1
@@ -159,7 +163,6 @@ def start_daq ():
     runNumber = 0
     
     runNumberFile = cwd+'/.currentRun.txt'
-    print runNumberFile
     
     with open(runNumberFile,'r') as runFile:
         runNumber = int(runFile.read())
