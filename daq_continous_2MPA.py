@@ -6,7 +6,7 @@ from array import array
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile
 import time
 
-def daq_continous_2MPA ():
+def start_daq ():
     assembly = [2,5]
     #Get current workingdir
     def make_sure_path_exists(path):
@@ -284,4 +284,4 @@ def daq_continous_2MPA ():
     # tFile.Write()
     # tFile.Close()
     
-print "done"
+print "imported"
