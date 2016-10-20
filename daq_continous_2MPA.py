@@ -117,7 +117,7 @@ def start_daq ():
                 # Only contains valVectors:
                 counterArray.append(MAPSACounter) 
                 memoryArray.append(MAPSAMemory)
-                print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
+                #print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
     
     
                 ############## Continuous operation in bash loop
