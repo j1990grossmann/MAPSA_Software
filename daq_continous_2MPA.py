@@ -63,8 +63,8 @@ def start_daq ():
     glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
     glib.dispatch()
     
-    shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-    #shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
+    #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
+    shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
     mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
     
     ibuffer = 1
