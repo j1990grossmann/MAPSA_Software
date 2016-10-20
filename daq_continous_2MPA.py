@@ -4,13 +4,17 @@ import sys
 import os
 from classes import *
 from array import array
-from numpy import array
+import numpy as np
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile
 import time
+
+def create_ttree()
+
 
 
 def start_daq ():
     assembly = [2,5]
+    number_mpa_light=len(assembly)
     #Get current workingdir
     def make_sure_path_exists(path):
         try:
@@ -68,7 +72,7 @@ def start_daq ():
     #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
     shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
     
-    pdb.set_trace()
+    # pdb.set_trace()
     mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
     
     ibuffer = 1
@@ -79,7 +83,7 @@ def start_daq ():
     
     triggerStop = 1000
     
-    
+    # np_counter_arr = 
     try:
         while True:
             freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
@@ -105,10 +109,6 @@ def start_daq ():
                     # print '{0:032b}'.format(counterData[0])
                     # print memoryData
                     # print "\n"
-                    print ("counterData ", ndarray.shape(counterData))
-                    print ("memoryData", ndarray.shape(memoryData))
-                    print ("counterData[0] ", ndarray.shape(counterData[0]))
-                    print ("memoryData[0]", ndarray.shape(memoryData[0]))
                     
                     MAPSACounter.append(counterData)
                     MAPSAMemory.append(memoryData)
@@ -120,8 +120,27 @@ def start_daq ():
                 shutterCounter+=1
                 
                 # Only contains valVectors:
+                counterData1=[]
+                memoryData1=[]
+                print "mapsa counter"
+                for count,pix  in enumerate( MAPSACounter):
+                    print count, array('d',pix)
+                counterData1 = array('d',MAPSACounter[0])
+                print "memory"
+                for count,pix  in enumerate( MAPSAMemory ):
+                    print count, array('d',pix)
+                memoryData1 = array('d',MAPSAMemory[0])
+
                 counterArray.append(MAPSACounter) 
                 memoryArray.append(MAPSAMemory)
+
+                numpyarray1 = np.array(counterData1[:][:])
+                numpyarray2 = np.array(memoryData1[:][:])
+                # print ("counterData "   , len(counterData1))
+                # print ("memoryData"     , len(memoryData1))
+                print ("counterData ", numpyarray1.shape)
+                print ("memoryData"  , numpyarray2.shape)
+
                 if(shutterCounter%100==0):
                     print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
     
