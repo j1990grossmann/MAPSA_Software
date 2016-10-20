@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import errno
 import sys
 import os
@@ -285,3 +284,5 @@ print "All files saved"
 
 # tFile.Write()
 # tFile.Close()
+
+
