@@ -54,7 +54,9 @@ class MAPSA_daq:
 			# 	print (i*1E-3), 'sec'
 			time.sleep(0.001)
 			i+=1
-			if i> 13500:
+			#the shutterduration is in maximum 13.422s
+                        #if i> 13500:
+                        if i> 1000:
 				print "timeout"
 				return 0
 		

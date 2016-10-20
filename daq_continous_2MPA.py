@@ -4,12 +4,12 @@ import sys
 import os
 from classes import *
 from array import array
+from numpy import array
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile
 import time
 
 
 def start_daq ():
-    pdb.set_trace()
     assembly = [2,5]
     #Get current workingdir
     def make_sure_path_exists(path):
@@ -46,7 +46,6 @@ def start_daq ():
     for iMPA, nMPA  in enumerate(assembly):
         mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
         conf.append(mpa[iMPA].config(cwd+"/data/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
-        #conf.append(mpa[iMPA].config("data/Conf_default_MPA" + str(nMPA)+ "_config1.xml"))
     
     threshold = 100
     
@@ -69,6 +68,7 @@ def start_daq ():
     #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
     shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
     
+    pdb.set_trace()
     mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
     
     ibuffer = 1
@@ -79,23 +79,20 @@ def start_daq ():
     
     triggerStop = 1000
     
+    
     try:
         while True:
-            
             freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             glib.dispatch()
-    
             if freeBuffers < 3: # When set to 4 this produces duplicate entries, 3 (= 2 full buffers) avoids this.  
-    
                 if shutterCounter%2000 == 0:
                     # print "2000 events taken"
                     startTime = time.time()
                     shutterTimeStart = shutterCounter
-    
+
                 if shutterCounter%100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
                     frequency = (shutterCounter - shutterTimeStart)/(time.time() - startTime)
-                
-            
+
                 MAPSACounter = []
                 MAPSAMemory = []
                 for iMPA, nMPA in enumerate(assembly):
@@ -108,7 +105,11 @@ def start_daq ():
                     # print '{0:032b}'.format(counterData[0])
                     # print memoryData
                     # print "\n"
-    
+                    print ("counterData ", ndarray.shape(counterData))
+                    print ("memoryData", ndarray.shape(memoryData))
+                    print ("counterData[0] ", ndarray.shape(counterData[0]))
+                    print ("memoryData[0]", ndarray.shape(memoryData[0]))
+                    
                     MAPSACounter.append(counterData)
                     MAPSAMemory.append(memoryData)
     
@@ -121,7 +122,8 @@ def start_daq ():
                 # Only contains valVectors:
                 counterArray.append(MAPSACounter) 
                 memoryArray.append(MAPSAMemory)
-                #print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
+                if(shutterCounter%100==0):
+                    print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
     
     
                 ############## Continuous operation in bash loop
