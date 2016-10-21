@@ -183,8 +183,8 @@ def start_daq ():
                 numpyarray2 = np.array(memoryData1[:][:])
                 # print ("counterData "   , len(counterData1))
                 # print ("memoryData"     , len(memoryData1))
-                print ("counterData ", numpyarray1.shape)
-                print ("memoryData"  , numpyarray2.shape)
+                #print ("counterData ", numpyarray1.shape)
+                #print ("memoryData"  , numpyarray2.shape)
 
                 if(shutterCounter%100==0):
                     print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
