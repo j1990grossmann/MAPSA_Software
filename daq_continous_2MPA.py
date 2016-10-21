@@ -128,14 +128,13 @@ def start_daq ():
     
     triggerStop = 1000
     
-    # np_counter_arr = 
     try:
         while True:
             freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             glib.dispatch()
             if freeBuffers < 3: # When set to 4 this produces duplicate entries, 3 (= 2 full buffers) avoids this.  
                 if shutterCounter%2000 == 0:
-                    # print "2000 events taken"
+                    print "2000 events taken"
                     startTime = time.time()
                     shutterTimeStart = shutterCounter
 
@@ -144,6 +143,8 @@ def start_daq ():
 
                 MAPSACounter = []
                 MAPSAMemory = []
+
+                pix, mem = MAPSA.daq().read_data(ibuffer,wait=False,Fast=True,number_mpa_light )
                 for iMPA, nMPA in enumerate(assembly):
                     counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
                     memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
