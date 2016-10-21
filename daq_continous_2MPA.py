@@ -5,16 +5,61 @@ import os
 from classes import *
 from array import array
 import numpy as np
-from ROOT import TGraph, TCanvas, TLine, TTree, TFile
+from ROOT import TGraph, TCanvas, TLine, TTree, TFile, TBranch, TFile
 import time
 
-def create_ttree()
+
+def create_ttree(tree_vars, number_mpa_light, assembly, foldername):
+        tree_vars["SPILL"] = array('L',[0])
+        tree_vars["THRESHOLD"] = array('h',[0])
+        tree_vars["SPICHAIN"] = array('h',[0]*6)
+        #tree_vars["TIMESTAMP"] = array('L',[0])
+        tree_vars["TRIG_COUNTS_SHUTTER"] = array('L',[0])
+        tree_vars["TRIG_COUNTS_TOTAL_SHUTTER"] = array('L',[0])
+        tree_vars["TRIG_COUNTS_TOTAL"] = array('L',[0])
+        tree_vars["TRIG_OFFSET_BEAM"] = array('L',[0]*2048)
+        tree_vars["TRIG_OFFSET_MPA"] = array('L',[0]*2048)
+        for i in range(0,number_mpa_light):
+                        tree_vars["AR_MPA_"+str(i)] = array('L',[0]*48)
+                        tree_vars["SR_BX_MPA_"+str(i)] = array('L',[0]*96)
+                        tree_vars["SR_MPA_"+str(i)] = array('L',[0]*96)
+        F = TFile('daqlogs/'+foldername+'/output.root','recreate')
+        tree=TTree("Tree","Tree")
+
+
+        for key in tree_vars.keys():
+                if "SR" in key:
+                        tree.Branch(key,tree_vars[key],key+"[96]/l")
+                if "AR" in key:
+                        tree.Branch(key,tree_vars[key],key+"[48]/l")
+                if "TRIG_OFFSET" in key:
+                        tree.Branch(key,tree_vars[key],key+"[2048]/l")
+                if "TRIG_COUNTS" in key:
+                        tree.Branch(key,tree_vars[key],key+"[1]/l")
+                if "SPICHAIN" in key:
+                        tree.Branch(key,tree_vars[key],key+"[6]/l")
+        for i in range(0,number_mpa_light):
+            tree_vars["AR_MPA_"+str(i)] = array('L',[0]*48)
+            tree_vars["SR_BX_MPA_"+str(i)] = array('L',[0]*96)
+            tree_vars["SR_MPA_"+str(i)] = array('L',[0]*96)
+        for keys in tree_vars.keys():
+            if "SR" in key:
+                tree.Branch(key,tree_vars[key],key+"[96]/l")
+            if "AR" in key:
+                tree.Branch(key,tree_vars[key],key+"[48]/l")
+            if "TRIG_OFFSET" in key:
+                tree.Branch(key,tree_vars[key],key+"[2048]/l")
+            if "TRIG_COUNTS" in key:
+                tree.Branch(key,tree_vars[key],key+"[1]/l")
+
 
 
 
 def start_daq ():
     assembly = [2,5]
     number_mpa_light=len(assembly)
+    tree_vars = {}
+
     #Get current workingdir
     def make_sure_path_exists(path):
         try:
