@@ -143,7 +143,6 @@ def start_daq ():
 
                 MAPSACounter = []
                 MAPSAMemory = []
-
                 pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
 		# print "pix", pix
 		# print "mem", mem
