@@ -55,8 +55,8 @@ class MAPSA_daq:
 			time.sleep(0.001)
 			i+=1
 			#the shutterduration is in maximum 13.422s
-                        #if i> 13500:
-                        if i> 1000:
+                        if i> 13500:
+                        #if i> 1000:
 				print "timeout"
 				return 0
 		
@@ -171,5 +171,5 @@ class MAPSA_daq:
 		self._Sequencer.getNode('datataking_continuous').write(smode)
 		self._Sequencer.getNode('buffers_index').write(ibuff)
 		self._hw.dispatch()
-		time.sleep(0.05)
-		self._waitsequencer()
+		#time.sleep(0.05)
+		#self._waitsequencer()
