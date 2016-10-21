@@ -167,13 +167,13 @@ def start_daq ():
                 # Only contains valVectors:
                 counterData1=[]
                 memoryData1=[]
-                print "mapsa counter"
-                for count,pix  in enumerate( MAPSACounter):
-                    print count, array('d',pix)
+                #print "mapsa counter"
+                #for count,pix  in enumerate( MAPSACounter):
+                    #print count, array('d',pix)
                 counterData1 = array('d',MAPSACounter[0])
-                print "memory"
-                for count,pix  in enumerate( MAPSAMemory ):
-                    print count, array('d',pix)
+                #print "memory"
+                #for count,pix  in enumerate( MAPSAMemory ):
+                    #print count, array('d',pix)
                 memoryData1 = array('d',MAPSAMemory[0])
 
                 counterArray.append(MAPSACounter) 
