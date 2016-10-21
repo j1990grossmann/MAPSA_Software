@@ -143,7 +143,7 @@ def start_daq ():
 
                 MAPSACounter = []
                 MAPSAMemory = []
-                pix, mem = mapsaClasses.daq().read_data(1,wait=False,Fast=True,number_mpa_light )
+                pix, mem = mapsaClasses.daq().read_data(mapsaClasses,ibuffer,wait=False,Fast=True,number_mpa_light )
                 #pix, mem = MAPSA.daq().read_data(ibuffer,wait=False,Fast=True,number_mpa_light )
                 for iMPA, nMPA in enumerate(assembly):
                     counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
