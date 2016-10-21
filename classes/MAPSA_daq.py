@@ -74,13 +74,13 @@ class MAPSA_daq:
 			self._Readout.getNode("Header").getNode("MPA"+str(i)).write(0xFFFFFFF0+i)
 			self._hw.dispatch()
 
-	def read_data(self,buffer_num=1,wait=True,Fast=False):
+	def read_data(self,buffer_num=1,wait=True,Fast=False, no_mpa=6):
 		counts = []  
 		mems = []  
 
 		dcindex=-1
 
-		for i in range(1,7):
+		for i in range(1,no_mpa+1):
 			# start = time.time()
 			counter_data  = self._counter.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(25)
 			memory_data = self._memory.getNode("MPA"+str(i)).getNode("buffer_"+str(buffer_num)).readBlock(216)
