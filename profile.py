@@ -5,4 +5,5 @@ import daq_continous_2MPA
 
 cProfile.run('daq_continous_2MPA.start_daq()', 'restats')
 p = pstats.Stats('restats')
-p.strip_dirs().sort_stats(-1).print_stats()
+p.strip_dirs().sort_stats("cum").print_stats()
+
