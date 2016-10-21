@@ -144,7 +144,14 @@ def start_daq ():
                 MAPSACounter = []
                 MAPSAMemory = []
 
-                pix, mem = MAPSA.daq().read_data(ibuffer,wait=False,Fast=True,number_mpa_light )
+                pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
+		# print "pix", pix
+		# print "mem", mem
+                counterData1=[]
+                memoryData1=[]
+                counterData1 = array('d',pix[1])
+                memoryData1 = array('d',mem[1])
+
                 for iMPA, nMPA in enumerate(assembly):
                     counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
                     memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
@@ -166,26 +173,24 @@ def start_daq ():
                 shutterCounter+=1
                 
                 # Only contains valVectors:
-                counterData1=[]
-                memoryData1=[]
                 #print "mapsa counter"
                 #for count,pix  in enumerate( MAPSACounter):
                     #print count, array('d',pix)
-                counterData1 = array('d',MAPSACounter[0])
+                # counterData1 = array('d',MAPSACounter[0])
                 #print "memory"
                 #for count,pix  in enumerate( MAPSAMemory ):
                     #print count, array('d',pix)
-                memoryData1 = array('d',MAPSAMemory[0])
+                # memoryData1 = array('d',MAPSAMemory[0])
 
                 counterArray.append(MAPSACounter) 
                 memoryArray.append(MAPSAMemory)
 
                 numpyarray1 = np.array(counterData1[:][:])
                 numpyarray2 = np.array(memoryData1[:][:])
-                # print ("counterData "   , len(counterData1))
-                # print ("memoryData"     , len(memoryData1))
-                #print ("counterData ", numpyarray1.shape)
-                #print ("memoryData"  , numpyarray2.shape)
+                print ("counterData "   , len(counterData1))
+                print ("memoryData"     , len(memoryData1))
+                print ("counterData ", numpyarray1.shape)
+                print ("memoryData"  , numpyarray2.shape)
 
                 if(shutterCounter%100==0):
                     print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
