@@ -171,5 +171,5 @@ class MAPSA_daq:
 		self._Sequencer.getNode('datataking_continuous').write(smode)
 		self._Sequencer.getNode('buffers_index').write(ibuff)
 		self._hw.dispatch()
-		#time.sleep(0.05)
-		#self._waitsequencer()
+		time.sleep(0.05)
+		self._waitsequencer()
