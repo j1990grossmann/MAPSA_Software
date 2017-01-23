@@ -61,6 +61,17 @@ def fill2d(mapsa_ordered,mapsa_mat, hist2d):
                             # print "x coord %d y coord %d value %f" %(counter_y_glob*3+counter_y_loc+1,counter_x_glob*16+counter_x_loc+1, vals_x_loc)
                             hist2d.Fill(counter_x_glob*16+counter_x_loc+1,counter_y_glob*3+counter_y_loc+1,vals_x_loc)
                 total_mapsa+=1
+def fill_columns(hist2d, column, hist1d):
+    tmphist=hist2d.ProjectionY(str(column),column,column)
+    for bins in range(1,tmphist.GetNbinsX()+1):
+        hist1d.Fill(tmphist.GetBinContent(bins))
+        print str(tmphist.GetBinContent(bins))
+        
+def fill1d_edges(hist2d, hist1d_arr):
+    fill_columns(hist2d, 1, hist1d_arr[0])
+    fill_columns(hist2d, 16, hist1d_arr[0])
+    
+    
 def extract_name_par(line,meas_type):
     arr=line.split()
     arr1=[arr[0]];
@@ -261,9 +272,18 @@ def read_file(arr,meas_type):
                         chisquaregraph.SetPointError(pointno, 0 ,0)
         ## iterator.ls()
         # Map the data to the pixel layout:
-        for i in range (0,3):
-            fill2d(fitarray[:,i], mapsa_mat,objarr2d[i] )
-        fill2d(fitarray[:,6], mapsa_mat,objarr2d[3] )
+        tmp_objarr=[]
+        tmp_objarr.extend([meanhist_std, meanhist_double, meanhist_double_neighbour])
+        tmp_objarr.extend([sigmahist_std, sigmahist_double, sigmahist_double_neighbour])
+        for i in tmp_objarr:
+            print str(i.GetName())
+
+        fill2d(fitarray[:,0], mapsa_mat,objarr2d[0])
+        fill2d(fitarray[:,1], mapsa_mat,objarr2d[1])
+        fill2d(fitarray[:,2], mapsa_mat,objarr2d[2])
+        fill2d(fitarray[:,6], mapsa_mat,objarr2d[3])
+        
+        fill1d_edges(objarr2d[0],tmp_objarr[0:3])
 
         g.cd(str(outfile))
         g.mkdir(str(outfile)+"/Channels")
@@ -368,7 +388,7 @@ def read_file(arr,meas_type):
         copy1 = chisquare.DrawCopy("colz")
         copy1 = sigma_2d.DrawCopy("colz")
         copy1.GetZaxis().SetTitle("sigma (a.u.)")
-        if(outfile.Contains("inv")):
+        if (arr[2] == 'inv'):
             copy1.GetXaxis().SetRangeUser(.5,16.5)
         copy1.SetMaximum(5)
         copy1.SetMinimum(0)
