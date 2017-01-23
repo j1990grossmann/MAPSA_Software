@@ -7,26 +7,53 @@ from array import array
 import numpy as np
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile, TBranch, TFile
 import time
+import datetime
+from optparse import OptionParser
 
+def make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
 
-def create_ttree(tree_vars, number_mpa_light, assembly, foldername):
-        tree_vars["SPILL"] = array('L',[0])
-        tree_vars["THRESHOLD"] = array('h',[0])
-        tree_vars["SPICHAIN"] = array('h',[0]*6)
-        #tree_vars["TIMESTAMP"] = array('L',[0])
-        tree_vars["TRIG_COUNTS_SHUTTER"] = array('L',[0])
+def create_data_dir():
+    cwd = os.getcwd()
+    #Create directory for new run
+    data_dir=cwd+"/readout_data"
+    make_sure_path_exists(data_dir)
+    runNumber = 0
+    runNumberFile = cwd+'/.currentRun.txt'
+    with open(runNumberFile,'r') as runFile:
+        runNumber = int(runFile.read())
+    with open(runNumberFile,'w') as newRunFile:
+        newRunFile.write(str(runNumber+1))
+    subdir ="/%09d" %runNumber
+    datapath = data_dir+subdir
+    make_sure_path_exists(datapath)
+    #check if config dir is there
+    config_dir=cwd+"/data"
+    make_sure_path_exists(config_dir)
+
+    return datapath, runNumber, config_dir
+
+def create_ttree(tree_vars, number_mpa_light, assembly, datapath):
+        tree_vars["COND_NO_MPA_LIGHT"]              = array('L',[0])
+        tree_vars["COND_SPILL"]                     = array('L',[0])
+        tree_vars["COND_THRESHOLD"]                 = array('L',[0])
+        tree_vars["COND_TIMESTAMP"]                 = array('L',[0])
+        tree_vars["SPICHAIN"]                  = array('L',[0]*6)
+        tree_vars["TRIG_COUNTS_SHUTTER"]       = array('L',[0])
         tree_vars["TRIG_COUNTS_TOTAL_SHUTTER"] = array('L',[0])
-        tree_vars["TRIG_COUNTS_TOTAL"] = array('L',[0])
-        tree_vars["TRIG_OFFSET_BEAM"] = array('L',[0]*2048)
-        tree_vars["TRIG_OFFSET_MPA"] = array('L',[0]*2048)
+        tree_vars["TRIG_COUNTS_TOTAL"]         = array('L',[0])
+        tree_vars["TRIG_OFFSET_BEAM"]          = array('L',[0]*2048)
+        tree_vars["TRIG_OFFSET_MPA"]           = array('L',[0]*2048)
         for i in range(0,number_mpa_light):
                         tree_vars["AR_MPA_"+str(i)] = array('L',[0]*48)
                         tree_vars["SR_BX_MPA_"+str(i)] = array('L',[0]*96)
                         tree_vars["SR_MPA_"+str(i)] = array('L',[0]*96)
-        F = TFile('daqlogs/'+foldername+'/output.root','recreate')
+        F = TFile(datapath+'/data.root','recreate')
         tree=TTree("Tree","Tree")
-
-
         for key in tree_vars.keys():
                 if "SR" in key:
                         tree.Branch(key,tree_vars[key],key+"[96]/l")
@@ -38,47 +65,29 @@ def create_ttree(tree_vars, number_mpa_light, assembly, foldername):
                         tree.Branch(key,tree_vars[key],key+"[1]/l")
                 if "SPICHAIN" in key:
                         tree.Branch(key,tree_vars[key],key+"[6]/l")
-        for i in range(0,number_mpa_light):
-            tree_vars["AR_MPA_"+str(i)] = array('L',[0]*48)
-            tree_vars["SR_BX_MPA_"+str(i)] = array('L',[0]*96)
-            tree_vars["SR_MPA_"+str(i)] = array('L',[0]*96)
-        for keys in tree_vars.keys():
-            if "SR" in key:
-                tree.Branch(key,tree_vars[key],key+"[96]/l")
-            if "AR" in key:
-                tree.Branch(key,tree_vars[key],key+"[48]/l")
-            if "TRIG_OFFSET" in key:
-                tree.Branch(key,tree_vars[key],key+"[2048]/l")
-            if "TRIG_COUNTS" in key:
-                tree.Branch(key,tree_vars[key],key+"[1]/l")
-
-
-
+                if "COND" in key:
+                        tree.Branch(key,tree_vars[key],key+"[1]/l")                        
+        return F, tree
 
 def start_daq ():
     assembly = [2,5]
     number_mpa_light=len(assembly)
     tree_vars = {}
-
     #Get current workingdir
-    def make_sure_path_exists(path):
-        try:
-            os.makedirs(path)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise
-    
-    cwd = os.getcwd()
-    filepath = os.path.dirname(os.path.realpath(__file__))
-    data_dir=cwd+"/readout_data"
-    make_sure_path_exists(data_dir)
-    config_dir=cwd+"/data"
-    make_sure_path_exists(data_dir)
-    
+    datapath, runNumber, config_dir = create_data_dir()
+    print datapath, runNumber, config_dir
+    timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
+    print timestr
+    #filepath = os.path.dirname(os.path.realpath(__file__))
+    #create ttree and open root file
+    create_ttree(tree_vars, number_mpa_light, assembly, datapath)
+
+
     # Connection and GLIB 
     a = uasic(connection="file://connections_test.xml",device="board0")
     glib = a._hw 
-    
+    firmver = glib.getNode("Control").getNode('firm_ver').read()
+    glib.dispatch()
     # Enable clock on MPA
     glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
     glib.dispatch()
@@ -94,10 +103,10 @@ def start_daq ():
     mpa = []
     for iMPA, nMPA  in enumerate(assembly):
         mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
-        conf.append(mpa[iMPA].config(cwd+"/data/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
-    
+        conf.append(mpa[iMPA].config(config_dir+"/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
+
     threshold = 100
-    
+
     # Define default config
     for iMPA in range(0,len(assembly)):
         conf[iMPA].modifyperiphery('THDAC',threshold) # Write threshold to MPA 'iMPA'
@@ -143,13 +152,14 @@ def start_daq ():
 
                 MAPSACounter = []
                 MAPSAMemory = []
+                #here one reads the pix and memory
                 pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
-		# print "pix", pix
-		# print "mem", mem
-                counterData1=[]
-                memoryData1=[]
-                counterData1 = array('d',pix[1])
-                memoryData1 = array('d',mem[1])
+		print "pix", pix
+		print "mem", mem
+                #counterData1=[]
+                #memoryData1=[]
+                #counterData1 = array('d',pix[1])
+                #memoryData1 = array('d',mem[1])
 
                 for iMPA, nMPA in enumerate(assembly):
                     counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
@@ -184,12 +194,12 @@ def start_daq ():
                 counterArray.append(MAPSACounter) 
                 memoryArray.append(MAPSAMemory)
 
-                numpyarray1 = np.array(counterData1[:][:])
-                numpyarray2 = np.array(memoryData1[:][:])
-                print ("counterData "   , len(counterData1))
-                print ("memoryData"     , len(memoryData1))
-                print ("counterData ", numpyarray1.shape)
-                print ("memoryData"  , numpyarray2.shape)
+                #numpyarray1 = np.array(counterData1[:][:])
+                #numpyarray2 = np.array(memoryData1[:][:])
+                #print ("counterData "   , len(counterData1))
+                #print ("memoryData"     , len(memoryData1))
+                #print ("counterData ", numpyarray1.shape)
+                #print ("memoryData"  , numpyarray2.shape)
 
                 if(shutterCounter%100==0):
                     print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
@@ -231,21 +241,12 @@ def start_daq ():
     #            print "Shutter counter: %s Buffers num: %s " %(shutterCounter, freeBuffers)
     #
     
-    runNumber = 0
-    
-    runNumberFile = cwd+'/.currentRun.txt'
-    
-    with open(runNumberFile,'r') as runFile:
-        runNumber = int(runFile.read())
-    
-    with open(runNumberFile,'w') as newRunFile:
-        newRunFile.write(str(runNumber+1))
     
     
     print "End of Run %s" %runNumber
                    
-    memoryFile = open(cwd+'/readout/run%s_memory.txt' %('{0:04d}'.format(runNumber)), 'w')
-    counterFile = open(cwd+'/readout/run%s_counter.txt' %('{0:04d}'.format(runNumber)), 'w')
+    memoryFile = open(datapath+'memory.txt', 'w')
+    counterFile = open(datapath+'counter.txt', 'w')
     
     for i, shutter in enumerate(counterArray):
         for j,mpa in enumerate(shutter):
@@ -255,10 +256,8 @@ def start_daq ():
     counterFile.close()
     memoryFile.close()
     
-    
     print "All files saved"
-            
-    
+
     # nHitMax = 95
     # nPixMax = 48
     # nMPA = 2
@@ -357,5 +356,119 @@ def start_daq ():
     
     # tFile.Write()
     # tFile.Close()
-    
+
+
+parser = OptionParser()
+
+parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
+default =       'default',
+dest    =       'setting',
+help    =       'settings ie default,  testbeam etc')
+
+parser.add_option('-C', '--calib', metavar='F', type='string', action='store',
+default =       'False',
+dest    =       'calib',
+help    =       'calibration')
+
+parser.add_option('-r', '--readout', metavar='F', type='string', action='store',
+default =       'both',
+dest    =       'readout',
+help    =       'readout which data ie counters, memory, both')
+
+parser.add_option('-f', '--format', metavar='F', type='string', action='store',
+default =       'noprocessing',
+dest    =       'format',
+help    =       'memout format noprocessing, stubfinding, centroid, stripemulator ')
+
+parser.add_option('-m', '--mpa', metavar='F', type='int', action='store',
+default =       1,
+dest    =       'mpa',
+help    =       'mpa to configure (0 for all)')
+
+
+
+parser.add_option('-c', '--charge', metavar='F', type='int', action='store',
+default =       0,
+dest    =       'charge',
+help    =       'Charge for caldac')
+
+parser.add_option('-t', '--thresh', metavar='F', type='int', action='store',
+default =       90,
+dest    =       'thresh',
+help    =       'threshold')
+
+
+parser.add_option('-T', '--testclock', metavar='F', type='string', action='store',
+default =       'glib',
+dest    =       'testclock',
+help    =       'test beam clock')
+
+
+
+parser.add_option('-n', '--number', metavar='F', type='int', action='store',
+default =       0x0,
+dest    =       'number',
+help    =       'number of calcstrobe pulses to send')
+
+
+
+
+parser.add_option('-x', '--record', metavar='F', type='string', action='store',
+default =       'True',
+dest    =       'record',
+help    =       'record this daq cycle')
+
+parser.add_option('-y', '--daqstring', metavar='F', type='string', action='store',
+default =       'none',
+dest    =       'daqstring',
+help    =       'string to append on daq folder name')
+
+parser.add_option('-z', '--monitor', metavar='F', type='string', action='store',
+default =       'False',
+dest    =       'monitor',
+help    =       'start event monitor in background')
+
+
+parser.add_option('-w', '--shutterdur', metavar='F', type='int', action='store',
+default =       0xFFFFF,
+dest    =       'shutterdur',
+help    =       'shutter duration')
+
+
+parser.add_option('-v', '--skip', metavar='F', type='string', action='store',
+default =       'True',
+dest    =       'skip',
+help    =       'skip zero counts')
+
+parser.add_option('-u', '--autospill', metavar='F', type='string', action='store',
+default =       'True',
+dest    =       'autospill',
+help    =       'write every spill')
+
+parser.add_option('-N', '--norm', metavar='F', type='string', action='store',
+default =       'False',
+dest    =       'norm',
+help    =       'use normalization mpa scheme')
+
+parser.add_option('-D', '--direction', metavar='F', type='string', action='store',
+default =       'glib',
+dest    =       'direction',
+help    =       'strip direction (glib or mpa)')
+
+parser.add_option('-L', '--loops', metavar='F', type='int', action='store',
+default =       -1,
+dest    =       'loops',
+help    =       'number of daq loops')
+
+
+parser.add_option('-p', '--phase', metavar='F', type='int', action='store',
+default =       0,
+dest    =       'phase',
+help    =       'beam phase offset')
+
+
+
+
+(options, args) = parser.parse_args()
+
 print "imported"
