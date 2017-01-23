@@ -1,0 +1,2 @@
+Filename	Repetitions	Shutterduration(Hex)
+pedestal_17_23_01_k_100_w_30D400.root	100	0x30D400
