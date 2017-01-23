@@ -7,4 +7,5 @@ plots*
 !laser_30D400_k_100.root
 !pedestal_17_23_01_k_10_w_30D400.root
 !pedestal_17_23_01_k_100_w_30D400.root
+!laser_17_23_01_k_100_w_30D400.root
 *.pdf
