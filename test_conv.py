@@ -3,11 +3,11 @@ import numpy as np
 import os.path
 import sys
 import ROOT
-from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis
+from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker
 import array as array
 import time
 
-points = 2560
+points = 2560*2
 points1=int(256*2)
 SQRT2=ROOT.TMath.Sqrt2()
 
@@ -50,6 +50,19 @@ def gaussian(x,par):
 def gaussian_der(x,par):
     return (-1.)*x[0]/(ROOT.TMath.Power(par[0],2))*ROOT.TMath.Gaus(x[0],0,par[0],ROOT.kTRUE)
 
+def get_gpeaks(h,lrange=[0,100],sigma=1,opt="",thres=0.01,niter=10):
+    s = TSpectrum(niter,3)
+    h.GetXaxis().SetRangeUser(lrange[0],lrange[1])
+    npeaks=s.Search(h,sigma,opt,thres)
+    bufX, bufY = s.GetPositionX(), s.GetPositionY()
+    pos = []
+    for i in range(s.GetNPeaks()):
+        pos.append([bufX[i], bufY[i]])
+    print pos
+    pos.sort()
+    return npeaks,pos
+
+
 g = TFile("analysis.root","READ")
 tester = TFile("testile.root","RECREATE")
 g.cd("pedestal/Channels")
@@ -62,111 +75,204 @@ for pixel in range(20, 21):
 data=TH1D("datahist","datahist",points1+1,-256.5,256.5)
 data.Sumw2()
 data.Add(gr2[0],1.)
-#data = TH1D(gr2[0])
 data.SetMarkerColor(1)
-data.SetMarkerSize(.5)
+data.SetMarkerStyle(20)
+data.SetMarkerSize(1)
 data.SetLineColor(1)
+#data.Scale(1./data.Integral())
 
-data.Scale(1./data.Integral())
-#kernel =  TH1F("gaussian_der", "Gaussian Derivative Kernel; TDAC (a.u.); frequency" ,20000, 0., 60000.)
-
-x1    =ROOT.RooRealVar("TDAC","TDAC",-256.5,256.5,"a.u.")
-#y    =ROOT.RooRealVar("y","y",0.5,256.5)
+x1    =ROOT.RooRealVar("x","TDAC",-256.5,256.5,"a.u.")
 mean =ROOT.RooRealVar("mean","mean of gaussian",0)
 sigma=ROOT.RooRealVar("sigma","width of gaussian",1,0.01,5)
 
 gauss =ROOT.RooGaussian("gauss","gaussian PDF",x1,mean,sigma)
-dgdx=gauss.derivative(x1,1) ;
-kernel=gauss.createHistogram("TDAC",256*2)
-#kernel1=dgdx.createHistogram("TDAC",points*2)
-    
-xframe = x1.frame(ROOT.RooFit.Title("d(Gauss)/dx"))
-dgdx.plotOn(xframe,ROOT.RooFit.Precision(1e-6))
+kernel=gauss.createHistogram("x",256*2)
 
-#kernel = TH1D(gaussian_der_f.GetHistogram())
-c =  TCanvas("c1","Fits",10,10,1600,1200)
+xframe = x1.frame(ROOT.RooFit.Title("d(Gauss)/dx"))
+
+c =  TCanvas("c1","Find Peak",10,10,1600,1200)
 c.Divide(2,2)
 
 arglist=ROOT.RooArgList(x1)
 argset=ROOT.RooArgSet(x1)
 
-arglist1=ROOT.RooArgList(x1)
-argset1=ROOT.RooArgSet(x1)
+RData =  ROOT.RooDataHist("RData", "Experimental Data", arglist, data)
+RKernel =  ROOT.RooDataHist("RKernel", " ", arglist, kernel)
 
-
-RData =  ROOT.RooDataHist("RData", "Experimental Data", arglist1, data)
-#RData.printMultiline(streams,1)
-sigma.Print()
-RKernel =  ROOT.RooDataHist("RKernel", " ", arglist1, kernel)
-
-pdf_data =  ROOT.RooHistPdf("pdf_data", "pdf_data", argset1,  RData,0)
+pdf_data =  ROOT.RooHistPdf("pdf_data", "pdf_data", argset,  RData,0)
 pdf_data.setInterpolationOrder(0)
-pdf_kernel =  ROOT.RooHistPdf("pdf_kernel", "pdf_kernel", argset1, RKernel, 0)
+pdf_kernel =  ROOT.RooHistPdf("pdf_kernel", "pdf_kernel", argset, RKernel, 0)
 pdf_kernel.setInterpolationOrder(0)
-#abspdf1 = ROOT.RooAbsRealPdf(pdfh2)
-#abspdf2 = ROOT.RooAbsRealPdf(pdfaccPulse)
-#pdf_conv=ROOT.RooNumConvPdf("ExpTOF", "ExpTOF", x,pdfh2 ,pdfaccPulse)
+
 x1.setBins(points,"cache")
 pdf_conv=ROOT.RooFFTConvPdf("pdf_conv", "pdf_conv", x1, gauss,pdf_data,0)
 pdf_conv.setInterpolationOrder(0)
-#pdf_conv1=ROOT.RooFFTConvPdf("pdf_conv", "pdf_conv", x1, pdf_kernel,pdf_data,0)
-x1.setBins(points,"cache")
+
 derived_smooth   =pdf_conv.derivative(x1,1)
-derived_no_smooth=pdf_data.derivative(x1,1)
-test_histo=derived_smooth.createHistogram("TDAC",points)
-print str(test_histo)
-test_histo.Scale(-1./(points1*points/points1))
+#derived_no_smooth=pdf_data.derivative(x1,1)
+derivative_histo=derived_smooth.createHistogram("x",points)
+derivative_histo.Scale(-1./(points1*points/points1))
 
-#derived_smooth_histo= derived_smooth.createHistogram("derived_smooth",25600)
-
-#frame = x.frame(ROOT.RooFit.Bins(256))
-#x1.setRange("Subrange",40,100)
-
-frame = x1.frame(ROOT.RooFit.Bins(points1))
-#frame1 = x1.frame(ROOT.RooFit.Bins(points*2))
+frame = x1.frame(ROOT.RooFit.Bins(points))
 frame1 = x1.frame(ROOT.RooFit.Bins(points))
-#frame2 = x1.frame(ROOT.RooFit.Bins(256*2*5))
 frame2 = x1.frame(ROOT.RooFit.Bins(points1))
-#plot=ROOT.RooPlot(frame)
-#frame1.GetXaxis.SetRange(40,100)
-#pdf_kernel.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kMagenta))
-#gauss.plotOn(frame,ROOT.RooFit.Precision(1e-6),ROOT.RooFit.LineColor(ROOT.kAzure))
-pdf_data.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kBlack))
-pdf_conv.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kRed))
+
+
+#pdf_data.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kBlack),ROOT.RooFit.Normalization(data.Integral()*points/points1,ROOT.RooAbsReal.NumEvent))
+#pdf_conv.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Normalization(data.Integral()*points/points1,ROOT.RooAbsReal.NumEvent))
 #derived1.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kBlue))
-RData.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kGreen))
+RData.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kBlack))
+#RData.statOn(frame,ROOT.RooFit.Layout(0.55,0.99,0.8))
+
 gauss.plotOn(frame1,ROOT.RooFit.LineColor(ROOT.kBlue))
+
 norm=1./(points*points/points1)
 #derived_smooth.plotOn(frame2,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Normalization(25600,ROOT.RooAbsReal.NumEvent))
 derived_smooth.plotOn(frame2,ROOT.RooFit.LineColor(ROOT.kGreen),ROOT.RooFit.Normalization(norm,ROOT.RooAbsReal.NumEvent))
 
-#dgdx.plotOn(frame2,ROOT.RooFit.LineColor(ROOT.kGreen))
-#derived_no_smooth.plotOn(frame2,ROOT.RooFit.LineColor(ROOT.kBlue))
+#print get_gpeaks(data,lrange=[40,100],sigma=1,opt="",thres=0.01,niter=2)
+peaks1=get_gpeaks(data)
+peaks2=[]
+if peaks1[0]>0:
+    interval =[peaks1[1][0][0]+2,100]
+    peaks2 = get_gpeaks(derivative_histo,interval,4,"",1e-5,5)
+    print peaks2[1][-1][0]
+
+#simultaneous fit
+#[peaks1[1][0][0]
+total=TF1('total',signal_fit, 0,256,7)
+total.SetNpx(points)
+total.SetLineColor(ROOT.kOrange)
+G_Mean=peaks1[1][-1][0]
+C_Start=peaks1[1][-1][0]
+C_End=peaks2[1][-1][0]
+Height=peaks2[1][-1][1]*2
+Sigma=1
+Height_Noise=peaks1[1][-1][1]
+Mean_Noise=peaks1[1][-1][0]
+Sigm_Noise=3
+
+total.SetParameters(Height,C_End,Sigma,C_Start,Height_Noise,Mean_Noise,Sigm_Noise)
+#for i,j in enumerate(pars):
+    #signal.SetParameter(i,j)
+data.Fit(total,"l+","", 0,256)
+
+#sig_norm  =ROOT.RooRealVar("sig_norm"   ,"Signal Normalization",Height/(ROOT.TMath.Pi()*2)**2)
+sig_norm  =ROOT.RooRealVar("sig_norm"   ,"Signal Normalization",Height/2.,1E-5,1E-2)
+sig_mean  =ROOT.RooRealVar("sig_mean"   ,"Signal Mean"         ,C_End,C_End-5,C_End+5)
+sig_sigma =ROOT.RooRealVar("sig_sigma"  ,"Signal Sigma"        ,2.5,0.5,20)
+ped_norm  =ROOT.RooRealVar("ped_norm" ,"Pedestal Normalization",Height_Noise,.8*Height_Noise,1.1*Height_Noise)
+#ped_norm  =ROOT.RooRealVar("ped_norm" ,"Pedestal Normalization",Height_Noise,Height/2.,1)
+ped_mean  =ROOT.RooRealVar("ped_mean" ,"Pedestal Mean"         ,C_Start,C_Start-5,C_Start+5)
+#ped_mean  =ROOT.RooRealVar("ped_mean" ,"Pedestal Mean"         ,C_Start)
+ped_sigma =ROOT.RooRealVar("ped_sigma","Pedestal Sigma",2,0.5,20)
+#ped_alpha =ROOT.RooRealVar("ped_alpha","Pedestal Alpha"        ,-10,-20,0)
+#ped_n =ROOT.RooRealVar("ped_n","Pedestal N"        ,1,0.01,10)
+
+
+#x1.setRange("R1",0,C_Start)
+#x1.setRange("R2",C_End-10,C_End+10)
+#coeff     =ROOT.RooRealVar("coeff","Coefficient"        ,)
+#RooCBShape CBShape("CBShape", "Cystal Ball Function", x, m, s, a, n); 
+ped_dist      =ROOT.RooGaussian("ped_dist","Pedestal",x1,ped_mean,ped_sigma)
+#ped_dist      =ROOT.RooCBShape("ped_dist","Pedestal",x1,ped_mean,ped_sigma,ped_alpha,ped_n)
+#signal_dist   =ROOT.RooFormulaVar("signal_dist",
+                             #"0.5*(TMath::Erf((x-sig_mean)/(sig_sigma*TMath::Sqrt2()))-TMath::Erf((x-ped_mean)/(sig_sigma*TMath::Sqrt2())))",
+                             #ROOT.RooArgList(x1,ped_mean,sig_sigma,sig_mean))
+signal_dist   =ROOT.RooGenericPdf("signal_dist",
+                                  "signal_dist",
+                                  "0.5*(TMath::Erf((x-ped_mean)/(sig_sigma*TMath::Sqrt2()))-TMath::Erf((x-sig_mean)/(sig_sigma*TMath::Sqrt2())))",
+                             ROOT.RooArgList(x1,ped_mean,sig_sigma,sig_mean))
+ped_dist_ext     =ROOT.RooExtendPdf("ped_dist_ext","ped_dist_ext",ped_dist,ped_norm)
+signal_dist_ext  =ROOT.RooExtendPdf("signal_dist_ext","signal_dist_ext",signal_dist,sig_norm)
+#overlap          =ROOT.RooProdPdf("overlap","overlap",ped_dist_ext,signal_dist_ext)
+#total_dist    =ROOT.RooAddPdf("model","ped_dist+sig_dist",ROOT.RooArgList(ped_dist,signal_dist),ROOT.RooArgList(ped_norm,sig_norm))
+total_dist    =ROOT.RooAddPdf("model","ped_dist+sig_dist",ROOT.RooArgList(ped_dist_ext,signal_dist_ext))
+
+#result = ROOT.RooFitResult(total_dist.fitTo(RData,ROOT.RooFit.Extended(1),ROOT.RooFit.Save(),ROOT.RooFit.SumW2Error(ROOT.kTRUE),
+#ROOT.RooFit.Range("R2")))
+result = ROOT.RooFitResult(total_dist.fitTo(RData,ROOT.RooFit.Extended(1),ROOT.RooFit.Save(),ROOT.RooFit.SumW2Error(ROOT.kTRUE)))
+#corr_hist= result.correlationHist("matrix")
+#result.Print("v")
+
+total_dist.plotOn(frame,ROOT.RooFit.Components("ped_dist_ext"),ROOT.RooFit.LineColor(ROOT.kGreen))
+total_dist.plotOn(frame,ROOT.RooFit.Components("signal_dist_ext"),ROOT.RooFit.LineColor(ROOT.kRed))
+#total_dist.plotOn(frame,ROOT.RooFit.Components("overlap"),ROOT.RooFit.LineColor(ROOT.kAzure))
+total_dist.plotOn(frame,ROOT.RooFit.LineColor(ROOT.kBlue))
+total_dist.paramOn(frame, ROOT.RooFit.Format("NELU", ROOT.RooFit.AutoPrecision(3)), ROOT.RooFit.Layout(0.6, 0.9,0.9))
+RData.Print("all")
+#print "chisquare\t",frame.chiSquare("model_Norm","RData",0)
+frame.Print("all")
+#frame.chiSquare()
+#chiquadrat und residuen
+#chi2 =ROOT.RooChi2Var("chi2","chi2",total_dist,RData,ROOT.RooFit.DataError(ROOT.RooAbsData.SumW2))
+#hresid = ROOT.RooHist(frame.residHist())
+print "find obj"
+frame.findObject("model_Norm[x]")
+hresid = ROOT.RooHist(frame.residHist("h_RData","model_Norm[x]",ROOT.kTRUE))
+#test = basic_ostream()
+#test = sys.stdout()
+#print test
+#hresid.Print("all")
+hpull = ROOT.RooHist(frame.pullHist())
+frame_res = x1.frame(ROOT.RooFit.Bins(points))
+frame_pull = x1.frame(ROOT.RooFit.Bins(points))
+#frame_res = x1.frame()
+#frame_pull = x1.frame()
+frame_res.addPlotable(hresid,"P")
+frame_pull.addPlotable(hpull,"P")
+
+frame.SetAxisRange(40,100,"X")
+frame.SetMinimum(1E-8)
+frame1.SetAxisRange(-5,5,"X")
+frame2.SetAxisRange(40,100,"X")
+frame_res.SetAxisRange(40,100,"X")
+#frame_pull.SetAxisRange(40,100,"X")
+
 
 c.cd(1)
 frame.Draw()
-frame.SetAxisRange(40,100,"X")
-print "hratio is " + str(frame)
-#xaxis.Print()
-
 c.cd(2)
 data.Draw()
+total.Draw("same")
 c.cd(3)
-frame1.Draw()
-frame1.SetAxisRange(40,100,"X")
-#kernel.Draw()
-
+#frame1.Draw()
+#frame_res.Draw()
 c.cd(4)
 #frame2.Draw()
-test_histo.Draw("p")
-test_histo.SetMarkerStyle(20)
-test_histo.GetXaxis().SetRangeUser(40,100)
+derivative_histo.Draw("p")
+derivative_histo.SetMarkerStyle(20)
+derivative_histo.GetXaxis().SetRangeUser(40,100)
 c.Update()
-c.SaveAs("test.pdf")
+c.SaveAs("overview.pdf")
 file= TFile("test.root","RECREATE")
-kernel.Write()
-data.Write()
-c.Write("testW")
+data.Write("data")
+derivative_histo.Write("smoothed_derivative")
+c.Write("overview")
+c2 = TCanvas("c2","c2",10,10,500,500)
+c2.Divide(1,2)
+c2.cd(1)
+ROOT.gPad.SetGrid(1)
+ROOT.gPad.SetLogy()
+frame.Draw()
+c2.cd(2)
+ROOT.gPad.SetGrid(1)
+frame_res.Draw()
+#c2.cd(2)
+#frame_pull.Draw()
+#corr_hist.Draw("colz")
+#frame_res.Draw()
+#c2.cd(3)
+#frame_pull.Draw()
+c2.Write("frame")
+#c2.Write("frame_res")
+#c2.Clear()
+#c2.Clear()
+#derivative_histo.Draw("p")
+#derivative_histo.SetMarkerStyle(20)
+#derivative_histo.GetXaxis().SetRangeUser(40,100)
+#c2.Write("frame1")
+c2.Close()
 
 file.Close()
 time.sleep(1)
