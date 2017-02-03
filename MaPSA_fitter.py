@@ -9,7 +9,7 @@ import time
 
 class MaPSA_fitter:
     def __init__(self):
-        self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)',0,256,3)
+        self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)+[3]',0,256,3)
         self._gaussian_f1.SetNpx(2560)
         self._gaussian_f1.SetTitle("Gaussian")
         self._gaussian_f1.SetMarkerColor(ROOT.kRed)
@@ -32,6 +32,8 @@ class MaPSA_fitter:
         self._s=ROOT.TSpectrum(10,3)
         self._threshold=1
         self._initial_expt_signal=0.0025
+
+        self._run_no=ROOT.std.string()
 
         self._Noise_Norm =0
         self._Noise_Mean =0
@@ -67,7 +69,8 @@ class MaPSA_fitter:
         h.SetAxisRange(minimum,upper_lim,"X")
         maximum = h.GetMaximum()
         maximum_x = h.GetBinCenter(h.GetMaximumBin())
-        bin1 = h.FindLastBinAbove(h.GetMaximum()/2)
+        tmpbin = h.FindLastBinAbove(h.GetMaximum()/2)
+        bin1 = tmpbin if (tmpbin>0) else 0
         half_max = h.GetBinCenter(bin1)
         bin2 = h.FindLastBinAbove(h.GetMaximum()/4)
         q_max = h.GetBinCenter(bin2)
@@ -85,7 +88,7 @@ class MaPSA_fitter:
             self._Err_Signal_Sigma    =tmp[5]
             self._Signal_Chisqrndf=tmp[6]
             self._Signal_Fit_Error=tmp[7]
-    def Find_signal(self,h,channel,initial_expt_signal=0.025,threshold=1):
+    def Find_signal(self,h,channel,initial_expt_signal=0.0025,threshold=1):
         self._reset()
         self._initial_expt_signal=initial_expt_signal
         self._threshold=threshold
@@ -108,27 +111,35 @@ class MaPSA_fitter:
         self._Noise_Fit_Error=results[7]
         if results[7]==0:
             #self._Noise_Chisqrndf=results[6]
-            _file=TFile("test.root","RECREATE")
-            h.Write()
             resid_hist=self._residual_hist(h,self._gaussian_f1,1)
             resid_hist1=self._residual_hist(h,self._gaussian_f1,0)
-            resid_hist.Write("residuals")
             resid_hist=self._residual_hist(h,self._gaussian_f1_extended,1)
-            resid_hist.Write("residuals_1")
-            self._gaussian_f1_extended.Write("extended")
-            self.Find_signal_in_res(resid_hist,resid_hist1,self._Err_Noise_Mean)
-            resid_hist1.Write("unormal")
-            self._erf_f1.Write("erf")
-            self._gaussian_f1.Write("gaussian")
-            _file.Close()
+            self.Find_signal_in_res(resid_hist,resid_hist1,self._Err_Noise_Mean+self._Err_Noise_Sigma)
+            if self._Found_Signal>0:
+                self.Write_signal(resid_hist1,resid_hist,self._gaussian_f1,self._erf_f1,channel)
         self._build_dict()
         self._fill_tree()
-            #self.Print_Result_Dict()
+    def Set_run_no(self,run_no):
+        self._run_no.replace(0, ROOT.std.string.npos, str(run_no))
+    def Make_dirs(self):
+        #print ROOT.gDirectory.GetPathStatic()
+        ROOT.gDirectory.mkdir("Signal")
+    def Write_signal(self,resid, resid_norm, gaussian_tf1,erf_tf1,channel):
+        ROOT.gDirectory.cd("Signal")
+        pixel=str(channel).zfill(3)
+        resid.Write(pixel+"_resid")
+        resid_norm.Write(pixel+"_resid_norm")
+        gaussian_tf1.Write(pixel+"_resid_gaussian_tf1")
+        erf_tf1.Write(pixel+"_resid_erf_tf1")
+        ROOT.gDirectory.cd("..")
+    def Write_tree(self):
+        self._tree.Write('tree',ROOT.TObject.kOverwrite)
     def _initialize_ttree(self):
         for k, v in self._Result_Dict:
             self._treevars[k] = array.array('f',[0])
         for key in self._treevars.keys():
             self._tree.Branch(key,self._treevars[key],key+"[1]/f")
+        self._tree.Branch('FILENAME',self._run_no)
     def _reset(self):
         self._Noise_Norm =0
         self._Noise_Mean =0
