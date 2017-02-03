@@ -95,7 +95,7 @@ def formating_th1(graph, color):
     graph.SetMarkerStyle(20)
     graph.Sumw2(ROOT.kFALSE)
 
-def read_file(arr,meas_type):
+def read_file(arr,meas_type,mapsa_fitter_inst):
     if not os.path.isfile("./"+arr[0]):
         print "Root file not found!"
         #sys.exit(1)
@@ -301,14 +301,17 @@ def read_file(arr,meas_type):
         fill2d(fitarray[:,6], mapsa_mat,objarr2d[3])
         fill1d_edges(objarr2d[1],tmp_objarr[0:3])
         fill1d_edges(objarr2d[2],tmp_objarr[3:])
-    #gr2=[]
-    #if(meas_type==1):
-        #g.cd("pedestal/Channels")
-        #for pixel in range(0, channels):
-            #tmp = ROOT.gDirectory.Get(str(pixel).zfill(3))
-            #gr2.append(tmp)
 
     g.cd(str(outfile))
+    mapsa_fitter_inst.Make_dirs()
+    mapsa_fitter_inst.Set_run_no(outfile)
+    if(meas_type==1):
+        for idx,it in enumerate(iterator):
+            if(it.Integral() >0):
+                if(idx<channels):
+                    mapsa_fitter_inst.Find_signal(it,idx,0.0025,3)
+    g.cd()
+    mapsa_fitter_inst.Write_tree()
     g.mkdir(str(outfile)+"/Channels")
     g.cd(str(outfile)+"/Channels")
     iterator.Write()
@@ -465,12 +468,12 @@ pedestal_run_files = [line.rstrip('\n') for line in open('pedestals.txt')]
 signal_run_files = [line.rstrip('\n') for line in open('signal.txt')]
 
 g = TFile("analysis.root","RECREATE")
-
+mapsa_fitter_inst =MaPSA_fitter()
 for i in pedestal_run_files[1:]:
     arr=extract_name_par(i,0)
-    read_file(arr,0)
+    read_file(arr,0,mapsa_fitter_inst)
     #print "par name", arr
 for i in signal_run_files[1:]:
     arr=extract_name_par(i,1)
-    read_file(arr,1)
+    read_file(arr,1,mapsa_fitter_inst)
     #print "par name", arr
