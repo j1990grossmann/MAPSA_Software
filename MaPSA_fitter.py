@@ -9,7 +9,7 @@ import time
 
 class MaPSA_fitter:
     def __init__(self):
-        self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)+[3]',0,256,3)
+        self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)',0,256,3)
         self._gaussian_f1.SetNpx(2560)
         self._gaussian_f1.SetTitle("Gaussian")
         self._gaussian_f1.SetMarkerColor(ROOT.kRed)
@@ -113,7 +113,7 @@ class MaPSA_fitter:
             #self._Noise_Chisqrndf=results[6]
             resid_hist=self._residual_hist(h,self._gaussian_f1,1)
             resid_hist1=self._residual_hist(h,self._gaussian_f1,0)
-            resid_hist=self._residual_hist(h,self._gaussian_f1_extended,1)
+            #resid_hist=self._residual_hist(h,self._gaussian_f1_extended,1)
             self.Find_signal_in_res(resid_hist,resid_hist1,self._Err_Noise_Mean+self._Err_Noise_Sigma)
             if self._Found_Signal>0:
                 self.Write_signal(resid_hist1,resid_hist,self._gaussian_f1,self._erf_f1,channel)
@@ -130,7 +130,8 @@ class MaPSA_fitter:
         resid.Write(pixel+"_resid")
         resid_norm.Write(pixel+"_resid_norm")
         gaussian_tf1.Write(pixel+"_resid_gaussian_tf1")
-        erf_tf1.Write(pixel+"_resid_erf_tf1")
+        tmperf=erf_tf1.Clone()
+        tmperf.Write(pixel+"_resid_erf_tf1")
         ROOT.gDirectory.cd("..")
     def Write_tree(self):
         self._tree.Write('tree',ROOT.TObject.kOverwrite)
@@ -218,13 +219,13 @@ class MaPSA_fitter:
         return npeaks,pos
     def _fit_gauss(self,h,lrange=[0,100],norm=1,mean=1,sigma=1):
         self._gaussian_f1.SetParameters(norm,mean,sigma)
-        self._gaussian_f1_extended.SetParameters(norm,mean,sigma,0.5)
+        #self._gaussian_f1_extended.SetParameters(norm,mean,sigma)
         self._gaussian_f1.SetRange(lrange[0],lrange[1])
-        self._gaussian_f1_extended.SetRange(lrange[0],lrange[1])
+        #self._gaussian_f1_extended.SetRange(lrange[0],lrange[1])
         #fit_ptr=h.Fit(self._gaussian_f1,'rWL0q+','',lrange[0],lrange[1])
-        fit_ptr=h.Fit(self._gaussian_f1,'r0q+','',lrange[0],lrange[1])
+        fit_ptr=h.Fit(self._gaussian_f1,'r0q','',lrange[0],lrange[1])
         fit_error=ROOT.gMinuit.GetStatus()
-        h.Fit(self._gaussian_f1_extended,'r0q','',lrange[0],lrange[1])
+        #h.Fit(self._gaussian_f1_extended,'r0q','',lrange[0],lrange[1])
         norm = self._gaussian_f1.GetParameter(0)
         mean = self._gaussian_f1.GetParameter(1)
         sigma= self._gaussian_f1.GetParameter(2)
