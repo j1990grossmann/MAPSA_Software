@@ -543,17 +543,3 @@ for i in signal_run_files[1:]:
 g.cd()
 mapsa_fitter_inst.Write_tree()
 g.Close()
-
-    #print "par name", arr
-#TSeqCollection(ROOT.gROOT.fFiles      )
-#TSeqCollection(ROOT.gROOT.fMappedFiles)
-#TSeqCollection(ROOT.gROOT.fSockets    )
-#TSeqCollection(ROOT.gROOT.fCanvases   )
-#TSeqCollection(ROOT.gROOT.fStyles     )
-#TSeqCollection(ROOT.gROOT.fFunctions  )
-#TSeqCollection(ROOT.gROOT.fTasks      )
-#TSeqCollection(ROOT.gROOT.fColors     )
-#TSeqCollection(ROOT.gROOT.fGeometries )
-#TSeqCollection(ROOT.gROOT.fBrowsers   )
-#TSeqCollection(ROOT.gROOT.fSpecials   )
-#TSeqCollection(ROOT.gROOT.fCleanups   )
