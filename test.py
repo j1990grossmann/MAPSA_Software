@@ -518,6 +518,11 @@ default =       'signal.txt',
 dest    =       'signal_file',
 help    =       'Signal files')
 
+parser.add_option('-o', '--out_file', metavar='F', type='string', action='store',
+default =       'analysis.root',
+dest    =       'out_file',
+help    =       'Destination File')
+
 (options, args) = parser.parse_args()
 
 path = options.path
@@ -529,7 +534,7 @@ ROOT.gROOT.SetBatch()
 #pedestal_run_files = [line.rstrip('\n') for line in open('pedestals.txt')]
 signal_run_files = [line.rstrip('\n') for line in open(signal)]
 
-g = TFile("analysis.root","RECREATE")
+g = TFile(str(options.out_file),"RECREATE")
 mapsa_fitter_inst =MaPSA_fitter()
 #for i in pedestal_run_files[1:]:
     #arr=extract_name_par(i,0)
