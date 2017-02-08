@@ -68,8 +68,41 @@ def create_ttree(tree_vars, number_mpa_light, assembly, datapath):
                 if "COND" in key:
                         tree.Branch(key,tree_vars[key],key+"[1]/l")                        
         return F, tree
+    
+def fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
+    for ev_i, ev in enumerate(vararr):
+        if ev_i%20==0:
+            print ev
+            mem={}
+            for impa in range(0,no_mpa_light):
+                #print ev["SR_UN_MPA_"+str(impa)]
+                #print len(ev["SR_UN_MPA_"+str(impa)])
+                mem[impa] = mpa[impa].daq().formatmem(ev["SR_UN_MPA_"+str(impa)])
+                memo = mpa[impa].daq().read_memory(mem[impa],memmode)
+                for p in range(0,96):
+                    if p>len(memo[0]):
+                        memo[0].append(int(0))
+                        memo[1].append('0')
 
-def start_daq ():
+                        BXmemo = np.array(memo[0])
+                        DATAmemo = np.array(memo[1])
+
+                        DATAmemoint = []
+                        for DATAmem in DATAmemo:
+                            DATAmemoint.append(long(DATAmem,2)) 
+
+                            ev["SR_BX_MPA_"+str(impa)] = BXmemo
+                            ev["SR_MPA_"+str(impa)] = DATAmemoint
+
+                            for tv in tree_vars.keys():
+                                if 'SR_UN_MPA' in tv:
+                                    continue 
+                                for i in range(0,len(ev[tv])):
+                                    tree_vars[tv][i] = ev[tv][i]
+
+    tree.Fill()
+
+def start_daq (memmode, threshold):
     assembly = [2,5]
     number_mpa_light=len(assembly)
     tree_vars = {}
@@ -105,11 +138,11 @@ def start_daq ():
         mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
         conf.append(mpa[iMPA].config(config_dir+"/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
 
-    threshold = 100
 
     # Define default config
     for iMPA in range(0,len(assembly)):
         conf[iMPA].modifyperiphery('THDAC',threshold) # Write threshold to MPA 'iMPA'
+        conf[iMPA].modifyperiphery('OM',memmode) # Change the aquisition mode
         conf[iMPA].modifypixel(range(1,25), 'SR', 1) # Enable synchronous readout on all pixels
         conf[iMPA].upload() # Push configuration to GLIB
     glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
@@ -138,6 +171,7 @@ def start_daq ():
     triggerStop = 1000
     
     try:
+        vararr = {}
         while True:
             freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             glib.dispatch()
@@ -156,6 +190,21 @@ def start_daq ():
                 pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
 		print "pix", pix
 		print "mem", mem
+		parray = []
+		marray = []
+		cntspershutter = 0
+		for i in range(0,number_mpa_light):
+                    pix[i].pop(0)
+                    pix[i].pop(0)
+                    parray.append(pix[i])
+                    #marray.append(mpa[i].daq().read_memory(mem[i],memmode))
+                    marray.append(mem[i])
+                temp_vars = {}
+                for imemo,memo in enumerate(marray):
+                    temp_vars["SR_UN_MPA_"+str(imemo)]=memo
+                for ip, p in enumerate(parray):
+                    temp_vars["AR_MPA_"+str(ip)]=p                    
+                vararr.append(temp_vars)
                 #counterData1=[]
                 #memoryData1=[]
                 #counterData1 = array('d',pix[1])
@@ -470,5 +519,9 @@ help    =       'beam phase offset')
 
 
 (options, args) = parser.parse_args()
+formarr = ['stubfinding','stripemulator' ,'centroid','noprocessing']
+memmode = formarr.index(options.format)
+threshold = options.thresh
+
 
 print "imported"
