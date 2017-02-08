@@ -164,12 +164,12 @@ def take_data(resolution, low, up, config, rangeval, mapsa, buffnum, daq, strobe
 		c1.Modified()
 		c1.Update()
 	# c1.Write("test")
-	time.sleep(2)
+	# time.sleep(2)
 	channelcounts.Write("channelcounts")
 	totalcounts.Write("totalcounts")
 	f.Close()
 
-# ROOT.gROOT.SetBatch(True)
+ROOT.gROOT.SetBatch(True)
 
 parser = OptionParser()
 parser.add_option('-s', '--setting', metavar='F', type='string', action='store',
