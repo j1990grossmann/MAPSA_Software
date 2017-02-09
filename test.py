@@ -3,10 +3,12 @@ import numpy as np
 import os.path
 import sys
 import ROOT
-from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker
+from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker, TSeqCollection,TObjString,TMap
 from MaPSA_fitter import MaPSA_fitter
+from optparse import OptionParser
 import array as array
 import time
+from memprof import *
 
 no_mpa_light=6
 #1/(320E6Hz*25E-9s)=per clockcycle
@@ -67,6 +69,7 @@ def fill_columns(hist2d, column, hist1d):
     tmphist=hist2d.ProjectionY(str(column),column,column)
     for bins in range(1,tmphist.GetNbinsX()+1):
         hist1d.Fill(tmphist.GetBinContent(bins))
+        #tmphist.Delete()
         #print str(tmphist.GetBinContent(bins))
 def fill1d_edges(hist2d, hist1d_arr):
     for i in range(2,15):
@@ -94,18 +97,22 @@ def formating_th1(graph, color):
     graph.SetMarkerSize(.5)
     graph.SetMarkerStyle(20)
     graph.Sumw2(ROOT.kFALSE)
-
-def read_file(arr,meas_type,mapsa_fitter_inst):
-    if not os.path.isfile("./"+arr[0]):
-        print "Root file not found!"
+#@memprof
+def read_file(arr,meas_type,mapsa_fitter_inst,path):
+    if not os.path.isfile(str(path+arr[0])):
+        print "Root file not found at", str(path+arr[0])
         #sys.exit(1)
         return
-    f = TFile(arr[0],'READ')
-    if (f.IsZombie()): 
+    f = TFile(str(path+arr[0]),'READ')
+    if (f.IsZombie()):
         print "Error opening file"
         return
+    else :
+        print "Reading File ",arr[0]
     #f.ls()
     tree = f.Get('tree')
+    f_GlobalData_Map=ROOT.TMap()
+    f_GlobalData_Map.Add(ROOT.TObjString("tree"),tree)
     #tree.Print()
     outfile = TString(arr[0])
     outfile.ReplaceAll(".root","")
@@ -118,7 +125,6 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
         g.cd(str(outfile))
     else:
         return
-
     channels=288
     if (arr[2] == 'inv'):
         channels=96
@@ -134,11 +140,15 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     c3 = TCanvas('c3', 'Pixel Monitor ', 1280, 720)
     c4 = TCanvas('c4', 'Pixel Monitor ', 500, 500)
     c5 = TCanvas('c5', 'Pixel Monitor ', 500, 500)
-    c2.Clear()
+    
+    f_GlobalData_Map.Add(ROOT.TObjString("c1"),c1)
+    f_GlobalData_Map.Add(ROOT.TObjString("c2"),c2)
+    f_GlobalData_Map.Add(ROOT.TObjString("c3"),c3)
+    f_GlobalData_Map.Add(ROOT.TObjString("c4"),c4)
+    f_GlobalData_Map.Add(ROOT.TObjString("c5"),c5)
+
     # c2.Divide(2,1)
-    c2.cd(0)
-    c1.Clear()
-    c3.Clear()
+    #c2.cd(0)
     c1.Divide(3,2)
     for i in range(1,7):
         c1.cd(i)
@@ -148,10 +158,20 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     # channelcounts = TH2I('HitMap','Counts; Channel; DAC Value (1.456 mV)', 288, .5,288.5,256, .5, 256.5)
     channelcounts = TH2I('HitMap','Counts; Channel; DAC Value (a.u.)', 288, .5,288.5,256, .5, 256.5)
     channelcounts_norm = TH2F('HitMap_norm','Occupancy ; Channel; DAC Value (a.u.)', 288, .5,288.5,256, .5, 256.5)
+    f_GlobalData_Map.Add(ROOT.TObjString("HitMap"),channelcounts)
+    f_GlobalData_Map.Add(ROOT.TObjString("HitMap"),channelcounts_norm)
+    
     norm_2d   = TH2F('Norm2D','Normalization; Column; Row' , 48, .5,48.5,6, .5, 6.5)
     mean_2d   = TH2F('Mean2D','Mean; Column; Row'          , 48, .5,48.5,6, .5, 6.5)
     sigma_2d  = TH2F('Sigma2D','Sigma; Column; Row'        , 48, .5,48.5,6, .5, 6.5)
     chisquare = TH2F('Chisquare2D','Chisquare; Column; Row', 48, .5,48.5,6, .5, 6.5)
+    
+    f_GlobalData_Map.Add(ROOT.TObjString("Norm2D"),norm_2d)
+    f_GlobalData_Map.Add(ROOT.TObjString("Mean2D"),mean_2d)
+    f_GlobalData_Map.Add(ROOT.TObjString("Sigma2D"),sigma_2d)
+    f_GlobalData_Map.Add(ROOT.TObjString("Chisquare2D"),chisquare)
+    
+    
     objarr2d = []
     objarr2d.append(norm_2d   )
     objarr2d.append(mean_2d   )
@@ -162,6 +182,13 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     sigmagraph     = TGraphErrors() 
     chisquaregraph = TGraphErrors()
     mean_corrgraph = TGraphErrors()
+    
+    f_GlobalData_Map.Add(ROOT.TObjString("normgraph     "),normgraph      )
+    f_GlobalData_Map.Add(ROOT.TObjString("meangraph     "),meangraph      )
+    f_GlobalData_Map.Add(ROOT.TObjString("sigmagraph    "),sigmagraph     )
+    f_GlobalData_Map.Add(ROOT.TObjString("chisquaregraph"),chisquaregraph )
+    f_GlobalData_Map.Add(ROOT.TObjString("mean_corrgraph"),mean_corrgraph )
+    
 
     meanhist                    = TH1F('meanhist','Mean DAC; DAC Value (a.u.); counts', 2560,0,255)
     sigmahist                   = TH1F('sigmahist','Sigma DAC; DAC Value (a.u.); counts', 100,0,10)
@@ -177,6 +204,15 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     objarr.append(sigmagraph     )
     objarr.append(chisquaregraph )
     objarr.append(mean_corrgraph )
+    
+    f_GlobalData_Map.Add(ROOT.TObjString('meanhist'),meanhist)
+    f_GlobalData_Map.Add(ROOT.TObjString('sigmahist'),sigmahist)
+    f_GlobalData_Map.Add(ROOT.TObjString('meanhist_std'),meanhist_std)
+    f_GlobalData_Map.Add(ROOT.TObjString('sigmahist_std'),sigmahist_std)
+    f_GlobalData_Map.Add(ROOT.TObjString('meanhist_double'),meanhist_double)
+    f_GlobalData_Map.Add(ROOT.TObjString('sigmahist_double'),sigmahist_double)
+    f_GlobalData_Map.Add(ROOT.TObjString('meanhist_double_neighbour'),meanhist_double_neighbour)
+    f_GlobalData_Map.Add(ROOT.TObjString('sigmahist_double_neighbour'),sigmahist_double_neighbour)
     
     objarr.append(meanhist  )
     objarr.append(sigmahist )
@@ -202,11 +238,13 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     chisquaregraph.SetTitle('Chisquared/NDF_gr; Channel; Chisquared/NDF ')
     ROOT.gStyle.SetOptFit(1111)
     stack = THStack('a',';DAC Value (a.u.); Occupancy')
+    f_GlobalData_Map.Add(ROOT.TObjString("stack"),stack)
     fitfuncs = []
     fitparams = []
     gr1 = []
     for pixel in range(0, channels):
         gr1.append(TH1D(str(pixel).zfill(3),str(pixel+1).zfill(3)+';DAC Value (a.u.); Occupancy ',256,0.5,256.5))
+        f_GlobalData_Map.Add(ROOT.TObjString(str(pixel).zfill(3)),gr1[pixel])
         #gr2.append(TH1F('th1f_'+str(pixel).zfill(3),str(pixel+1).zfill(3)+';DAC Value (a.u.); Occupancy',256,0.5,256.5))
         color=pixel%8+1
         formating_th1(gr1[pixel],color)
@@ -214,6 +252,7 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
             fitfuncs.append(TF1('gauss'+str(pixel+1).zfill(3),'gaus(0)',0,256))
             fitfuncs[pixel].SetNpx(256)
             fitfuncs[pixel].SetLineColor(color)
+            f_GlobalData_Map.Add(ROOT.TObjString('gauss'+str(pixel).zfill(3)),fitfuncs[pixel])
     #Here we read the data and fill the histogram
     for event in tree :
         eventstr = []
@@ -222,9 +261,9 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
             channelcounts.Fill(counter,tree.THRESHOLD,vals)
             if(counter<channels):
                 gr1[counter].Fill(tree.THRESHOLD,vals)
-        if tree.THRESHOLD%10==0 and tree.REPETITION==0:
+        #if tree.THRESHOLD%20==0 and tree.REPETITION==0:
             #print eventstr
-            print ("Threshold %d Repetion %d" % (tree.THRESHOLD,tree.REPETITION))
+            #print ("Threshold %d Repetion %d" % (tree.THRESHOLD,tree.REPETITION))
             #print tree.AR_MPA
     #now we make a small analysis of the curves fitting different functions to it:
     print "Finished Reading the Tree\n Normalization of Histograms\n"
@@ -249,7 +288,7 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
                     #fitfuncs.append(TF1('combined'+str(idx),combined, 0,256,5))
                     #fitfuncs.append(TF1('combined_same_mean'+str(idx),combined_mean, 0,256,4))
                     #fitfuncs.append(TF1('double_gauss'+str(idx),'gaus(0)+gaus(3)',0,256))
-                    fitfuncs.append(TF1('gauss'+str(idx),'gaus(0)',0,256))
+                    #fitfuncs.append(TF1('gauss'+str(idx),'gaus(0)',0,256))
                     #fitfuncs.append(TF1('double_gauss_same_mean'+str(idx),double_gauss, 0,256,5))
                     #print it.GetName(), idx
                     #fitfuncs[idx].SetParameters(it.GetMaximum(),it.GetMean()+1,it.GetRMS(),it.GetMean()-1,it.GetRMS());
@@ -311,10 +350,9 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
                 if(idx<channels):
                     mapsa_fitter_inst.Find_signal(it,idx,0.0025,3)
     g.cd()
-    mapsa_fitter_inst.Write_tree()
-    g.mkdir(str(outfile)+"/Channels")
-    g.cd(str(outfile)+"/Channels")
-    iterator.Write()
+    #g.mkdir(str(outfile)+"/Channels")
+    #g.cd(str(outfile)+"/Channels")
+    #iterator.Write()
 
     g.cd(str(outfile))
     g.mkdir(str(outfile)+"/Overview")
@@ -351,16 +389,16 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
 
     ROOT.gPad.SetLogy()
     ROOT.gPad.Update()
-    for idx, it in enumerate(fitfuncs):
-        # if idx>0 and idx<7:
-        c1.cd(1)
-        fitfuncs[idx].Draw("same")
-        c2.cd(0)
-        fitfuncs[idx].DrawCopy("psame")
-        # it.SetLineColor(idx%9+1)
-        # it.Draw("same")
-        g.cd(str(outfile)+"/Channels")
-        it.Write("HitMap_py_"+str(idx+1)+"_fit")
+    #for idx, it in enumerate(fitfuncs):
+        ## if idx>0 and idx<7:
+        #c1.cd(1)
+        #fitfuncs[idx].Draw("same")
+        #c2.cd(0)
+        #fitfuncs[idx].DrawCopy("psame")
+        ## it.SetLineColor(idx%9+1)
+        ## it.Draw("same")
+        #g.cd(str(outfile)+"/Channels")
+        #it.Write("HitMap_py_"+str(idx+1)+"_fit")
     g.cd(str(outfile)+"/Overview")
     c1.cd(2)
     chisquaregraph.Draw("ap")
@@ -386,6 +424,7 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     ROOT.gPad.SetLeftMargin(.15)
     ROOT.gPad.SetGrid(0)
     copy = channelcounts.DrawCopy("colz")
+    #f_GlobalData_Map.Add(ROOT.TObjString("copy"),copy)
     #if(outfile.Contains("SR_90_on_top")):
         #copy.SetMaximum(100)
         #copy.SetMinimum(1)
@@ -396,6 +435,7 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     ROOT.gPad.SetLeftMargin(.15)
     ROOT.gPad.SetGrid(0)
     copy1 = sigma_2d.DrawCopy("colz")
+    #f_GlobalData_Map.Add(ROOT.TObjString("copy1"),copy1)
     copy1.GetZaxis().SetTitle("Sigma (a.u.)")
     copy1.GetZaxis().SetTitleOffset(1.2)
     ROOT.gPad.SetRightMargin(.2)
@@ -409,8 +449,10 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     ROOT.gPad.SetRightMargin(.15)
     ROOT.gPad.SetLeftMargin(.15)
     ROOT.gPad.SetGrid(0)
-    copy1 = chisquare.DrawCopy("colz")
+    #copy1 = chisquare.DrawCopy("colz")
+    #f_GlobalData_Map.Add(ROOT.TObjString("copy2"),copy1)
     copy1 = sigma_2d.DrawCopy("colz")
+    #f_GlobalData_Map.Add(ROOT.TObjString("copy2"),copy1)
     copy1.GetZaxis().SetTitle("sigma (a.u.)")
     if (arr[2] == 'inv'):
         copy1.GetXaxis().SetRangeUser(.5,16.5)
@@ -431,24 +473,24 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     ## c1.SaveAs("double_gauss_same_mean.pdf")
     ## time.sleep(2)
     g.cd(str(outfile)+"/Overview")
-    for objs in objarr:
-            objs.Write(objs.GetName())
+    #for objs in objarr:
+            #objs.Write(objs.GetName())
     #norm_2d.GetZaxis().SetRangeUser(1E5,2E6)         
     #mean_2d.GetZaxis().SetRangeUser(54,64) 
     ## norm_2d.GetZaxis().SetRangeUser(TMath.Power(10,(round(TMath.Log10(norm_2d.GetStdDev(3))-2)), TMath.Power(10,(round(TMath.Log10(norm_2d.GetStdDev(3)))-1)))         
     ## mean_2d.GetZaxis().SetRangeUser(TMath.Power(10,(round(TMath.Log10(mean_2d.mean_2d.GetStdDev(3)))-1))-5,TMath.Power(10,(round(TMath.Log10(mean_2d.GetStdDev(3)))-1))+5) 
     #sigma_2d.GetZaxis().SetRangeUser(0,5)
     #chisquare.GetZaxis().SetRangeUser(0,10000 ) 
-    for objs in objarr2d:
-            objs.Write(objs.GetName())
-    c1.Write("c1")
+    #for objs in objarr2d:
+            #objs.Write(objs.GetName())
+    #c1.Write("c1")
     #outfile1=outfile+TString(".pdf")
     #c2.SaveAs(str(outfile1))
-    c2.Write("c2")
+    #c2.Write("c2")
     #c3.SaveAs("c3"+str(outfile1))
-    c3.Write("c3")
+    #c3.Write("c3")
     #c4.SaveAs("c4"+str(outfile1))
-    c4.Write("c4")
+    #c4.Write("c4")
     ## while (TObject(iterator.Next())): 
     ##       print iterator.Next().Title()
     #stack.Write("stack")
@@ -460,20 +502,49 @@ def read_file(arr,meas_type,mapsa_fitter_inst):
     c3.Close()
     c4.Close()
     c5.Close()
+    f_GlobalData_Map.DeleteAll()
     f.Close()
+
+
+parser = OptionParser()
+parser.add_option('-p', '--path', metavar='F', type='string', action='store',
+# default       =       'none',
+default =       './',
+dest    =       'path',
+help    =       'default path for files ./')
+
+parser.add_option('-s', '--signal_files', metavar='F', type='string', action='store',
+default =       'signal.txt',
+dest    =       'signal_file',
+help    =       'Signal files')
+
+parser.add_option('-o', '--out_file', metavar='F', type='string', action='store',
+default =       'analysis.root',
+dest    =       'out_file',
+help    =       'Destination File')
+
+(options, args) = parser.parse_args()
+
+path = options.path
+signal = options.signal_file
+
 
 ROOT.gROOT.SetBatch()
 
-pedestal_run_files = [line.rstrip('\n') for line in open('pedestals.txt')]
-signal_run_files = [line.rstrip('\n') for line in open('signal.txt')]
+#pedestal_run_files = [line.rstrip('\n') for line in open('pedestals.txt')]
+signal_run_files = [line.rstrip('\n') for line in open(signal)]
 
-g = TFile("analysis.root","RECREATE")
+g = TFile(str(options.out_file),"RECREATE")
 mapsa_fitter_inst =MaPSA_fitter()
-for i in pedestal_run_files[1:]:
-    arr=extract_name_par(i,0)
-    read_file(arr,0,mapsa_fitter_inst)
+#for i in pedestal_run_files[1:]:
+    #arr=extract_name_par(i,0)
+    #read_file(arr,0,mapsa_fitter_inst)
     #print "par name", arr
 for i in signal_run_files[1:]:
     arr=extract_name_par(i,1)
-    read_file(arr,1,mapsa_fitter_inst)
-    #print "par name", arr
+    read_file(arr,1,mapsa_fitter_inst,path)
+    #ROOT.gDirectory.cd()
+    #ROOT.gDirectory.ls()
+g.cd()
+mapsa_fitter_inst.Write_tree()
+g.Close()

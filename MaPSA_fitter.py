@@ -3,13 +3,15 @@ import numpy as np
 import os.path
 import sys
 import ROOT
-from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker
+from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker,TMap
 import array as array
 import time
 
 class MaPSA_fitter:
     def __init__(self):
+        self._f_map = ROOT.TMap()
         self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)',0,256,3)
+        self._f_map.Add(ROOT.TObjString("gauss_f1"),self._gaussian_f1)
         self._gaussian_f1.SetNpx(2560)
         self._gaussian_f1.SetTitle("Gaussian")
         self._gaussian_f1.SetMarkerColor(ROOT.kRed)
@@ -22,15 +24,17 @@ class MaPSA_fitter:
         self._gaussian_f1_extended.SetNpx(2560)
         self._gaussian_f1_extended.SetMarkerColor(ROOT.kGreen)
         self._gaussian_f1_extended.SetLineColor(ROOT.kGreen)
+        self._f_map.Add(ROOT.TObjString("gauss_f1_ext"),self._gaussian_f1_extended)
 
         self._erf_f1 = TF1('Erf_f1','[0]*.5*(1+TMath::Erf(([1]-x)/[2]))',0,256,3)
         self._erf_f1.SetNpx(2560)
         self._erf_f1.SetTitle("Erf")
         self._erf_f1.SetMarkerColor(ROOT.kOrange)
         self._erf_f1.SetLineColor(ROOT.kOrange)
+        self._f_map.Add(ROOT.TObjString("Erf_f1"),self._erf_f1)
 
-        self._s=ROOT.TSpectrum(10,3)
-        self._threshold=1
+        self._s=TSpectrum()
+        self._threshold=2
         self._initial_expt_signal=0.0025
 
         self._run_no=ROOT.std.string()
@@ -57,6 +61,7 @@ class MaPSA_fitter:
         self._Result_Dict=[]
         self._build_dict()
         self._tree = TTree( 'datatree', 'datatree' )
+        self._f_map.Add(ROOT.TObjString("tree"),self._tree)
         self._treevars={}
         self._initialize_ttree()
     def Print_Result_Dict(self):
@@ -69,7 +74,7 @@ class MaPSA_fitter:
         h.SetAxisRange(minimum,upper_lim,"X")
         maximum = h.GetMaximum()
         maximum_x = h.GetBinCenter(h.GetMaximumBin())
-        tmpbin = h.FindLastBinAbove(h.GetMaximum()/2)
+        tmpbin = h.FindLastBinAbove(abs(h.GetMaximum())/2)
         bin1 = tmpbin if (tmpbin>0) else 0
         half_max = h.GetBinCenter(bin1)
         bin2 = h.FindLastBinAbove(h.GetMaximum()/4)
@@ -88,7 +93,7 @@ class MaPSA_fitter:
             self._Err_Signal_Sigma    =tmp[5]
             self._Signal_Chisqrndf=tmp[6]
             self._Signal_Fit_Error=tmp[7]
-    def Find_signal(self,h,channel,initial_expt_signal=0.0025,threshold=1):
+    def Find_signal(self,h,channel,initial_expt_signal=0.0025,threshold=2):
         self._reset()
         self._initial_expt_signal=initial_expt_signal
         self._threshold=threshold
@@ -129,12 +134,13 @@ class MaPSA_fitter:
         pixel=str(channel).zfill(3)
         resid.Write(pixel+"_resid")
         resid_norm.Write(pixel+"_resid_norm")
-        gaussian_tf1.Write(pixel+"_resid_gaussian_tf1")
-        tmperf=erf_tf1.Clone()
-        tmperf.Write(pixel+"_resid_erf_tf1")
+        #gaussian_tf1.Write(pixel+"_resid_gaussian_tf1")
+        #tmperf=erf_tf1.Clone()
+        #tmperf.Write(pixel+"_resid_erf_tf1")
         ROOT.gDirectory.cd("..")
     def Write_tree(self):
         self._tree.Write('tree',ROOT.TObject.kOverwrite)
+        self._f_map.DeleteAll()
     def _initialize_ttree(self):
         for k, v in self._Result_Dict:
             self._treevars[k] = array.array('f',[0])
