@@ -8,7 +8,6 @@ from MaPSA_fitter import MaPSA_fitter
 from optparse import OptionParser
 import array as array
 import time
-from memprof import *
 
 no_mpa_light=6
 #1/(320E6Hz*25E-9s)=per clockcycle
