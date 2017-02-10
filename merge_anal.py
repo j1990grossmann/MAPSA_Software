@@ -6,9 +6,10 @@ import ROOT
 from ROOT import gROOT, TCanvas, TGraphAsymmErrors, TH1, TF1, TH1F, TH1D, TTree, TFile, TTreeReader, TTreeReaderValue, TTreeReaderArray, TH2I, TH2F, TString, THStack, TGraphErrors, TList, TListIter, TIter, TObject, TH1I, TMath, TDirectory, TEfficiency, TF1Convolution, RooFit, TRandom,TAxis, TSpectrum, TPolyMarker
 import array as array
 import time
+from optparse import OptionParser
 
 class merge_anal:
-    def __init__(self):
+    def __init__(self,fit_tree, position_tree, destination_file):
         self._gaussian_f1 = TF1('gauss_f1','[0]*TMath::Gaus(x,[1],[2],1)',0,256,3)
         self._gaussian_f1.SetNpx(2560)
         self._gaussian_f1.SetTitle("Gaussian")
@@ -24,13 +25,15 @@ class merge_anal:
         self._threshold=1
         self._initial_expt_signal=0.0025
 
-        self.file=TFile("analysis.root","READ")
+        self.file=TFile(str(fit_tree),"READ")
         self._tree = self.file.Get("tree")
         self._tree.SetName("extract_tree")
-        self.file_1=TFile("Log_Thu20170126-100454.root","READ")
+        # self.file_1=TFile("~/LaserScanData/Log_Thu20170209-140334.root","READ")
+        self.file_1=TFile(position_tree,"READ")
+        # self.file_1=TFile("Log_Tue20170207-172450.root","READ")
         self._tree1 = self.file_1.Get("tree")
         self._tree1.SetName("pos_tree")
-
+        self._destination_file=destination_file
         #self._Print_First()
         self.graphs= []
         #self._init_graphs()
@@ -51,9 +54,9 @@ class merge_anal:
         self._Dir_Y=0
         self._Dir_Z=0
         
-        self._Bins_X=0
-        self._Bins_Y=0
-        self._Bins_Z=0
+        self._Bins_X=1
+        self._Bins_Y=1
+        self._Bins_Z=1
 
         self._Max_Hist_X=0
         self._Max_Hist_Y=0
@@ -191,7 +194,7 @@ class merge_anal:
                 self.th2_hists_yz.append(tmp)
 
     def _Write_Hists(self):
-        r_file=TFile("output_analysis.root","RECREATE")
+        r_file=TFile(self._destination_file,"RECREATE")
         if(self._Dir_X>0 and self._Dir_Y>0):
             #self.th2d_xy.Write()
             for it in self.th2_hists_xy:
@@ -247,13 +250,13 @@ class merge_anal:
                 #self.th2_hists_xz[(int)(self._tree.Channel_No)].Fill(self._tree1.X,self._tree1.Z,signal)
             if(signal>0):
                 self.th2_hists_yz[(int)(self._tree.Channel_No)].Fill(self._tree1.Y,self._tree1.Z,signal)
-        for event1 in xrange(0,self._tree1.GetEntries()):
-            self._tree1.GetEntry(event1)        
-            #if(self._tree1.X>66.7 and self._tree1.X<70 and self._tree1.Z<121 and self._tree1.Z>120.0):
-            if(self._tree1.Y>66.7 and self._tree1.Y<66.8 and self._tree1.Z<121 and self._tree1.Z>120.8):
-                print self._tree1.FILENAME,self._tree1.Y,self._tree1.Z
-                #self.th2d_xy.Fill(self._tree1.X,self._tree1.Y,signal)
-                #self.th2d_xz.Fill(self._tree1.X,self._tree1.Z,signal)
+        # for event1 in xrange(0,self._tree1.GetEntries()):
+        #     self._tree1.GetEntry(event1)        
+        #     #if(self._tree1.X>66.7 and self._tree1.X<70 and self._tree1.Z<121 and self._tree1.Z>120.0):
+        #     if(self._tree1.Y>66.7 and self._tree1.Y<66.8 and self._tree1.Z<121 and self._tree1.Z>120.8):
+        #         print self._tree1.FILENAME,self._tree1.Y,self._tree1.Z
+        #         #self.th2d_xy.Fill(self._tree1.X,self._tree1.Y,signal)
+        #         #self.th2d_xz.Fill(self._tree1.X,self._tree1.Z,signal)
 
 
     def _Print_First(self):
@@ -309,3 +312,30 @@ class merge_anal:
             #self._tree1.RUN
             #)
             
+
+parser = OptionParser()
+parser.add_option('-e', '--extracted_signals', metavar='F', type='string', action='store',
+# default       =       'none',
+default =       'Intensity.root',
+dest    =       'fit_tree',
+help    =       'File with fit parameters')
+
+parser.add_option('-p', '--position_tree', metavar='F', type='string', action='store',
+default =       '/home/silicon/LaserScanData/Log_Thu20170209-140334.root',
+dest    =       'position_tree',
+help    =       'File with xyz Runno information')
+
+parser.add_option('-o', '--out_file', metavar='F', type='string', action='store',
+default =       'Output_analysis.root',
+dest    =       'out_file',
+help    =       'Destination File')
+
+(options, args) = parser.parse_args()
+
+fit_tree = options.fit_tree
+position_tree = options.position_tree
+destination_file = options.out_file
+
+ROOT.gROOT.SetBatch()
+
+d= merge_anal(fit_tree, position_tree, destination_file)
