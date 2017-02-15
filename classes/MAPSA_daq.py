@@ -46,13 +46,13 @@ class MAPSA_daq:
 		# True 
 		test = self._sequencerbusy.read()
 		self._hw.dispatch()
-		time.sleep(0.002)
+		# time.sleep(0.002)
 		while  busyseq:
 			busyseq = self._sequencerbusy.read()
 			self._hw.dispatch()
 			# if i%500==0:
 			# 	print (i*1E-3), 'sec'
-			time.sleep(0.001)
+			# time.sleep(0.001)
 			i+=1
 			#the shutterduration is in maximum 13.422s
                         if i> 13500:
