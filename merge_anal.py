@@ -79,6 +79,15 @@ class merge_anal:
         self.th1_hists_y = []
         self.th1_hists_z = []
 
+        self.th1d_x_r_p_l=ROOT.TH1D()
+        self.th1d_x_r_m_l=ROOT.TH1D()
+        self.th1d_x_r_g=ROOT.TH1D()
+        self.th1d_x_l_g=ROOT.TH1D()
+        self.th1d_x_r_m_l_g=ROOT.TH1D()
+
+        self.th1_hists_x_anal = []
+
+
         self.th2d_xy=ROOT.TH2D()
         self.th2d_xz=ROOT.TH2D()
         self.th2d_yz=ROOT.TH2D()
@@ -88,9 +97,9 @@ class merge_anal:
         
         self._Initialize_Hists()
         self._Fill_Hists()
+        self._Analyze_Hists()
         self._Write_Hists()
         #self._Channel_range()
-
     def _Get_Min_Max(self):
         self._Max_X = self._tree1.GetMaximum("X")
         self._Max_Y = self._tree1.GetMaximum("Y")
@@ -180,6 +189,28 @@ class merge_anal:
                 tmp.SetName("X_HIST_"+str(i).zfill(3))
                 tmp.SetTitle("X_HIST_"+str(i).zfill(3))
                 self.th1_hists_x.append(tmp)
+                tmp1=[]
+                tmp=ROOT.TH1D(self.th1d_x)
+                tmp.SetName("X_HIST_r_p_l_"+str(i).zfill(3))
+                tmp.SetTitle("X_HIST Sum"+str(i).zfill(3))
+                tmp1.append(tmp)
+                tmp=ROOT.TH1D(self.th1d_x)
+                tmp.SetName("X_HIST_r_m_l_"+str(i).zfill(3))
+                tmp.SetTitle("X_HIST Diff"+str(i).zfill(3))
+                tmp1.append(tmp)
+                tmp=ROOT.TH1D(self.th1d_x)
+                tmp.SetName("X_HIST_r_g_"+str(i).zfill(3))
+                tmp.SetTitle("X_HIST R over Sum"+str(i).zfill(3))
+                tmp1.append(tmp)
+                tmp=ROOT.TH1D(self.th1d_x)
+                tmp.SetName("X_HIST_l_g_"+str(i).zfill(3))
+                tmp.SetTitle("X_HIST L over Sum"+str(i).zfill(3))
+                tmp1.append(tmp)
+                tmp=ROOT.TH1D(self.th1d_x)
+                tmp.SetName("X_HIST_d_g_"+str(i).zfill(3))
+                tmp.SetTitle("X_HIST Diff over Sum"+str(i).zfill(3))
+                tmp1.append(tmp)
+                self.th1_hists_x_anal.append(tmp1)
         if(self._Dir_Y>0):
             self.th1d_y=ROOT.TH1D("Y_HIST","Y_HIST",self._Bins_Y,self._Min_Hist_Y,self._Max_Hist_Y)
             for i in range(1,no_pixel):
@@ -265,6 +296,17 @@ class merge_anal:
             for it in self.th2_hists_yz:
                 it.Write()
         r_file.cd()
+        r_file.mkdir("strip_anal")
+        ROOT.gDirectory.cd("strip_anal")
+        if(self._Dir_X>0 and self._Dir_Y==0 and self._Dir_Z==0):
+            for num,it in enumerate(self.th1_hists_x_anal):
+                ROOT.gDirectory.mkdir("strip_"+str(num).zfill(3))
+                ROOT.gDirectory.cd("strip_"+str(num).zfill(3))
+                for bla in it:
+                    bla.Write()
+                ROOT.gDirectory.cd("..")
+        r_file.cd()
+
         r_file.mkdir("total")
         ROOT.gDirectory.cd("total")
         if( self.th2d_xy.GetEntries()>0):
@@ -321,7 +363,8 @@ class merge_anal:
                 #)
                 #self.th2_hists_xy[(int)(self._tree.Channel_No)].Fill(self._tree1.X,self._tree1.Y,signal)
                 #self.th2_hists_xz[(int)(self._tree.Channel_No)].Fill(self._tree1.X,self._tree1.Z,signal)
-            if(signal>0 and signal < 256 and self._tree.Signal_Chisqrndf < 100 and  self._tree.Noise_Chisqrndf < 100 ):
+            # if(signal>0 and signal < 256 and self._tree.Signal_Chisqrndf < 1000 and  self._tree.Noise_Chisqrndf < 100 ):
+            if(signal>0 and signal < 256):
                 if(self._Dir_X>0):
                     self.th1_hists_x[(int)(self._tree.Channel_No)].Fill(self._tree1.X,signal)
                 if(self._Dir_Y>0):
@@ -349,6 +392,22 @@ class merge_anal:
         #         #self.th2d_xy.Fill(self._tree1.X,self._tree1.Y,signal)
         #         #self.th2d_xz.Fill(self._tree1.X,self._tree1.Z,signal)
 
+    def _Analyze_Hists(self):
+        for num,i in enumerate(self.th1_hists_x):
+            if(num>0 and num<len(self.th1_hists_x)-1):
+                self.th1_hists_x_anal[num][0].Add(self.th1_hists_x[num],1)
+                self.th1_hists_x_anal[num][0].Add(self.th1_hists_x[num+1],1)
+                self.th1_hists_x_anal[num][1].Add(self.th1_hists_x[num],1)
+                self.th1_hists_x_anal[num][1].Add(self.th1_hists_x[num+1],-1)
+                self.th1_hists_x_anal[num][2].Add(self.th1_hists_x[num+1],1)
+                self.th1_hists_x_anal[num][2].Divide(self.th1_hists_x_anal[num][0])
+                self.th1_hists_x_anal[num][3].Add(self.th1_hists_x[num],1)
+                self.th1_hists_x_anal[num][3].Divide(self.th1_hists_x_anal[num][0])
+                self.th1_hists_x_anal[num][4].Add(self.th1_hists_x_anal[num][1],1)
+                self.th1_hists_x_anal[num][4].Divide(self.th1_hists_x_anal[num][0])
+                
+                # print num ,str(i.GetTitle())
+                
 
     def _Print_First(self):
         bla =0
@@ -388,6 +447,7 @@ class merge_anal:
                     self._tree1.FILENAME,
                     #self._tree1.RUN
                     )
+
 
         #for event1 in xrange(self._tree1.GetEntries()):
             #self._tree1.GetEntry(event1)
