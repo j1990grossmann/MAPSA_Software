@@ -99,8 +99,7 @@ def fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
                                     continue 
                                 for i in range(0,len(ev[tv])):
                                     tree_vars[tv][i] = ev[tv][i]
-
-    tree.Fill()
+    # tree.Fill()
 
 def start_daq (memmode, threshold):
     assembly = [2,5]
@@ -138,7 +137,6 @@ def start_daq (memmode, threshold):
         mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
         conf.append(mpa[iMPA].config(config_dir+"/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
 
-
     # Define default config
     for iMPA in range(0,len(assembly)):
         conf[iMPA].modifyperiphery('THDAC',threshold) # Write threshold to MPA 'iMPA'
@@ -156,8 +154,10 @@ def start_daq (memmode, threshold):
     glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
     glib.dispatch()
     
-    #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-    shutterDur = 0xFFF #0xFFFFFFFF is maximum, in clock cycles
+    shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
+    # shutterDur = 0xA280 #0xFFFFFFFF is maximum, in clock cycles
+    # shutterDur = 0x27100 #0xFFFFFFFF is maximum, in clock cycles
+    # shutterDur = 0xFFFFF #0xFFFFFFFF is maximum, in clock cycles
     
     # pdb.set_trace()
     mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
@@ -168,10 +168,10 @@ def start_daq (memmode, threshold):
     memoryArray = []
     frequency = "Wait"
     
-    triggerStop = 1000
+    triggerStop = 10000
     
     try:
-        vararr = {}
+        vararr = []
         while True:
             freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             glib.dispatch()
@@ -188,8 +188,8 @@ def start_daq (memmode, threshold):
                 MAPSAMemory = []
                 #here one reads the pix and memory
                 pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
-		print "pix", pix
-		print "mem", mem
+		# print "pix", pix
+		# print "mem", mem
 		parray = []
 		marray = []
 		cntspershutter = 0
@@ -199,12 +199,13 @@ def start_daq (memmode, threshold):
                     parray.append(pix[i])
                     #marray.append(mpa[i].daq().read_memory(mem[i],memmode))
                     marray.append(mem[i])
-                temp_vars = {}
-                for imemo,memo in enumerate(marray):
-                    temp_vars["SR_UN_MPA_"+str(imemo)]=memo
-                for ip, p in enumerate(parray):
-                    temp_vars["AR_MPA_"+str(ip)]=p                    
-                vararr.append(temp_vars)
+                # temp_vars_sr_un_mpa = []
+                # temp_vars_ar_mpa = []
+                # for imemo,memo in enumerate(marray):
+                #     temp_vars_sr_un_mpa[imemo]=memo
+                # for ip, p in enumerate(parray):
+                #     temp_vars["AR_MPA_"+str(ip)]=p
+                vararr.append([[marray],[parray]])
                 #counterData1=[]
                 #memoryData1=[]
                 #counterData1 = array('d',pix[1])
@@ -430,11 +431,9 @@ dest    =       'format',
 help    =       'memout format noprocessing, stubfinding, centroid, stripemulator ')
 
 parser.add_option('-m', '--mpa', metavar='F', type='int', action='store',
-default =       1,
+default =       0,
 dest    =       'mpa',
 help    =       'mpa to configure (0 for all)')
-
-
 
 parser.add_option('-c', '--charge', metavar='F', type='int', action='store',
 default =       0,
@@ -442,7 +441,7 @@ dest    =       'charge',
 help    =       'Charge for caldac')
 
 parser.add_option('-t', '--thresh', metavar='F', type='int', action='store',
-default =       90,
+default =       80,
 dest    =       'thresh',
 help    =       'threshold')
 
@@ -516,12 +515,10 @@ dest    =       'phase',
 help    =       'beam phase offset')
 
 
-
-
 (options, args) = parser.parse_args()
 formarr = ['stubfinding','stripemulator' ,'centroid','noprocessing']
 memmode = formarr.index(options.format)
 threshold = options.thresh
 
-
+start_daq(memmode,threshold)
 print "imported"
