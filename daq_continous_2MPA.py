@@ -2,7 +2,7 @@ import pdb
 import errno
 import sys
 import os
-from classes import *
+#from classes import *
 from array import array
 import numpy as np
 from ROOT import TGraph, TCanvas, TLine, TTree, TFile, TBranch, TFile
@@ -10,86 +10,115 @@ import time
 import datetime
 from optparse import OptionParser
 
-def make_sure_path_exists(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
-
-def create_data_dir():
-    cwd = os.getcwd()
-    #Create directory for new run
-    data_dir=cwd+"/readout_data"
-    make_sure_path_exists(data_dir)
-    runNumber = 0
-    runNumberFile = cwd+'/.currentRun.txt'
-    with open(runNumberFile,'r') as runFile:
-        runNumber = int(runFile.read())
-    with open(runNumberFile,'w') as newRunFile:
-        newRunFile.write(str(runNumber+1))
-    subdir ="/%09d" %runNumber
-    datapath = data_dir+subdir
-    make_sure_path_exists(datapath)
-    #check if config dir is there
-    config_dir=cwd+"/data"
-    make_sure_path_exists(config_dir)
-
-    return datapath, runNumber, config_dir
-
-def create_ttree(tree_vars, number_mpa_light, assembly, datapath):
-        tree_vars["COND_NO_MPA_LIGHT"]              = array('L',[0])
-        tree_vars["COND_SPILL"]                     = array('L',[0])
-        tree_vars["COND_THRESHOLD"]                 = array('L',[0])
-        tree_vars["COND_TIMESTAMP"]                 = array('L',[0])
-        tree_vars["SPICHAIN"]                  = array('L',[0]*6)
-        tree_vars["TRIG_COUNTS_SHUTTER"]       = array('L',[0])
-        tree_vars["TRIG_COUNTS_TOTAL_SHUTTER"] = array('L',[0])
-        tree_vars["TRIG_COUNTS_TOTAL"]         = array('L',[0])
-        tree_vars["TRIG_OFFSET_BEAM"]          = array('L',[0]*2048)
-        tree_vars["TRIG_OFFSET_MPA"]           = array('L',[0]*2048)
-        for i in range(0,number_mpa_light):
-                        tree_vars["AR_MPA_"+str(i)] = array('L',[0]*48)
-                        tree_vars["SR_BX_MPA_"+str(i)] = array('L',[0]*96)
-                        tree_vars["SR_MPA_"+str(i)] = array('L',[0]*96)
-        F = TFile(datapath+'/data.root','recreate')
-        tree=TTree("Tree","Tree")
-        for key in tree_vars.keys():
-                if "SR" in key:
-                        tree.Branch(key,tree_vars[key],key+"[96]/l")
-                if "AR" in key:
-                        tree.Branch(key,tree_vars[key],key+"[48]/l")
-                if "TRIG_OFFSET" in key:
-                        tree.Branch(key,tree_vars[key],key+"[2048]/l")
-                if "TRIG_COUNTS" in key:
-                        tree.Branch(key,tree_vars[key],key+"[1]/l")
-                if "SPICHAIN" in key:
-                        tree.Branch(key,tree_vars[key],key+"[6]/l")
-                if "COND" in key:
-                        tree.Branch(key,tree_vars[key],key+"[1]/l")                        
-        return F, tree
-    
-def fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
-    for ev_i, ev in enumerate(vararr):
-        if ev_i%20==0:
-            print ev
-            mem={}
-            for impa in range(0,no_mpa_light):
-                #print ev["SR_UN_MPA_"+str(impa)]
-                #print len(ev["SR_UN_MPA_"+str(impa)])
-                mem[impa] = mpa[impa].daq().formatmem(ev["SR_UN_MPA_"+str(impa)])
-                memo = mpa[impa].daq().read_memory(mem[impa],memmode)
-                for p in range(0,96):
-                    if p>len(memo[0]):
-                        memo[0].append(int(0))
-                        memo[1].append('0')
-
-                        BXmemo = np.array(memo[0])
-                        DATAmemo = np.array(memo[1])
-
-                        DATAmemoint = []
-                        for DATAmem in DATAmemo:
-                            DATAmemoint.append(long(DATAmem,2)) 
+class daq_coninous_2MPA:
+    def __init__(self):
+        self._Result_Dict=[]
+        self._Keys=[]
+        self._Values=[]
+        self._assembly = []
+        self._number_mpa_light=len(self._assembly)
+        #Get Workingdir, DataDir, Config Dir
+        self._datapath, self._runNumber, self._config_dir = self._create_data_dir()
+        self.timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
+        self._tfile = TFile()
+        self._tree  = TTree()
+        self._create_tree()
+        ##filepath = os.path.dirname(os.path.realpath(__file__))
+        ##create ttree and open root file
+        #create_ttree(tree_vars, number_mpa_light, assembly, datapath)
+    def _create_data_dir(self):
+        cwd = os.getcwd()
+        #Create directory for new run
+        data_dir=cwd+"/readout_data"
+        self._make_sure_path_exists(data_dir)
+        runNumber = 0
+        runNumberFile = cwd+'/.currentRun.txt'
+        with open(runNumberFile,'r') as runFile:
+            runNumber = int(runFile.read())
+            with open(runNumberFile,'w') as newRunFile:
+                newRunFile.write(str(runNumber+1))
+                subdir ="/%09d" %runNumber
+                datapath = data_dir+subdir
+                self._make_sure_path_exists(datapath)
+                #check if config dir is there
+                config_dir=cwd+"/data"
+                self._make_sure_path_exists(config_dir)
+        return datapath, runNumber, config_dir
+    def _make_sure_path_exists(self,path):
+        try:
+            os.makedirs(path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+    def _create_tree(self):
+        self._Keys = [
+            "COND_NO_MPA_LIGHT"        ,
+            "COND_SPILL"               ,
+            "COND_THRESHOLD"           ,
+            "COND_TIMESTAMP"           ,
+            "COND_ANGLE"               ,
+            "COND_VOLTAGE"             ,
+            "TRIG_COUNTS_SHUTTER"      ,
+            "TRIG_COUNTS_TOTAL_SHUTTER",
+            "TRIG_COUNTS_TOTAL"        ,
+            "TRIG_OFFSET_BEAM"         ,
+            "TRIG_OFFSET_MPA"
+            ]
+        #self._assembly = [2,5]
+        #self._number_mpa_light=len(self._assembly)
+        for i in range(0,6):
+            self._Keys.append("AR_MPA_"+str(i))
+            self._Keys.append("SR_BX_MPA_"+str(i))
+            self._Keys.append("SR_MPA_"+str(i))
+        for key in self._Keys:
+            if "COND" in key:
+                self._Values.append(array('L',[0]))
+            if "TRIG_COUNTS" in key:
+                self._Values.append(array('L',[0]))
+            if "TRIG_OFFSET" in key:
+                self._Values.append(array('L',[0]*2048))
+            if "AR_MPA" in key:
+                self._Values.append(array('L',[0]*48))
+            if "SR" in key:
+                self._Values.append(array('L',[0]*96))
+        self._Result_Dict=zip(self._Keys,self._Values)
+        self._tfile = TFile(self._datapath+'/data.root','recreate')
+        self._tree = TTree("Tree","Tree")
+        for key in self._Result_Dict:
+            if "COND" in key[0]:
+                self._tree.Branch(key[0],key[1],key[0]+"[1]/l")
+            if "TRIG_COUNTS" in key[0]:
+                self._tree.Branch(key[0],key[1],key[0]+"[1]/l")
+            if "TRIG_OFFSET" in key[0]:
+                self._tree.Branch(key[0],key[1],key[0]+"[2048]/l")
+            if "AR_MPA" in key[0]:
+                self._tree.Branch(key[0],key[1],key[0]+"[48]/l")
+            if "SR" in key[0]:
+                self._tree.Branch(key[0],key[1],key[0]+"[96]/l")
+    def write_close(self):
+        self._tree.Write()
+        self._tfile.Close()
+    def _fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
+        for ev_i, ev in enumerate(vararr):
+            if ev_i%20==0:
+                print ev
+                mem={}
+                for impa in range(0,no_mpa_light):
+                    #print ev["SR_UN_MPA_"+str(impa)]
+                    #print len(ev["SR_UN_MPA_"+str(impa)])
+                    mem[impa] = mpa[impa].daq().formatmem(ev["SR_UN_MPA_"+str(impa)])
+                    memo = mpa[impa].daq().read_memory(mem[impa],memmode)
+                    for p in range(0,96):
+                        if p>len(memo[0]):
+                            memo[0].append(int(0))
+                            memo[1].append('0')
+                            
+                            BXmemo = np.array(memo[0])
+                            DATAmemo = np.array(memo[1])
+                            
+                            DATAmemoint = []
+                            for DATAmem in DATAmemo:
+                                DATAmemoint.append(long(DATAmem,2)) 
 
                             ev["SR_BX_MPA_"+str(impa)] = BXmemo
                             ev["SR_MPA_"+str(impa)] = DATAmemoint
@@ -99,214 +128,214 @@ def fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
                                     continue 
                                 for i in range(0,len(ev[tv])):
                                     tree_vars[tv][i] = ev[tv][i]
-    # tree.Fill()
+                                    
+                                    # tree.Fill()
+#def start_daq (memmode, threshold):
+    #assembly = [2,5]
+    #number_mpa_light=len(assembly)
+    #tree_vars = {}
+    ##Get current workingdir
+    #datapath, runNumber, config_dir = create_data_dir()
+    #print datapath, runNumber, config_dir
+    #timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
+    #print timestr
+    ##filepath = os.path.dirname(os.path.realpath(__file__))
+    ##create ttree and open root file
+    #create_ttree(tree_vars, number_mpa_light, assembly, datapath)
 
-def start_daq (memmode, threshold):
-    assembly = [2,5]
-    number_mpa_light=len(assembly)
-    tree_vars = {}
-    #Get current workingdir
-    datapath, runNumber, config_dir = create_data_dir()
-    print datapath, runNumber, config_dir
-    timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
-    print timestr
-    #filepath = os.path.dirname(os.path.realpath(__file__))
-    #create ttree and open root file
-    create_ttree(tree_vars, number_mpa_light, assembly, datapath)
 
+    ## Connection and GLIB 
+    #a = uasic(connection="file://connections_test.xml",device="board0")
+    #glib = a._hw 
+    #firmver = glib.getNode("Control").getNode('firm_ver').read()
+    #glib.dispatch()
+    ## Enable clock on MPA
+    #glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
+    #glib.dispatch()
+    
+    ## Reset all logic on GLIB
+    #glib.getNode("Control").getNode("logic_reset").write(0x1)
+    #glib.dispatch()
+    
+    ## Source all classes
+    #mapsaClasses = MAPSA(a)
+    
+    #conf = []
+    #mpa = []
+    #for iMPA, nMPA  in enumerate(assembly):
+        #mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
+        #conf.append(mpa[iMPA].config(config_dir+"/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
 
-    # Connection and GLIB 
-    a = uasic(connection="file://connections_test.xml",device="board0")
-    glib = a._hw 
-    firmver = glib.getNode("Control").getNode('firm_ver').read()
-    glib.dispatch()
-    # Enable clock on MPA
-    glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
-    glib.dispatch()
+    ## Define default config
+    #for iMPA in range(0,len(assembly)):
+        #conf[iMPA].modifyperiphery('THDAC',threshold) # Write threshold to MPA 'iMPA'
+        #conf[iMPA].modifyperiphery('OM',memmode) # Change the aquisition mode
+        #conf[iMPA].modifypixel(range(1,25), 'SR', 1) # Enable synchronous readout on all pixels
+        #conf[iMPA].upload() # Push configuration to GLIB
+    #glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
+    #conf[iMPA]._spi_wait() # includes dispatch
     
-    # Reset all logic on GLIB
-    glib.getNode("Control").getNode("logic_reset").write(0x1)
-    glib.dispatch()
+    #glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
+    #glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1) # This is a 'write' and pushes the configuration to the glib. Write must happen before starting the sequencer.
+    #conf[0]._spi_wait() # includes dispatch
     
-    # Source all classes
-    mapsaClasses = MAPSA(a)
+    #glib.getNode("Control").getNode('testbeam_clock').write(0x1) # Enable external clock 
+    #glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
+    #glib.dispatch()
     
-    conf = []
-    mpa = []
-    for iMPA, nMPA  in enumerate(assembly):
-        mpa.append(MPA(glib, iMPA+1)) # List of instances of MPA, one for each MPA. SPI-chain numbering!
-        conf.append(mpa[iMPA].config(config_dir+"/Conf_calibrated_MPA" + str(nMPA)+ "_config1.xml")) # Use trimcalibrated config
+    #shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
+    ## shutterDur = 0xA280 #0xFFFFFFFF is maximum, in clock cycles
+    ## shutterDur = 0x27100 #0xFFFFFFFF is maximum, in clock cycles
+    ## shutterDur = 0xFFFFF #0xFFFFFFFF is maximum, in clock cycles
+    
+    ## pdb.set_trace()
+    #mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
+    
+    #ibuffer = 1
+    #shutterCounter = 0
+    #counterArray = []
+    #memoryArray = []
+    #frequency = "Wait"
+    
+    #triggerStop = 10000
+    
+    #try:
+        #vararr = []
+        #while True:
+            #freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+            #glib.dispatch()
+            #if freeBuffers < 3: # When set to 4 this produces duplicate entries, 3 (= 2 full buffers) avoids this.  
+                #if shutterCounter%2000 == 0:
+                    #print "2000 events taken"
+                    #startTime = time.time()
+                    #shutterTimeStart = shutterCounter
 
-    # Define default config
-    for iMPA in range(0,len(assembly)):
-        conf[iMPA].modifyperiphery('THDAC',threshold) # Write threshold to MPA 'iMPA'
-        conf[iMPA].modifyperiphery('OM',memmode) # Change the aquisition mode
-        conf[iMPA].modifypixel(range(1,25), 'SR', 1) # Enable synchronous readout on all pixels
-        conf[iMPA].upload() # Push configuration to GLIB
-    glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-    conf[iMPA]._spi_wait() # includes dispatch
-    
-    glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
-    glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1) # This is a 'write' and pushes the configuration to the glib. Write must happen before starting the sequencer.
-    conf[0]._spi_wait() # includes dispatch
-    
-    glib.getNode("Control").getNode('testbeam_clock').write(0x1) # Enable external clock 
-    glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-    glib.dispatch()
-    
-    shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-    # shutterDur = 0xA280 #0xFFFFFFFF is maximum, in clock cycles
-    # shutterDur = 0x27100 #0xFFFFFFFF is maximum, in clock cycles
-    # shutterDur = 0xFFFFF #0xFFFFFFFF is maximum, in clock cycles
-    
-    # pdb.set_trace()
-    mapsaClasses.daq().Sequencer_init(0x1,shutterDur, mem=1) # Start sequencer in continous daq mode. Already contains the 'write'
-    
-    ibuffer = 1
-    shutterCounter = 0
-    counterArray = []
-    memoryArray = []
-    frequency = "Wait"
-    
-    triggerStop = 10000
-    
-    try:
-        vararr = []
-        while True:
-            freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
-            glib.dispatch()
-            if freeBuffers < 3: # When set to 4 this produces duplicate entries, 3 (= 2 full buffers) avoids this.  
-                if shutterCounter%2000 == 0:
-                    print "2000 events taken"
-                    startTime = time.time()
-                    shutterTimeStart = shutterCounter
+                #if shutterCounter%100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
+                    #frequency = (shutterCounter - shutterTimeStart)/(time.time() - startTime)
 
-                if shutterCounter%100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
-                    frequency = (shutterCounter - shutterTimeStart)/(time.time() - startTime)
+                #MAPSACounter = []
+                #MAPSAMemory = []
+                ##here one reads the pix and memory
+                #pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
+		## print "pix", pix
+		## print "mem", mem
+		#parray = []
+		#marray = []
+		#cntspershutter = 0
+		#for i in range(0,number_mpa_light):
+                    #pix[i].pop(0)
+                    #pix[i].pop(0)
+                    #parray.append(pix[i])
+                    ##marray.append(mpa[i].daq().read_memory(mem[i],memmode))
+                    #marray.append(mem[i])
+                ## temp_vars_sr_un_mpa = []
+                ## temp_vars_ar_mpa = []
+                ## for imemo,memo in enumerate(marray):
+                ##     temp_vars_sr_un_mpa[imemo]=memo
+                ## for ip, p in enumerate(parray):
+                ##     temp_vars["AR_MPA_"+str(ip)]=p
+                #vararr.append([[marray],[parray]])
+                ##counterData1=[]
+                ##memoryData1=[]
+                ##counterData1 = array('d',pix[1])
+                ##memoryData1 = array('d',mem[1])
 
-                MAPSACounter = []
-                MAPSAMemory = []
-                #here one reads the pix and memory
-                pix, mem = mapsaClasses.daq().read_data(ibuffer,False,True,number_mpa_light)
-		# print "pix", pix
-		# print "mem", mem
-		parray = []
-		marray = []
-		cntspershutter = 0
-		for i in range(0,number_mpa_light):
-                    pix[i].pop(0)
-                    pix[i].pop(0)
-                    parray.append(pix[i])
-                    #marray.append(mpa[i].daq().read_memory(mem[i],memmode))
-                    marray.append(mem[i])
-                # temp_vars_sr_un_mpa = []
-                # temp_vars_ar_mpa = []
-                # for imemo,memo in enumerate(marray):
-                #     temp_vars_sr_un_mpa[imemo]=memo
-                # for ip, p in enumerate(parray):
-                #     temp_vars["AR_MPA_"+str(ip)]=p
-                vararr.append([[marray],[parray]])
-                #counterData1=[]
-                #memoryData1=[]
-                #counterData1 = array('d',pix[1])
-                #memoryData1 = array('d',mem[1])
-
-                for iMPA, nMPA in enumerate(assembly):
-                    counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
-                    memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
-                    glib.dispatch()
+                #for iMPA, nMPA in enumerate(assembly):
+                    #counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
+                    #memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
+                    #glib.dispatch()
     
-                    # print "Buffer: %s iMPA: %s nMPA: %s" %(ibuffer, iMPA, nMPA)
-                    # print counterData
-                    # print '{0:032b}'.format(counterData[0])
-                    # print memoryData
-                    # print "\n"
+                    ## print "Buffer: %s iMPA: %s nMPA: %s" %(ibuffer, iMPA, nMPA)
+                    ## print counterData
+                    ## print '{0:032b}'.format(counterData[0])
+                    ## print memoryData
+                    ## print "\n"
                     
-                    MAPSACounter.append(counterData)
-                    MAPSAMemory.append(memoryData)
+                    #MAPSACounter.append(counterData)
+                    #MAPSAMemory.append(memoryData)
     
-                ibuffer += 1
-                if ibuffer > 4:
-                    ibuffer = 1
+                #ibuffer += 1
+                #if ibuffer > 4:
+                    #ibuffer = 1
     
-                shutterCounter+=1
+                #shutterCounter+=1
                 
-                # Only contains valVectors:
-                #print "mapsa counter"
-                #for count,pix  in enumerate( MAPSACounter):
-                    #print count, array('d',pix)
-                # counterData1 = array('d',MAPSACounter[0])
-                #print "memory"
-                #for count,pix  in enumerate( MAPSAMemory ):
-                    #print count, array('d',pix)
-                # memoryData1 = array('d',MAPSAMemory[0])
+                ## Only contains valVectors:
+                ##print "mapsa counter"
+                ##for count,pix  in enumerate( MAPSACounter):
+                    ##print count, array('d',pix)
+                ## counterData1 = array('d',MAPSACounter[0])
+                ##print "memory"
+                ##for count,pix  in enumerate( MAPSAMemory ):
+                    ##print count, array('d',pix)
+                ## memoryData1 = array('d',MAPSAMemory[0])
 
-                counterArray.append(MAPSACounter) 
-                memoryArray.append(MAPSAMemory)
+                #counterArray.append(MAPSACounter) 
+                #memoryArray.append(MAPSAMemory)
 
-                #numpyarray1 = np.array(counterData1[:][:])
-                #numpyarray2 = np.array(memoryData1[:][:])
-                #print ("counterData "   , len(counterData1))
-                #print ("memoryData"     , len(memoryData1))
-                #print ("counterData ", numpyarray1.shape)
-                #print ("memoryData"  , numpyarray2.shape)
+                ##numpyarray1 = np.array(counterData1[:][:])
+                ##numpyarray2 = np.array(memoryData1[:][:])
+                ##print ("counterData "   , len(counterData1))
+                ##print ("memoryData"     , len(memoryData1))
+                ##print ("counterData ", numpyarray1.shape)
+                ##print ("memoryData"  , numpyarray2.shape)
 
-                if(shutterCounter%100==0):
-                    print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
+                #if(shutterCounter%100==0):
+                    #print "Shutter counter: %s Free buffers: %s Frequency: %s " %(shutterCounter, freeBuffers, frequency)
     
     
-                ############## Continuous operation in bash loop
+                ############### Continuous operation in bash loop
     
-                if shutterCounter == triggerStop:
-                    endTimeStamp = time.time()
-                if shutterCounter > triggerStop:
-                    if time.time() - endTimeStamp > 2:
-                        break
+                #if shutterCounter == triggerStop:
+                    #endTimeStamp = time.time()
+                #if shutterCounter > triggerStop:
+                    #if time.time() - endTimeStamp > 2:
+                        #break
             
-    except KeyboardInterrupt:
-        pass
+    #except KeyboardInterrupt:
+        #pass
     
-    #finally:
-    #    while ibuffer <= 4:
-    #
-    #        freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
-    #        glib.dispatch()
-    #        if freeBuffers < 3:    
-    #            MAPSACounter = []
-    #            MAPSAMemory = []
-    #            for iMPA, nMPA in enumerate(assembly):
-    #               counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
-    #               memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
-    #                glib.dispatch()
-    #                
-    #                MAPSACounter.append(counterData)
-    #                MAPSAMemory.append(memoryData)
-    #
-    #            shutterCounter += 1        
-    #            ibuffer += 1
-    #
-    #            # Only contains valVectors:
-    #            counterArray.append(MAPSACounter) 
-    #            memoryArray.append(MAPSAMemory)
-    #            print "Shutter counter: %s Buffers num: %s " %(shutterCounter, freeBuffers)
-    #
+    ##finally:
+    ##    while ibuffer <= 4:
+    ##
+    ##        freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+    ##        glib.dispatch()
+    ##        if freeBuffers < 3:    
+    ##            MAPSACounter = []
+    ##            MAPSAMemory = []
+    ##            for iMPA, nMPA in enumerate(assembly):
+    ##               counterData  = glib.getNode("Readout").getNode("Counter").getNode("MPA"+str(iMPA + 1)).getNode("buffer_"+str(ibuffer)).readBlock(25)
+    ##               memoryData = glib.getNode("Readout").getNode("Memory").getNode("MPA"+str(nMPA)).getNode("buffer_"+str(ibuffer)).readBlock(216)
+    ##                glib.dispatch()
+    ##                
+    ##                MAPSACounter.append(counterData)
+    ##                MAPSAMemory.append(memoryData)
+    ##
+    ##            shutterCounter += 1        
+    ##            ibuffer += 1
+    ##
+    ##            # Only contains valVectors:
+    ##            counterArray.append(MAPSACounter) 
+    ##            memoryArray.append(MAPSAMemory)
+    ##            print "Shutter counter: %s Buffers num: %s " %(shutterCounter, freeBuffers)
+    ##
     
     
     
-    print "End of Run %s" %runNumber
+    #print "End of Run %s" %runNumber
                    
-    memoryFile = open(datapath+'memory.txt', 'w')
-    counterFile = open(datapath+'counter.txt', 'w')
+    #memoryFile = open(datapath+'memory.txt', 'w')
+    #counterFile = open(datapath+'counter.txt', 'w')
     
-    for i, shutter in enumerate(counterArray):
-        for j,mpa in enumerate(shutter):
-            counterFile.write(str(mpa.value())+"\n")
-            memoryFile.write(str(memoryArray[i][j].value())+"\n")
+    #for i, shutter in enumerate(counterArray):
+        #for j,mpa in enumerate(shutter):
+            #counterFile.write(str(mpa.value())+"\n")
+            #memoryFile.write(str(memoryArray[i][j].value())+"\n")
     
-    counterFile.close()
-    memoryFile.close()
+    #counterFile.close()
+    #memoryFile.close()
     
-    print "All files saved"
+    #print "All files saved"
 
     # nHitMax = 95
     # nPixMax = 48
@@ -520,5 +549,7 @@ formarr = ['stubfinding','stripemulator' ,'centroid','noprocessing']
 memmode = formarr.index(options.format)
 threshold = options.thresh
 
-start_daq(memmode,threshold)
+#start_daq(memmode,threshold)
+DAQ = daq_coninous_2MPA()
+DAQ.write_close()
 print "imported"
