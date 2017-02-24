@@ -441,7 +441,7 @@ dest    =       'charge',
 help    =       'Charge for caldac')
 
 parser.add_option('-t', '--thresh', metavar='F', type='int', action='store',
-default =       80,
+default =       180,
 dest    =       'thresh',
 help    =       'threshold')
 
