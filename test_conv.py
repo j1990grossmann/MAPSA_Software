@@ -15,11 +15,14 @@ subpixel_resolution=5
 #Width of the central excitatory region 2*Sqrt(2)*Sigma filter constant
 
 def match_predicator(x,n):
-  for i in range(1,n-1):
-    x[i]
-  
-  return matches
-
+    matches=[]
+    for i in range(1,n):
+        if x[i-1]<0 and x[i]>0:
+            #matches.append[1,x[i]]
+            print "found rising edge at ", i
+        if x[i-1]>0 and x[i]<0:
+            #matches.append[-1,x[i]]
+            print "found falling edge at ", i
 
 def heavyside_function(x,par):
     if x[0]>par[0]:
@@ -123,7 +126,7 @@ data.SetLineColor(1)
 filter_constant_sigma=1
 excitatory_region_width=2*SQRT2*filter_constant_sigma
 size_of_operator=3*excitatory_region_width
-subpixel_resolution=1
+subpixel_resolution=0.1
 bins_mask=(int)(round(size_of_operator/subpixel_resolution,1))
 if(bins_mask%2==0):
     bins_mask=bins_mask+1
@@ -136,88 +139,122 @@ mean =ROOT.RooRealVar("mean","mean of gaussian",0)
 sigma=ROOT.RooRealVar("sigma","width of gaussian",filter_constant_sigma)
 gauss =ROOT.RooGaussian("gauss","gaussian PDF",filter_size,mean,sigma)
 LoG_Mask   =gauss.derivative(filter_size,2)
+#LoG_Mask   =gauss
 #xframe = filter_size.frame(ROOT.RooFit.Title("LoG Mask"),ROOT.RooFit.Bins(3))
 #x1frame = x1.frame(ROOT.RooFit.Title("LoG Mask"),ROOT.RooFit.Bins(257))
 #gauss.plotOn(xframe,ROOT.RooFit.LineColor(ROOT.kBlue),ROOT.RooFit.Normalization(1))
 #LoG_Mask.plotOn(xframe,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Normalization(1))
 LoG_Mask_histo=LoG_Mask.createHistogram("x",bins_mask)
+#LoG_Mask_histo.Print("all")
+Kernel = array.array( 'd', [0]*LoG_Mask_histo.GetNbinsX())
+for i in range (1,LoG_Mask_histo.GetNbinsX()+1):
+    #print i, LoG_Mask_histo.GetBinContent(i)
+    Kernel[i-1]=LoG_Mask_histo.GetBinContent(i)
+    #print "kernel", Kernel[i-1]
+print "Data"
+padding=(int)(round(1./subpixel_resolution,1))
+Data = array.array( 'd', [0]*(data.GetNbinsX()*padding))
+Conv = array.array( 'd', [0]*(data.GetNbinsX()*padding))
+#print len(Data)
+for i in range (1, data.GetNbinsX()):
+    #print i,data.GetBinContent(i)
+    for j in range(0, padding):
+        #if(j<(padding/2)-1):
+            #Data[j+i*padding]=0
+        #if(j>(padding/2)-1):
+            #Data[j+i*padding]=0
+        if(j==padding/2):
+            Data[j+i*padding]=data.GetBinContent(i+1)
+        else:
+            Data[j+i*padding]=0
+Convolve=TH1D("convolve","convolve",256*padding,.5-subpixel_resolution/2,256.5-subpixel_resolution/2)
+for i in range(0,len(Data)):
+    Convolve.SetBinContent(i+1,Data[i])
+#Convolve.Print("all")
+#data.Print("all")
+
+
+    #Data=
 hm_n       = LoG_Mask_histo.GetNbinsX()
-hm_data       = data.GetNbinsX()
-Kernel = array.array( 'd', [0]*hm_n)
+hm_data       = Convolve.GetNbinsX()
+#Kernel = array.array( 'd', [0]*hm_n)
 #Data   = array.array( 'd', [0]*hm_n)
-Data= ROOT.std.vector('double')(hm_data)
-Convolve=TH1D(data)
-Convolve.Reset()
+#Data= ROOT.std.vector('double')(hm_data)
+Convolve1=TH1D(Convolve)
+Convolve1.Reset()
 
 for i in range(1,hm_data+1):
     #print ("%d sumover" %i)
     summe=0
     for j in range(1,hm_n+1):
       if (i-j)>=0:
-        summe+=data.GetBinContent(i-j)*LoG_Mask_histo.GetBinContent(j)
-        if(i==60):
-            print data.GetBinContent((i-j)%hm_data),LoG_Mask_histo.GetBinContent(j)
-    print i, summe
-    Convolve.SetBinContent(i,summe)
-    
+        summe+=Convolve.GetBinContent(i-j)*LoG_Mask_histo.GetBinContent(j)
+        #if(i==60):
+            #print Convolve.GetBinContent((i-j)%hm_data),LoG_Mask_histo.GetBinContent(j)
+    #print i, summe
+    Convolve1.SetBinContent(i,summe)
+    Conv[i]=summe
+Convolve1.Scale(1/LoG_Mask_histo.GetEntries())
+match_predicator(Conv,len(Conv))
+
 
 #for i in Data:
     #print "array" ,i
 
 
 
-hm=TH1F(LoG_Mask_histo)
+#hm=TH1F(LoG_Mask_histo)
 #LoG_Mask_histo.Print("all")
 #hm = ROOT.TH1D()
-ROOT.TVirtualFFT.SetTransform(0)
-hm = LoG_Mask_histo.FFT(hm, "R2C MAG M")
-hm.SetTitle("Magnitude of the 1st transform")
+#ROOT.TVirtualFFT.SetTransform(0)
+#hm = LoG_Mask_histo.FFT(hm, "R2C MAG M")
+#hm.SetTitle("Magnitude of the 1st transform")
 
 #hm_n       = LoG_Mask_histo.GetNbinsX()
-hm_re_full = array.array( 'd', [0]*hm_n)
-hm_im_full = array.array( 'd', [0]*hm_n)
-fft = ROOT.TVirtualFFT.GetCurrentTransform()
-fft.GetPointsComplex(hm_re_full,hm_im_full)
+#hm_re_full = array.array( 'd', [0]*hm_n)
+#hm_im_full = array.array( 'd', [0]*hm_n)
+#fft = ROOT.TVirtualFFT.GetCurrentTransform()
+#fft.GetPointsComplex(hm_re_full,hm_im_full)
 #for i in range(0,hm_n):
     #print hm_re_full[i], hm_im_full[i]
 
-hm1_n       = data.GetNbinsX()
-hm1_im_full = array.array( 'd', [0]*hm1_n)
-hm1_re_full = array.array( 'd', [0]*hm1_n)
+#hm1_n       = data.GetNbinsX()
+#hm1_im_full = array.array( 'd', [0]*hm1_n)
+#hm1_re_full = array.array( 'd', [0]*hm1_n)
 
-hm1=TH1D(data)
+#hm1=TH1D(data)
 #hm = ROOT.TH1D()
-ROOT.TVirtualFFT.SetTransform(0)
-hm1 = data.FFT(hm1, "R2C Mag M")
-fft1 = ROOT.TVirtualFFT.GetCurrentTransform()
-fft1.GetPointsComplex(hm1_re_full,hm1_im_full)
+#ROOT.TVirtualFFT.SetTransform(0)
+#hm1 = data.FFT(hm1, "R2C Mag M")
+#fft1 = ROOT.TVirtualFFT.GetCurrentTransform()
+#fft1.GetPointsComplex(hm1_re_full,hm1_im_full)
 
 #for i in range(0,hm1_n):
     #print hm1_re_full[i], hm1_im_full[i]
-hm1.SetTitle("Magnitude of the 1st transform of data")
-hm1_im_mult= array.array( 'd', [0]*hm_n)
-hm1_re_mult= array.array( 'd', [0]*hm_n)
+#hm1.SetTitle("Magnitude of the 1st transform of data")
+#hm1_im_mult= array.array( 'd', [0]*hm_n)
+#hm1_re_mult= array.array( 'd', [0]*hm_n)
 
-size_arr= array.array( 'i', [0])
-size_arr[0]=hm_n
+#size_arr= array.array( 'i', [0])
+#size_arr[0]=hm_n
 
 
-back_re_mult= array.array( 'd', [0]*hm_n)
+#back_re_mult= array.array( 'd', [0]*hm_n)
 
-mult=TH1F(LoG_Mask_histo)
-mult.Reset()
+#mult=TH1F(LoG_Mask_histo)
+#mult.Reset()
 
-for i in range(0,hm_n):
-    hm1_re_mult[i]=hm1_re_full[(i+(1+hm1_n)/2)%hm1_n]*hm_re_full[i]-hm_im_full[i]*hm1_im_full[(i+(1+hm1_n)/2)%hm1_n]
-    hm1_im_mult[i]=hm1_re_full[(i+(1+hm1_n)/2)%hm1_n]*hm_im_full[i]+hm1_im_full[(i+(1+hm1_n)/2)%hm1_n]*hm_re_full[i]
-fft2= ROOT.TVirtualFFT.FFT(1, size_arr, "C2R")
-fft2.SetPointsComplex(hm1_re_mult,hm1_im_mult)
-fft2.Transform()
+#for i in range(0,hm_n):
+    #hm1_re_mult[i]=hm1_re_full[(i+(1+hm1_n)/2)%hm1_n]*hm_re_full[i]-hm_im_full[i]*hm1_im_full[(i+(1+hm1_n)/2)%hm1_n]
+    #hm1_im_mult[i]=hm1_re_full[(i+(1+hm1_n)/2)%hm1_n]*hm_im_full[i]+hm1_im_full[(i+(1+hm1_n)/2)%hm1_n]*hm_re_full[i]
+#fft2= ROOT.TVirtualFFT.FFT(1, size_arr, "C2R")
+#fft2.SetPointsComplex(hm1_re_mult,hm1_im_mult)
+#fft2.Transform()
 
-fft2.GetPoints(back_re_mult)
-for i in range(0, len(back_re_mult)):
+#fft2.GetPoints(back_re_mult)
+#for i in range(0, len(back_re_mult)):
     #print back_re_mult[i]
-    mult.SetBinContent(i,back_re_mult[i])
+    #mult.SetBinContent(i,back_re_mult[i])
 
 
 #LoG_Mask_histo.plotOn(xframe,ROOT.RooFit.LineColor(ROOT.kRed),ROOT.RooFit.Normalization(1))
@@ -248,20 +285,24 @@ for i in range(0, len(back_re_mult)):
 
 #pdf_conv.plotOn(x1frame,ROOT.RooFit.LineColor(ROOT.kGreen))
 c =  TCanvas("c1","Find Peak",10,10,1600,1200)
-c.Divide(3,3)
+c.Divide(1,4)
 c.cd(1)
 ROOT.gPad.SetGrid()
 LoG_Mask_histo.Draw()
+#c.cd(2)
+#hm.Draw();
 c.cd(2)
-hm.Draw();
-c.cd(3)
 data.Draw()
+Convolve.Draw("same")
+c.cd(3)
+Convolve.DrawCopy("p")
 c.cd(4)
-hm1.Draw()
+Convolve1.Draw("histp")
+#hm1.Draw()
 c.cd(5)
-mult.Draw()
+#mult.Draw()
 c.cd(6)
-Convolve.Draw()
+#Convolve.Draw()
 #x1frame.Draw()
 c.SaveAs("canvas.root")
 
@@ -482,7 +523,10 @@ c.SaveAs("canvas.root")
 ##derivative_histo.GetXaxis().SetRangeUser(40,100)
 ##c2.Write("frame1")
 #c2.Close()
-
+tmp.Print("all")
+xaxis = tmp.GetXaxis()
+for i in range (0,tmp.GetNbinsX()):
+    print xaxis.GetBinCenter(i)
 g.Close()
 
 
