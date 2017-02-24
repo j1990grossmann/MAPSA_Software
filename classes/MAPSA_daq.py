@@ -42,24 +42,23 @@ class MAPSA_daq:
 
 	def _waitsequencer(self):
 		i=0
-		busyseq = True
+		busyseq = self._sequencerbusy.read()
+		# True
 		# True 
-		test = self._sequencerbusy.read()
+		# test = 
 		self._hw.dispatch()
-		# time.sleep(0.002)
 		while  busyseq:
 			busyseq = self._sequencerbusy.read()
 			self._hw.dispatch()
 			# if i%500==0:
 			# 	print (i*1E-3), 'sec'
-			# time.sleep(0.001)
+			time.sleep(0.001)
 			i+=1
 			#the shutterduration is in maximum 13.422s
-                        if i> 13500:
-                        #if i> 1000:
+                        # if i> 13500:
+                        if i> 1000:
 				print "timeout"
 				return 0
-		
 		return 1
 
 

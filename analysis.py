@@ -102,9 +102,10 @@ filelist = [
 	# "sourcetesttestlaser.root                                                                          ",
 	# "sourcetesttest.root                                                                               "
     # "laser_30D400_k_100000.root",
-    "laser_30D400_k_10000.root",
+    # "laser_30D400_k_10000.root",
     # "verification_inv_calib_17_20_01.root",
     # "test.root"
+    "pedestal_17_23_01_k_10_w_30D400.root"
 ]
 # filelist = [
 # 	# "sourcetestsourcetest_norm__100V_SR_90_on_top_ffffe_rep_100_l_0_u_255_16_08_12.root                ",
