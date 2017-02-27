@@ -16,102 +16,103 @@ import itertools
 
 parser = ArgumentParser()
 
-parser.add_argument('-s', '--setting', metavar='F',  action='store',
+parser.add_argument('-s', '--setting',   action='store',
 default =       'default',
 dest    =       'setting',
 help    =       'settings ie default,  testbeam etc')
 
-parser.add_argument('-C', '--calib', metavar='F',  action='store',
+parser.add_argument('-C', '--calib',   action='store',
 default =       'False',
 dest    =       'calib',
 help    =       'calibration')
 
-parser.add_argument('-r', '--readout', metavar='F',  action='store',
+parser.add_argument('-r', '--readout',   action='store',
 default =       'both',
 dest    =       'readout',
 help    =       'readout which data ie counters, memory, both')
 
-parser.add_argument('-f', '--format', metavar='F',  action='store',
+parser.add_argument('-f', '--format',   action='store',
 default =       'noprocessing',
 dest    =       'format',
 help    =       'memout format noprocessing, stubfinding, centroid, stripemulator ')
 
-parser.add_argument('-m', '--mpa', metavar='F', type=int, action='store',
+parser.add_argument('-m', '--mpa',  type=int, action='store',
 default =       0,
 dest    =       'mpa',
 help    =       'mpa to configure (0 for all)')
 
-parser.add_argument('-t', '--threshold', metavar='F', type=int, action='store',
+parser.add_argument('-t', '--threshold',  type=int, action='store',
 default =       180,
 dest    =       'threshold',
 help    =       'threshold as int a Number between 0 and 255')
 
-parser.add_argument('-T', '--testclock', metavar='F',  action='store',
+parser.add_argument('-T', '--testclock',   action='store',
 default =       'glib',
 dest    =       'testclock',
 help    =       'test beam clock')
 
-# parser.add_argument('-x', '--record', metavar='F',  action='store',
+# parser.add_argument('-x', '--record',   action='store',
 # default =       'True',
 # dest    =       'record',
 # help    =       'record this daq cycle')
 
-parser.add_argument('-y', '--daqstring', metavar='F',  action='store',
+parser.add_argument('-y', '--daqstring',   action='store',
 default =       'none',
 dest    =       'daqstring',
 help    =       'string to append on daq folder name')
 
-parser.add_argument('-z', '--monitor', metavar='F',  action='store',
+parser.add_argument('-z', '--monitor',   action='store',
 default =       'False',
 dest    =       'monitor',
 help    =       'start event monitor in background')
 
-parser.add_argument('-w', '--shutterdur', metavar='F', type=int, action='store',
+parser.add_argument('-w', '--shutterdur',  type=int, action='store',
 default =       0xFFFFF,
 dest    =       'shutterdur',
 help    =       'shutter duration')
 
-parser.add_argument('-v', '--skip', metavar='F',  action='store',
+parser.add_argument('-v', '--skip',   action='store',
 default =       'True',
 dest    =       'skip',
 help    =       'skip zero counts')
 
-parser.add_argument('-u', '--autospill', metavar='F',  action='store',
+parser.add_argument('-u', '--autospill',   action='store',
 default =       'True',
 dest    =       'autospill',
 help    =       'write every spill')
 
-# parser.add_argument('-N', '--norm', metavar='F',  action='store',
+# parser.add_argument('-N', '--norm',   action='store',
 # default =       'False',
 # dest    =       'norm',
 # help    =       'use normalization mpa scheme')
 
-parser.add_argument('-D', '--direction', metavar='F',  action='store',
+parser.add_argument('-D', '--direction',   action='store',
 default =       'glib',
 dest    =       'direction',
 help    =       'strip direction (glib or mpa)')
 
-parser.add_argument('-L', '--loops', metavar='F', type=int, action='store',
+parser.add_argument('-L', '--loops',  type=int, action='store',
 default =       -1,
 dest    =       'loops',
 help    =       'number of daq loops')
 
-parser.add_argument('-p', '--phase', metavar='F', type=int, action='store',
+parser.add_argument('-p', '--phase',  type=int, action='store',
 default =       0,
 dest    =       'phase',
 help    =       'beam phase offset')
 
-parser.add_argument('-x', '--external-clock', metavar='F', type=int, action='store',
+parser.add_argument('-x', '--external-clock',  type=int, action='store',
 default =       0,
 dest    =       'external_clock',
 help    =       'Use external 40MHz clock, e.g. for testbeam operation.')
 
-parser.add_argument('-a', '--assembly', metavar='F',  action='store',
+parser.add_argument('-a', '--assembly',   action='store',
 default =       0,
 dest    =       'assembly',
 help    =       'Name of the assembly, used to differentiate trimming configurations.')
 
-parser.add_argument('-i', '--mpa-index', metavar='F', type=int, choices=range(1,7), action='store',
+parser.add_argument('-i', '--mpa-index',  type=int, choices=range(1,7), nargs='+', action='store',
+# parser.add_argument('-i', '--mpa-index',  type=int, choices=range(1,7), action='store',
 default =       [],
 dest    =       'mpa_index',
 help    =       'Specify the indices of the MPAs in the SPI chain.')
@@ -136,7 +137,7 @@ default =       10000,
 dest    =       'num-triggers',
 help    =       'Filename format string for trimming and masking MPA configuration. The variables {assembly} and {mpa} are available.')
 
-parser.add_argument('-R', '--root', metavar='F', type=int, action='store',
+parser.add_argument('-R', '--root',  type=int, action='store',
 default =       1,
 dest    =       'root',
 help    =       'If set, write data to root file instead of plaintext output. '
@@ -149,9 +150,11 @@ default =       'run{number:04d}.root',
 dest    =       'root-fmt',
 help    =       'Format of the filename for ROOT file output. You can use the variables {number} and {assembly}.')
 
-
-
+args1 = parser.parse_args()
 from ROOT import TGraph, TCanvas, TTree, TFile, TBranch
+
+
+
 
 
 class RippleCounterBranch(Structure):
@@ -170,11 +173,11 @@ class MemoryNoProcessingBranch(Structure):
         ]
 
 class daq_continous_2MPA:
-    def __init__(self):
+    def __init__(self,parser):
         self._Result_Dict=[]
         self._Keys=[]
         self._Values=[]
-        self._Parser=ArgumentParser()
+        self._Parser=parser
         self._assembly = []
         self._number_mpa_light=0
         self._memmode=''
@@ -182,23 +185,29 @@ class daq_continous_2MPA:
         #Get Workingdir, DataDir, Config Dir
         self._datapath, self._runNumber, self._config_dir = self._create_data_dir()
         self.timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
+        self._parse_args()
         self._tfile = TFile()
         self._tree  = TTree()
-        self._parse_args(parser)
-        self._create_tree()
+        self.create_tree()
         ##filepath = os.path.dirname(os.path.realpath(__file__))
         ##create ttree and open root file
         #create_ttree(tree_vars, number_mpa_light, assembly, datapath)
-    def _parse_args(self, parser):
-        self._Parser=parser
-        (options, args) = parser.parse_args()
+    def _parse_args(self):
+        args=self._Parser.parse_args()
+
+        # print str(args)
+        # (options, args) =
         formarr = ['stubfinding','stripemulator' ,'centroid','noprocessing']
-        self._memmode = formarr.index(options.format)
-        self._threshold = options.threshold
-        if parser.args.mpa_index:
+        self._memmode = formarr.index(args.format)
+        self._threshold = args.threshold
+        if len(args.mpa_index)>6:
+            print "Specify a valid MPA configuration"
+            exit
+        if args.mpa_index:
             self._assembly = list(sorted(args.mpa_index))
         else:
             self._assembly = [2, 5]
+        print self._assembly
     def _create_data_dir(self):
         cwd = os.getcwd()
         #Create directory for new run
@@ -223,7 +232,7 @@ class daq_continous_2MPA:
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
-    def _create_tree(self):
+    def create_tree(self):
         self._Keys = [
             "COND_NO_MPA_LIGHT"        ,
             "COND_SPILL"               ,
@@ -238,7 +247,7 @@ class daq_continous_2MPA:
             "TRIG_OFFSET_MPA"
             ]
         # self._assembly = [2,5]
-        # self._number_mpa_light=len(self._assembly)
+        self._number_mpa_light=len(self._assembly)
         for i in range(0,self._number_mpa_light):
             self._Keys.append("AR_MPA_"+str(i))
             self._Keys.append("SR_BX_MPA_"+str(i))
@@ -272,87 +281,91 @@ class daq_continous_2MPA:
         self._tree.Write()
         self._tfile.Write()
         self._tfile.Close()
+    def acquisition_start(self):
+        # Connection and GLIB
+	a = uasic(connection="file://connections_test.xml", device="board0")
+	glib = a._hw
+	
+	# Enable clock on MPA
+	glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
+	glib.dispatch()
+	
+	# Reset all logic on GLIB
+	glib.getNode("Control").getNode("logic_reset").write(0x1)
+	glib.dispatch()
+	
+	# Source all classes
+	mapsaClasses = MAPSA(a)
+	
+	conf = []
+	mpa = []
+	try:
+	    for iMPA, nMPA in enumerate(self._assembly):
+	        # List of instances of MPA, one for each MPA. SPI-chain numbering!
+	        mpa.append(MPA(glib, iMPA + 1))
+	        # conf.append(mpa[iMPA].config("data/Conf_trimcalib_MPA" + str(nMPA)+
+	        # "_masked.xml")) # Use trimcalibrated config
+	        conf.append(mpa[iMPA].config(
+	            os.path.join(
+	                args.config_dir,
+	                args.config.format(mpa=nMPA, assembly=args.assembly))))
+	except IOError, e:
+	    if e.filename and e.errno == errno.ENOENT:
+	        parser.error(
+	            "Cannot open MPA configuration '{0}'.\nCheck --config and --assembly settings, or perform trimming.".format(e.filename))
+	    else:
+	        raise
+	
+	# Define default config
+	for iMPA in range(0, len(assembly)):
+	    # Write threshold to MPA 'iMPA'
+	    conf[iMPA].modifyperiphery('THDAC', args.threshold)
+	    # Enable synchronous readout on all pixels
+	    conf[iMPA].modifypixel(range(1, 25), 'SR', 1)
+	    conf[iMPA].upload()  # Push configuration to GLIB
+	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
+	conf[iMPA].spi_wait()  # includes dispatch
+	
+	glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
+	# This is a 'write' and pushes the configuration to the glib. Write must
+	# happen before starting the sequencer.
+	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
+	conf[0].spi_wait()  # includes dispatch
+	
+	if args.external_clock:
+	    glib.getNode("Control").getNode('testbeam_clock').write(0x1)
+	else:
+	    glib.getNode("Control").getNode('testbeam_clock').write(0x0)
+	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
+	glib.dispatch()
+	
+	# shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
+	shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
+	# Start sequencer in continous daq mode. Already contains the 'write'
+	mapsaClasses.daq().Sequencer_init(0x1, shutterDur, mem=1)
+	
+	
+	print """Command Line Configuration
+	--------------------------
+	  Clock source is \x1b[1m{0}\x1b[m
+	  Threshold     = \x1b[1m{1}\x1b[m
+	  MPA Indices   = \x1b[1m{2}\x1b[m
+	  Assembly Name = \x1b[1m{3}\x1b[m
+	  Output Dir    = \x1b[1m{4}\x1b[m
+	  Num Triggers  = \x1b[1m{5}\x1b[m
+	""".format("external" if args.external_clock else "internal",
+	           args.threshold,
+	           assembly,
+	           args.assembly,
+	           os.path.abspath(args.output_dir),
+	           args.num_triggers,
+	           )
 
-mpa_daq = daq_continous_2MPA()
 
-# # Connection and GLIB
-# a = uasic(connection="file://connections_test.xml", device="board0")
-# glib = a._hw
+daq= daq_continous_2MPA(parser)
+daq.create_tree()
+daq.write_close()
 
-# # Enable clock on MPA
-# glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
-# glib.dispatch()
-
-# # Reset all logic on GLIB
-# glib.getNode("Control").getNode("logic_reset").write(0x1)
-# glib.dispatch()
-
-# # Source all classes
-# mapsaClasses = MAPSA(a)
-
-# conf = []
-# mpa = []
-# try:
-#     for iMPA, nMPA in enumerate(assembly):
-#         # List of instances of MPA, one for each MPA. SPI-chain numbering!
-#         mpa.append(MPA(glib, iMPA + 1))
-#         # conf.append(mpa[iMPA].config("data/Conf_trimcalib_MPA" + str(nMPA)+
-#         # "_masked.xml")) # Use trimcalibrated config
-#         conf.append(mpa[iMPA].config(
-#             os.path.join(
-#                 args.config_dir,
-#                 args.config.format(mpa=nMPA, assembly=args.assembly))))
-# except IOError, e:
-#     if e.filename and e.errno == errno.ENOENT:
-#         parser.error(
-#             "Cannot open MPA configuration '{0}'.\nCheck --config and --assembly settings, or perform trimming.".format(e.filename))
-#     else:
-#         raise
-
-# # Define default config
-# for iMPA in range(0, len(assembly)):
-#     # Write threshold to MPA 'iMPA'
-#     conf[iMPA].modifyperiphery('THDAC', args.threshold)
-#     # Enable synchronous readout on all pixels
-#     conf[iMPA].modifypixel(range(1, 25), 'SR', 1)
-#     conf[iMPA].upload()  # Push configuration to GLIB
-# glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-# conf[iMPA].spi_wait()  # includes dispatch
-
-# glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
-# # This is a 'write' and pushes the configuration to the glib. Write must
-# # happen before starting the sequencer.
-# glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-# conf[0].spi_wait()  # includes dispatch
-
-# if args.external_clock:
-#     glib.getNode("Control").getNode('testbeam_clock').write(0x1)
-# else:
-#     glib.getNode("Control").getNode('testbeam_clock').write(0x0)
-# glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-# glib.dispatch()
-
-# # shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-# shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
-# # Start sequencer in continous daq mode. Already contains the 'write'
-# mapsaClasses.daq().Sequencer_init(0x1, shutterDur, mem=1)
-
-
-# print """Command Line Configuration
-# --------------------------
-#   Clock source is \x1b[1m{0}\x1b[m
-#   Threshold     = \x1b[1m{1}\x1b[m
-#   MPA Indices   = \x1b[1m{2}\x1b[m
-#   Assembly Name = \x1b[1m{3}\x1b[m
-#   Output Dir    = \x1b[1m{4}\x1b[m
-#   Num Triggers  = \x1b[1m{5}\x1b[m
-# """.format("external" if args.external_clock else "internal",
-#            args.threshold,
-#            assembly,
-#            args.assembly,
-#            os.path.abspath(args.output_dir),
-#            args.num_triggers,
-#            )
 # def acquire(numTriggers, stopDelay=2):
 #     ibuffer = 0
 #     shutterCounter = 0
