@@ -257,6 +257,7 @@ class daq_coninous_2MPA:
                 self._tree.Branch(key[0],key[1],key[0]+"[96]/l")
     def write_close(self):
         self._tree.Write()
+        self._tfile.Write()
         self._tfile.Close()
     def _fill_tree (memmode, threshold, vararr, F, tree, no_mpa_light,mpa ):
         for ev_i, ev in enumerate(vararr):
@@ -702,8 +703,7 @@ def acquire(numTriggers, stopDelay=2):
     shutterCounter = 0
     frequency = float("NaN")
     while True:
-        freeBuffers = glib.getNode("Control").getNode(
-            'Sequencer').getNode('buffers_num').read()
+        freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
         glib.dispatch()
         # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
         # avoids this.
