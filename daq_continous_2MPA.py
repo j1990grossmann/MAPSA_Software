@@ -185,7 +185,7 @@ class daq_continous_2MPA:
         #Get Workingdir, DataDir, Config Dir
         self._datapath, self._runNumber, self._config_dir = self._create_data_dir()
         self.timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
-        self._parse_args()
+        self._args = self._parse_args()
         self._tfile = TFile()
         self._tree  = TTree()
         self.create_tree()
@@ -207,7 +207,7 @@ class daq_continous_2MPA:
             self._assembly = list(sorted(args.mpa_index))
         else:
             self._assembly = [2, 5]
-        print self._assembly
+        return args
     def _create_data_dir(self):
         cwd = os.getcwd()
         #Create directory for new run
@@ -307,8 +307,8 @@ class daq_continous_2MPA:
 	        # "_masked.xml")) # Use trimcalibrated config
 	        conf.append(mpa[iMPA].config(
 	            os.path.join(
-	                args.config_dir,
-	                args.config.format(mpa=nMPA, assembly=args.assembly))))
+	                self._args.config_dir,
+	                self._args.config.format(mpa=nMPA, assembly=self._args.assembly))))
 	except IOError, e:
 	    if e.filename and e.errno == errno.ENOENT:
 	        parser.error(
@@ -332,7 +332,7 @@ class daq_continous_2MPA:
 	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
 	conf[0].spi_wait()  # includes dispatch
 	
-	if args.external_clock:
+	if self._args.external_clock:
 	    glib.getNode("Control").getNode('testbeam_clock').write(0x1)
 	else:
 	    glib.getNode("Control").getNode('testbeam_clock').write(0x0)
@@ -353,171 +353,174 @@ class daq_continous_2MPA:
 	  Assembly Name = \x1b[1m{3}\x1b[m
 	  Output Dir    = \x1b[1m{4}\x1b[m
 	  Num Triggers  = \x1b[1m{5}\x1b[m
-	""".format("external" if args.external_clock else "internal",
-	           args.threshold,
-	           assembly,
-	           args.assembly,
-	           os.path.abspath(args.output_dir),
-	           args.num_triggers,
+	""".format("external" if self._args.external_clock else "internal",
+	           self._args.threshold,
+	           self._assembly,
+	           self._args.assembly,
+	           os.path.abspath(self._args.output_dir),
+	           self._args.num_triggers,
 	           )
+	# if self._args.root:
+	    # self.recordRoot()
+	# else:
+	    # self.recordPlaintext()
 
 
+	def _acquire(numTriggers, stopDelay=2):
+	    ibuffer = 0
+	    shutterCounter = 0
+	    frequency = float("NaN")
+	    while True:
+	        freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+	        glib.dispatch()
+	        # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
+	        # avoids this.
+	        if freeBuffers < 3:
+	            if shutterCounter % 2000 == 0:
+	                startTime = time.time()
+	                shutterTimeStart = shutterCounter
+	            if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
+	                frequency = (shutterCounter - shutterTimeStart) / \
+	                    (time.time() - startTime)
+	            MAPSACounter = []
+	            MAPSAMemory = []
+	            for iMPA, nMPA in enumerate(assembly):
+	                counterData = glib.getNode("Readout").getNode("Counter").getNode(
+	                    "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
+	                memoryData = glib.getNode("Readout").getNode("Memory").getNode(
+	                    "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
+	                glib.dispatch()
+	                MAPSACounter.append(counterData)
+	                MAPSAMemory.append(memoryData)
+	            ibuffer = (ibuffer + 1) % 4
+	            shutterCounter += 1
+	            yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
+	
+	            # Continuous operation in bash loop
+	            if shutterCounter == numTriggers:
+	                endTimeStamp = time.time()
+	            # Required for automation! Do not stop DAQ until at least
+	            # 2 seconds after reaching the num trigger limit
+	            if shutterCounter > numTriggers:
+	                if time.time() - endTimeStamp > stopDelay:
+	                    break
+	def recordPlaintext():
+	    counterArray = []
+	    memoryArray = []
+	    try:
+	        for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+	            counterArray.append(counter)
+	            memoryArray.append(memory)
+	            print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+	    except KeyboardInterrupt:
+	        pass
+	    if len(counterArray):
+	        with open(runNumberFile, 'w') as newRunFile:
+	            newRunFile.write(str(runNumber + 1))
+	        print "End of Run %s" % runNumber
+	        memoryFile = open(os.path.join(
+	            self._args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(runNumber))), 'w')
+	        counterFile = open(os.path.join(
+	            self._args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(runNumber))), 'w')
+	        for i, shutter in enumerate(counterArray):
+	            for j, mpa in enumerate(shutter):
+	                counterFile.write(str(mpa.value()) + "\n")
+	                memoryFile.write(str(memoryArray[i][j].value()) + "\n")
+	        counterFile.close()
+	        memoryFile.close()
+	        print "All files saved"
+	    else:
+	        print "\x1b[1mNo data acquired, ignore.\x1b[m"
+	
+	def recordRoot():
+	    spinner = "--\\\\||//"
+	    progress = ["-"]*20
+	    filename = os.path.join(self._args.output_dir,
+	            self._args.root_fmt.format(number=runNumber, assembly=self._args.assembly))
+	    tFile = TFile(filename, "CREATE")
+	    with open(runNumberFile, 'w') as newRunFile:
+	        newRunFile.write(str(runNumber + 1))
+	    trees = []
+	    counterFormat = "pixel[48]/s"
+	    noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
+	    flood = [{
+	        "counter": RippleCounterBranch(),
+	        "noProcessing": MemoryNoProcessingBranch(),
+	    }]*len(assembly)
+	    for i, mpa in enumerate(assembly):
+	        tree = TTree("mpa{0}".format(mpa), "MPA{0} event tree".format(mpa))
+	        trees.append(tree)
+	        tree.Branch("rippleCounter", flood[i]["counter"], counterFormat)
+	        tree.Branch("memoryNoProcessing", flood[i]["noProcessing"], noProcessingFormat)
+	    try:
+	        totalEvents = 0
+	        for shutter, counters, memories, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+	            for data, tree, counter, memory in zip(flood, trees, counters, memories):
+	                for i, val in enumerate(itertools.islice(counter, 1, len(counter))):
+	                    # According to Moritz:
+	                    # "Mask to select left pixel. First bit is not
+	                    # considered as this seems sometimes to be set
+	                    # erronously. (Lots of entries with
+	                    # 0b1000000000000000)"
+	                    data["counter"].pixels[i*2 + 0] = val & 0x7FFF # left
+	                    data["counter"].pixels[i*2 + 1] = (val >> 16) & 0x7FFF # right
+	                # convert memory from uhal-format to ctype bytes array
+	                memory_ints = (c_uint*216)(*memory)
+	                memory_bytes = cast(memory_ints, POINTER(c_ubyte))
+	                # reset fill array
+	                data["noProcessing"].pixelMatrix = (c_ulonglong*96)(0)
+	                data["noProcessing"].bunchCrossingId = (c_ushort*96)(0)
+	                data["noProcessing"].header = (c_ubyte*96)(0)
+	                data["noProcessing"].corrupt = c_ubyte(0)
+	                # iterate over memory in multipletts of 9 bytes (one 72 bit event)
+	                evtIdx = 0
+	                numEvents = 0
+	                for evtIdx in reversed(xrange(0, 96)):
+	                    evtData = tuple(
+	                        itertools.islice(memory_bytes,
+	                            evtIdx*9, evtIdx*9 + 9))
+	                    data["noProcessing"].header[95-evtIdx] = evtData[8]
+	                    if data["noProcessing"].header[95-evtIdx] == 0x00:
+	                        break
+	                    elif data["noProcessing"].header[95-evtIdx] != 0xFF:
+	                        data["noProcessing"].corrupt = c_ubyte(evtIdx + 1)
+	                        break
+	                    numEvents += 1
+	                    # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
+	                    pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
+	                                   (evtData[3] << 24) | (evtData[2] << 16) |
+	                                   (evtData[1] << 8) | evtData[0])
+	                    bxid = ((evtData[7] << 8) | evtData[6])
+	                    data["noProcessing"].bunchCrossingId[95-evtIdx] = bxid
+	                    data["noProcessing"].pixelMatrix[95-evtIdx] = pixelMatrix
+	                totalEvents += numEvents
+	                data["noProcessing"].numEvents = c_ubyte(numEvents)
+	                tree.Fill()
+	            # Fancy shmancy visual output
+	            progress[int(len(progress)*float(shutter)/float(self._args.num_triggers)) % len(progress)] = "#"
+	            sys.stdout.write("\r\x1b[K [{3}] Shutter={0}  Free bufs={1}  freq={2:.0f} Hz  #events={6}  [{4}] {5:.0f}%".format(
+	                shutter, freeBuffers, frequency,
+	                spinner[shutter % len(spinner)],
+	                "".join(progress),
+	                float(shutter) / float(self._args.num_triggers) * 100,
+	                totalEvents
+	            ))
+	            sys.stdout.flush()
+	    except KeyboardInterrupt:
+	        pass
+	    sys.stdout.write("\n")
+	    tFile.Write()
+	    tFile.Close()
+	    print "End of Run", runNumber
+	
+		
 daq= daq_continous_2MPA(parser)
+
 daq.create_tree()
+daq.acquisition_start()
 daq.write_close()
 
-# def acquire(numTriggers, stopDelay=2):
-#     ibuffer = 0
-#     shutterCounter = 0
-#     frequency = float("NaN")
-#     while True:
-#         freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
-#         glib.dispatch()
-#         # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
-#         # avoids this.
-#         if freeBuffers < 3:
-#             if shutterCounter % 2000 == 0:
-#                 startTime = time.time()
-#                 shutterTimeStart = shutterCounter
-#             if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
-#                 frequency = (shutterCounter - shutterTimeStart) / \
-#                     (time.time() - startTime)
-#             MAPSACounter = []
-#             MAPSAMemory = []
-#             for iMPA, nMPA in enumerate(assembly):
-#                 counterData = glib.getNode("Readout").getNode("Counter").getNode(
-#                     "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
-#                 memoryData = glib.getNode("Readout").getNode("Memory").getNode(
-#                     "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
-#                 glib.dispatch()
-#                 MAPSACounter.append(counterData)
-#                 MAPSAMemory.append(memoryData)
-#             ibuffer = (ibuffer + 1) % 4
-#             shutterCounter += 1
-#             yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
-
-#             # Continuous operation in bash loop
-#             if shutterCounter == numTriggers:
-#                 endTimeStamp = time.time()
-#             # Required for automation! Do not stop DAQ until at least
-#             # 2 seconds after reaching the num trigger limit
-#             if shutterCounter > numTriggers:
-#                 if time.time() - endTimeStamp > stopDelay:
-#                     break
 
 
 
-# def recordPlaintext():
-#     counterArray = []
-#     memoryArray = []
-#     try:
-#         for shutter, counter, memory, freeBuffers, frequency in acquire(args.num_triggers):
-#             counterArray.append(counter)
-#             memoryArray.append(memory)
-#             print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
-#     except KeyboardInterrupt:
-#         pass
-#     if len(counterArray):
-#         with open(runNumberFile, 'w') as newRunFile:
-#             newRunFile.write(str(runNumber + 1))
-#         print "End of Run %s" % runNumber
-#         memoryFile = open(os.path.join(
-#             args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(runNumber))), 'w')
-#         counterFile = open(os.path.join(
-#             args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(runNumber))), 'w')
-#         for i, shutter in enumerate(counterArray):
-#             for j, mpa in enumerate(shutter):
-#                 counterFile.write(str(mpa.value()) + "\n")
-#                 memoryFile.write(str(memoryArray[i][j].value()) + "\n")
-#         counterFile.close()
-#         memoryFile.close()
-#         print "All files saved"
-#     else:
-#         print "\x1b[1mNo data acquired, ignore.\x1b[m"
-
-# def recordRoot():
-#     spinner = "--\\\\||//"
-#     progress = ["-"]*20
-#     filename = os.path.join(args.output_dir,
-#             args.root_fmt.format(number=runNumber, assembly=args.assembly))
-#     tFile = TFile(filename, "CREATE")
-#     with open(runNumberFile, 'w') as newRunFile:
-#         newRunFile.write(str(runNumber + 1))
-#     trees = []
-#     counterFormat = "pixel[48]/s"
-#     noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
-#     flood = [{
-#         "counter": RippleCounterBranch(),
-#         "noProcessing": MemoryNoProcessingBranch(),
-#     }]*len(assembly)
-#     for i, mpa in enumerate(assembly):
-#         tree = TTree("mpa{0}".format(mpa), "MPA{0} event tree".format(mpa))
-#         trees.append(tree)
-#         tree.Branch("rippleCounter", flood[i]["counter"], counterFormat)
-#         tree.Branch("memoryNoProcessing", flood[i]["noProcessing"], noProcessingFormat)
-#     try:
-#         totalEvents = 0
-#         for shutter, counters, memories, freeBuffers, frequency in acquire(args.num_triggers):
-#             for data, tree, counter, memory in zip(flood, trees, counters, memories):
-#                 for i, val in enumerate(itertools.islice(counter, 1, len(counter))):
-#                     # According to Moritz:
-#                     # "Mask to select left pixel. First bit is not
-#                     # considered as this seems sometimes to be set
-#                     # erronously. (Lots of entries with
-#                     # 0b1000000000000000)"
-#                     data["counter"].pixels[i*2 + 0] = val & 0x7FFF # left
-#                     data["counter"].pixels[i*2 + 1] = (val >> 16) & 0x7FFF # right
-#                 # convert memory from uhal-format to ctype bytes array
-#                 memory_ints = (c_uint*216)(*memory)
-#                 memory_bytes = cast(memory_ints, POINTER(c_ubyte))
-#                 # reset fill array
-#                 data["noProcessing"].pixelMatrix = (c_ulonglong*96)(0)
-#                 data["noProcessing"].bunchCrossingId = (c_ushort*96)(0)
-#                 data["noProcessing"].header = (c_ubyte*96)(0)
-#                 data["noProcessing"].corrupt = c_ubyte(0)
-#                 # iterate over memory in multipletts of 9 bytes (one 72 bit event)
-#                 evtIdx = 0
-#                 numEvents = 0
-#                 for evtIdx in reversed(xrange(0, 96)):
-#                     evtData = tuple(
-#                         itertools.islice(memory_bytes,
-#                             evtIdx*9, evtIdx*9 + 9))
-#                     data["noProcessing"].header[95-evtIdx] = evtData[8]
-#                     if data["noProcessing"].header[95-evtIdx] == 0x00:
-#                         break
-#                     elif data["noProcessing"].header[95-evtIdx] != 0xFF:
-#                         data["noProcessing"].corrupt = c_ubyte(evtIdx + 1)
-#                         break
-#                     numEvents += 1
-#                     # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
-#                     pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
-#                                    (evtData[3] << 24) | (evtData[2] << 16) |
-#                                    (evtData[1] << 8) | evtData[0])
-#                     bxid = ((evtData[7] << 8) | evtData[6])
-#                     data["noProcessing"].bunchCrossingId[95-evtIdx] = bxid
-#                     data["noProcessing"].pixelMatrix[95-evtIdx] = pixelMatrix
-#                 totalEvents += numEvents
-#                 data["noProcessing"].numEvents = c_ubyte(numEvents)
-#                 tree.Fill()
-#             # Fancy shmancy visual output
-#             progress[int(len(progress)*float(shutter)/float(args.num_triggers)) % len(progress)] = "#"
-#             sys.stdout.write("\r\x1b[K [{3}] Shutter={0}  Free bufs={1}  freq={2:.0f} Hz  #events={6}  [{4}] {5:.0f}%".format(
-#                 shutter, freeBuffers, frequency,
-#                 spinner[shutter % len(spinner)],
-#                 "".join(progress),
-#                 float(shutter) / float(args.num_triggers) * 100,
-#                 totalEvents
-#             ))
-#             sys.stdout.flush()
-#     except KeyboardInterrupt:
-#         pass
-#     sys.stdout.write("\n")
-#     tFile.Write()
-#     tFile.Close()
-#     print "End of Run", runNumber
-
-# if args.root:
-#     recordRoot()
-# else:
-#     recordPlaintext()
 
