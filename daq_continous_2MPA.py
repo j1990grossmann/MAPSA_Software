@@ -2,7 +2,6 @@ import pdb
 import errno
 import sys
 import os
-#from classes import *
 from array import array
 import numpy as np
 import time
@@ -123,8 +122,9 @@ dest    =       'output_dir',
 help    =       'Directory where run data is stored')
 
 parser.add_argument('-c', '--config', metavar='FILEFORMAT',  action='store',
-default =       'Conf-{assembly}_MPA-{mpa}.xml',
-dest    =       'output_dir',
+#default =       'Conf-{assembly}_MPA-{mpa}.xml',
+default =       'Conf_calibrated_MPA{mpa}_config1.xml',
+dest    =       'config',
 help    =       'Filename format string for trimming and masking MPA configuration. The variables {assembly} and {mpa} are available.')
 
 parser.add_argument('--config-dir', metavar='DIR',  action='store',
@@ -134,7 +134,7 @@ help    =       'Filename format string for trimming and masking MPA configurati
 
 parser.add_argument('-n', '--num-triggers', metavar='NTRIG', type=int, action='store',
 default =       10000,
-dest    =       'num-triggers',
+dest    =       'num_triggers',
 help    =       'Filename format string for trimming and masking MPA configuration. The variables {assembly} and {mpa} are available.')
 
 parser.add_argument('-R', '--root',  type=int, action='store',
@@ -147,13 +147,14 @@ help    =       'If set, write data to root file instead of plaintext output. '
 
 parser.add_argument('-F', '--root-fmt', metavar='ROOTFILE',  action='store',
 default =       'run{number:04d}.root',
-dest    =       'root-fmt',
+dest    =       'root_fmt',
 help    =       'Format of the filename for ROOT file output. You can use the variables {number} and {assembly}.')
+
 
 args1 = parser.parse_args()
 from ROOT import TGraph, TCanvas, TTree, TFile, TBranch
 
-
+print str(args1)
 
 
 
@@ -189,6 +190,9 @@ class daq_continous_2MPA:
         self._tfile = TFile()
         self._tree  = TTree()
         self.create_tree()
+        self._a= uasic(connection="file://connections_test.xml", device="board0")
+        self._glib = self._a._hw
+
         ##filepath = os.path.dirname(os.path.realpath(__file__))
         ##create ttree and open root file
         #create_ttree(tree_vars, number_mpa_light, assembly, datapath)
@@ -264,7 +268,7 @@ class daq_continous_2MPA:
             if "SR" in key:
                 self._Values.append(array('L',[0]*96))
         self._Result_Dict=zip(self._Keys,self._Values)
-        self._tfile = TFile(self._datapath+'/data.root','recreate')
+        self._tfile = TFile(self._datapath+'/{:09d}'.format(self._runNumber)+'.root','recreate')
         self._tree = TTree("Tree","Tree")
         for key in self._Result_Dict:
             if "COND" in key[0]:
@@ -278,36 +282,34 @@ class daq_continous_2MPA:
             if "SR" in key[0]:
                 self._tree.Branch(key[0],key[1],key[0]+"[96]/l")
     def write_close(self):
-        self._tree.Write()
-        self._tfile.Write()
+        #self._tree.Write('tree',ROOT.TObject.kOverwrite)
+        #self._tfile.Write()
         self._tfile.Close()
     def acquisition_start(self):
         # Connection and GLIB
-	a = uasic(connection="file://connections_test.xml", device="board0")
-	glib = a._hw
 	
 	# Enable clock on MPA
-	glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
-	glib.dispatch()
+	self._glib.getNode("Control").getNode("MPA_clock_enable").write(0x1)
+	self._glib.dispatch()
 	
 	# Reset all logic on GLIB
-	glib.getNode("Control").getNode("logic_reset").write(0x1)
-	glib.dispatch()
+	self._glib.getNode("Control").getNode("logic_reset").write(0x1)
+	self._glib.dispatch()
 	
 	# Source all classes
-	mapsaClasses = MAPSA(a)
+	mapsaClasses = MAPSA(self._a)
 	
 	conf = []
 	mpa = []
 	try:
 	    for iMPA, nMPA in enumerate(self._assembly):
 	        # List of instances of MPA, one for each MPA. SPI-chain numbering!
-	        mpa.append(MPA(glib, iMPA + 1))
+	        mpa.append(MPA(self._glib, iMPA + 1))
 	        # conf.append(mpa[iMPA].config("data/Conf_trimcalib_MPA" + str(nMPA)+
 	        # "_masked.xml")) # Use trimcalibrated config
 	        conf.append(mpa[iMPA].config(
 	            os.path.join(
-	                self._args.config_dir,
+	                self._config_dir,
 	                self._args.config.format(mpa=nMPA, assembly=self._args.assembly))))
 	except IOError, e:
 	    if e.filename and e.errno == errno.ENOENT:
@@ -317,27 +319,29 @@ class daq_continous_2MPA:
 	        raise
 	
 	# Define default config
-	for iMPA in range(0, len(assembly)):
+	NO_MPA=len(self._assembly)
+	for iMPA in range(0, NO_MPA):
 	    # Write threshold to MPA 'iMPA'
-	    conf[iMPA].modifyperiphery('THDAC', args.threshold)
+	    conf[iMPA].modifyperiphery('THDAC', self._args.threshold)
 	    # Enable synchronous readout on all pixels
 	    conf[iMPA].modifypixel(range(1, 25), 'SR', 1)
 	    conf[iMPA].upload()  # Push configuration to GLIB
-	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-	conf[iMPA].spi_wait()  # includes dispatch
+	self._glib.getNode("Configuration").getNode("mode").write(NO_MPA - 1)
+	print str(conf[iMPA])
+	conf[iMPA]._spi_wait()  # includes dispatch
 	
-	glib.getNode("Configuration").getNode("num_MPA").write(len(assembly))
+	self._glib.getNode("Configuration").getNode("num_MPA").write(NO_MPA)
 	# This is a 'write' and pushes the configuration to the glib. Write must
 	# happen before starting the sequencer.
-	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-	conf[0].spi_wait()  # includes dispatch
+	self._glib.getNode("Configuration").getNode("mode").write(NO_MPA - 1)
+	conf[0]._spi_wait()  # includes dispatch
 	
 	if self._args.external_clock:
-	    glib.getNode("Control").getNode('testbeam_clock').write(0x1)
+	    self._glib.getNode("Control").getNode('testbeam_clock').write(0x1)
 	else:
-	    glib.getNode("Control").getNode('testbeam_clock').write(0x0)
-	glib.getNode("Configuration").getNode("mode").write(len(assembly) - 1)
-	glib.dispatch()
+	    self._glib.getNode("Control").getNode('testbeam_clock').write(0x0)
+	self._glib.getNode("Configuration").getNode("mode").write(len(self._assembly) - 1)
+	self._glib.dispatch()
 	
 	# shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
 	shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
@@ -352,167 +356,164 @@ class daq_continous_2MPA:
 	  MPA Indices   = \x1b[1m{2}\x1b[m
 	  Assembly Name = \x1b[1m{3}\x1b[m
 	  Output Dir    = \x1b[1m{4}\x1b[m
-	  Num Triggers  = \x1b[1m{5}\x1b[m
+          Num Triggers  = \x1b[1m{5}\x1b[m
+          Run Number    = \x1b[1m{6}\x1b[m
 	""".format("external" if self._args.external_clock else "internal",
 	           self._args.threshold,
 	           self._assembly,
 	           self._args.assembly,
 	           os.path.abspath(self._args.output_dir),
 	           self._args.num_triggers,
+	           self._runNumber
 	           )
-	# if self._args.root:
-	    # self.recordRoot()
-	# else:
-	    # self.recordPlaintext()
+	if self._args.root:
+	    self.recordRoot()
+	else:
+	    self.recordPlaintext()
 
 
-	def _acquire(numTriggers, stopDelay=2):
-	    ibuffer = 0
-	    shutterCounter = 0
-	    frequency = float("NaN")
-	    while True:
-	        freeBuffers = glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
-	        glib.dispatch()
-	        # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
-	        # avoids this.
-	        if freeBuffers < 3:
-	            if shutterCounter % 2000 == 0:
-	                startTime = time.time()
-	                shutterTimeStart = shutterCounter
-	            if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
-	                frequency = (shutterCounter - shutterTimeStart) / \
-	                    (time.time() - startTime)
-	            MAPSACounter = []
-	            MAPSAMemory = []
-	            for iMPA, nMPA in enumerate(assembly):
-	                counterData = glib.getNode("Readout").getNode("Counter").getNode(
-	                    "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
-	                memoryData = glib.getNode("Readout").getNode("Memory").getNode(
-	                    "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
-	                glib.dispatch()
-	                MAPSACounter.append(counterData)
-	                MAPSAMemory.append(memoryData)
-	            ibuffer = (ibuffer + 1) % 4
-	            shutterCounter += 1
-	            yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
-	
-	            # Continuous operation in bash loop
-	            if shutterCounter == numTriggers:
-	                endTimeStamp = time.time()
-	            # Required for automation! Do not stop DAQ until at least
-	            # 2 seconds after reaching the num trigger limit
-	            if shutterCounter > numTriggers:
-	                if time.time() - endTimeStamp > stopDelay:
-	                    break
-	def recordPlaintext():
-	    counterArray = []
-	    memoryArray = []
-	    try:
-	        for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
-	            counterArray.append(counter)
-	            memoryArray.append(memory)
-	            print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
-	    except KeyboardInterrupt:
-	        pass
-	    if len(counterArray):
-	        with open(runNumberFile, 'w') as newRunFile:
-	            newRunFile.write(str(runNumber + 1))
-	        print "End of Run %s" % runNumber
-	        memoryFile = open(os.path.join(
-	            self._args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(runNumber))), 'w')
-	        counterFile = open(os.path.join(
-	            self._args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(runNumber))), 'w')
-	        for i, shutter in enumerate(counterArray):
-	            for j, mpa in enumerate(shutter):
-	                counterFile.write(str(mpa.value()) + "\n")
-	                memoryFile.write(str(memoryArray[i][j].value()) + "\n")
-	        counterFile.close()
-	        memoryFile.close()
-	        print "All files saved"
-	    else:
-	        print "\x1b[1mNo data acquired, ignore.\x1b[m"
-	
-	def recordRoot():
-	    spinner = "--\\\\||//"
-	    progress = ["-"]*20
-	    filename = os.path.join(self._args.output_dir,
-	            self._args.root_fmt.format(number=runNumber, assembly=self._args.assembly))
-	    tFile = TFile(filename, "CREATE")
-	    with open(runNumberFile, 'w') as newRunFile:
-	        newRunFile.write(str(runNumber + 1))
-	    trees = []
-	    counterFormat = "pixel[48]/s"
-	    noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
-	    flood = [{
-	        "counter": RippleCounterBranch(),
-	        "noProcessing": MemoryNoProcessingBranch(),
-	    }]*len(assembly)
-	    for i, mpa in enumerate(assembly):
-	        tree = TTree("mpa{0}".format(mpa), "MPA{0} event tree".format(mpa))
-	        trees.append(tree)
-	        tree.Branch("rippleCounter", flood[i]["counter"], counterFormat)
-	        tree.Branch("memoryNoProcessing", flood[i]["noProcessing"], noProcessingFormat)
-	    try:
-	        totalEvents = 0
-	        for shutter, counters, memories, freeBuffers, frequency in self._acquire(self._args.num_triggers):
-	            for data, tree, counter, memory in zip(flood, trees, counters, memories):
-	                for i, val in enumerate(itertools.islice(counter, 1, len(counter))):
-	                    # According to Moritz:
-	                    # "Mask to select left pixel. First bit is not
-	                    # considered as this seems sometimes to be set
-	                    # erronously. (Lots of entries with
-	                    # 0b1000000000000000)"
-	                    data["counter"].pixels[i*2 + 0] = val & 0x7FFF # left
-	                    data["counter"].pixels[i*2 + 1] = (val >> 16) & 0x7FFF # right
-	                # convert memory from uhal-format to ctype bytes array
-	                memory_ints = (c_uint*216)(*memory)
-	                memory_bytes = cast(memory_ints, POINTER(c_ubyte))
-	                # reset fill array
-	                data["noProcessing"].pixelMatrix = (c_ulonglong*96)(0)
-	                data["noProcessing"].bunchCrossingId = (c_ushort*96)(0)
-	                data["noProcessing"].header = (c_ubyte*96)(0)
-	                data["noProcessing"].corrupt = c_ubyte(0)
-	                # iterate over memory in multipletts of 9 bytes (one 72 bit event)
-	                evtIdx = 0
-	                numEvents = 0
-	                for evtIdx in reversed(xrange(0, 96)):
-	                    evtData = tuple(
-	                        itertools.islice(memory_bytes,
-	                            evtIdx*9, evtIdx*9 + 9))
-	                    data["noProcessing"].header[95-evtIdx] = evtData[8]
-	                    if data["noProcessing"].header[95-evtIdx] == 0x00:
-	                        break
-	                    elif data["noProcessing"].header[95-evtIdx] != 0xFF:
-	                        data["noProcessing"].corrupt = c_ubyte(evtIdx + 1)
-	                        break
-	                    numEvents += 1
-	                    # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
-	                    pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
-	                                   (evtData[3] << 24) | (evtData[2] << 16) |
-	                                   (evtData[1] << 8) | evtData[0])
-	                    bxid = ((evtData[7] << 8) | evtData[6])
-	                    data["noProcessing"].bunchCrossingId[95-evtIdx] = bxid
-	                    data["noProcessing"].pixelMatrix[95-evtIdx] = pixelMatrix
-	                totalEvents += numEvents
-	                data["noProcessing"].numEvents = c_ubyte(numEvents)
-	                tree.Fill()
-	            # Fancy shmancy visual output
-	            progress[int(len(progress)*float(shutter)/float(self._args.num_triggers)) % len(progress)] = "#"
-	            sys.stdout.write("\r\x1b[K [{3}] Shutter={0}  Free bufs={1}  freq={2:.0f} Hz  #events={6}  [{4}] {5:.0f}%".format(
-	                shutter, freeBuffers, frequency,
-	                spinner[shutter % len(spinner)],
-	                "".join(progress),
-	                float(shutter) / float(self._args.num_triggers) * 100,
-	                totalEvents
-	            ))
-	            sys.stdout.flush()
-	    except KeyboardInterrupt:
-	        pass
-	    sys.stdout.write("\n")
-	    tFile.Write()
-	    tFile.Close()
-	    print "End of Run", runNumber
-	
+    def _acquire(self,numTriggers, stopDelay=2):
+        ibuffer = 0
+        shutterCounter = 0
+        frequency = float("NaN")
+        while True:
+            freeBuffers = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+            self._glib.dispatch()
+            # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
+            # avoids this.
+            if freeBuffers < 3:
+                if shutterCounter % 2000 == 0:
+                    startTime = time.time()
+                    shutterTimeStart = shutterCounter
+                if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
+                    frequency = (shutterCounter - shutterTimeStart) / \
+                        (time.time() - startTime)
+                MAPSACounter = []
+                MAPSAMemory = []
+                for iMPA, nMPA in enumerate(self._assembly):
+                    counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
+                        "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
+                    memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
+                        "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
+                    self._glib.dispatch()
+                    MAPSACounter.append(counterData)
+                    MAPSAMemory.append(memoryData)
+                ibuffer = (ibuffer + 1) % 4
+                shutterCounter += 1
+                yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
+    
+                # Continuous operation in bash loop
+                if shutterCounter == numTriggers:
+                    endTimeStamp = time.time()
+                # Required for automation! Do not stop DAQ until at least
+                # 2 seconds after reaching the num trigger limit
+                if shutterCounter > numTriggers:
+                    if time.time() - endTimeStamp > stopDelay:
+                        break
+    def recordPlaintext(self):
+        counterArray = []
+        memoryArray = []
+        try:
+            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+                counterArray.append(counter)
+                memoryArray.append(memory)
+                print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+        except KeyboardInterrupt:
+            pass
+        if len(counterArray):
+            print "End of Run %s" % self._runNumber
+            memoryFile = open(os.path.join(
+                self._args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
+            counterFile = open(os.path.join(
+                self._args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
+            for i, shutter in enumerate(counterArray):
+                for j, mpa in enumerate(shutter):
+                    counterFile.write(str(mpa.value()) + "\n")
+                    memoryFile.write(str(memoryArray[i][j].value()) + "\n")
+            counterFile.close()
+            memoryFile.close()
+            print "All files saved"
+        else:
+            print "\x1b[1mNo data acquired, ignore.\x1b[m"
+    
+    def recordRoot(self):
+        spinner = "--\\\\||//"
+        progress = ["-"]*20
+        filename = os.path.join(self._args.output_dir,
+                self._args.root_fmt.format(number=self._runNumber, assembly=self._args.assembly))
+        self._tfile = TFile(filename, "RECREATE")
+        trees = []
+        counterFormat = "pixel[48]/s"
+        noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
+        flood = [{
+            "counter": RippleCounterBranch(),
+            "noProcessing": MemoryNoProcessingBranch(),
+        }]*len(self._assembly)
+        for i, mpa in enumerate(self._assembly):
+            tree = TTree("mpa{0}".format(mpa), "MPA{0} event tree".format(mpa))
+            trees.append(tree)
+            tree.Branch("rippleCounter", flood[i]["counter"], counterFormat)
+            tree.Branch("memoryNoProcessing", flood[i]["noProcessing"], noProcessingFormat)
+        try:
+            totalEvents = 0
+            for shutter, counters, memories, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+                for data, tree, counter, memory in zip(flood, trees, counters, memories):
+                    for i, val in enumerate(itertools.islice(counter, 1, len(counter))):
+                        # According to Moritz:
+                        # "Mask to select left pixel. First bit is not
+                        # considered as this seems sometimes to be set
+                        # erronously. (Lots of entries with
+                        # 0b1000000000000000)"
+                        data["counter"].pixels[i*2 + 0] = val & 0x7FFF # left
+                        data["counter"].pixels[i*2 + 1] = (val >> 16) & 0x7FFF # right
+                    # convert memory from uhal-format to ctype bytes array
+                    memory_ints = (c_uint*216)(*memory)
+                    memory_bytes = cast(memory_ints, POINTER(c_ubyte))
+                    # reset fill array
+                    data["noProcessing"].pixelMatrix = (c_ulonglong*96)(0)
+                    data["noProcessing"].bunchCrossingId = (c_ushort*96)(0)
+                    data["noProcessing"].header = (c_ubyte*96)(0)
+                    data["noProcessing"].corrupt = c_ubyte(0)
+                    # iterate over memory in multipletts of 9 bytes (one 72 bit event)
+                    evtIdx = 0
+                    numEvents = 0
+                    for evtIdx in reversed(xrange(0, 96)):
+                        evtData = tuple(
+                            itertools.islice(memory_bytes,
+                                evtIdx*9, evtIdx*9 + 9))
+                        data["noProcessing"].header[95-evtIdx] = evtData[8]
+                        if data["noProcessing"].header[95-evtIdx] == 0x00:
+                            break
+                        elif data["noProcessing"].header[95-evtIdx] != 0xFF:
+                            data["noProcessing"].corrupt = c_ubyte(evtIdx + 1)
+                            break
+                        numEvents += 1
+                        # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
+                        pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
+                                       (evtData[3] << 24) | (evtData[2] << 16) |
+                                       (evtData[1] << 8) | evtData[0])
+                        bxid = ((evtData[7] << 8) | evtData[6])
+                        data["noProcessing"].bunchCrossingId[95-evtIdx] = bxid
+                        data["noProcessing"].pixelMatrix[95-evtIdx] = pixelMatrix
+                    totalEvents += numEvents
+                    data["noProcessing"].numEvents = c_ubyte(numEvents)
+                    tree.Fill()
+                # Fancy shmancy visual output
+                progress[int(len(progress)*float(shutter)/float(self._args.num_triggers)) % len(progress)] = "#"
+                sys.stdout.write("\r\x1b[K [{3}] Shutter={0}  Free bufs={1}  freq={2:.0f} Hz  #events={6}  [{4}] {5:.0f}%".format(
+                    shutter, freeBuffers, frequency,
+                    spinner[shutter % len(spinner)],
+                    "".join(progress),
+                    float(shutter) / float(self._args.num_triggers) * 100,
+                    totalEvents
+                ))
+                sys.stdout.flush()
+        except KeyboardInterrupt:
+            pass
+        sys.stdout.write("\n")
+        self._tfile.Write()
+        self._tfile.Close()
+        print "End of Run", self._runNumber	
 		
 daq= daq_continous_2MPA(parser)
 
