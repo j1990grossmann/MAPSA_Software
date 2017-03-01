@@ -2,7 +2,7 @@ import pdb
 import errno
 import sys
 import os
- from array import array
+from array import array
 import numpy as np
 import time
 import datetime
