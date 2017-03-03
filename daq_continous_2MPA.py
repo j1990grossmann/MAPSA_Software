@@ -87,27 +87,27 @@ dest    =       'threshold',
 help    =       'threshold as int a Number between 0 and 255')
 
 parser.add_argument('--x_pos',  type=float, action='store',
-default =       0,
+default =       -1,
 dest    =       'x_pos',
 help    =       'x_position')
 
 parser.add_argument('--y_pos',  type=float, action='store',
-default =       0,
+default =       -1,
 dest    =       'y_pos',
 help    =       'y_position')
 
 parser.add_argument('--z_pos',  type=float, action='store',
-default =       0,
+default =       -1,
 dest    =       'z_pos',
 help    =       'z_position')
 
 parser.add_argument('--angle',  type=float, action='store',
-default =       0,
+default =       360,
 dest    =       'angle',
 help    =       'angle')
 
 parser.add_argument('--voltage',  type=float, action='store',
-default =       0,
+default =       -1,
 dest    =       'voltage',
 help    =       'voltage')
 
@@ -435,33 +435,33 @@ class daq_continous_2MPA:
             try:
                 totalEvents = 0
                 #"COND_NO_MPA_LIGHT"        ,
-                self._Values[0]=self._number_mpa_light                
+                self._Values[0][0]=self._number_mpa_light                
                 #"COND_SPILL"               ,
-                self._Values[1]=0
+                self._Values[1][0]=0
                 #"COND_THRESHOLD"           ,
-                self._Values[2]=(int)(self._threshold)
+                self._Values[2][0]=(int)(self._threshold)
                 #"COND_TIMESTAMP"           ,
-                self._Values[3]=0
+                self._Values[3][0]=0
                 #"COND_ANGLE"               ,
-                self._Values[4]=self._args.angle
+                self._Values[4][0]=self._args.angle
                 #"COND_X_POS"               ,
-                self._Values[5]=self._args.x_pos
+                self._Values[5][0]=self._args.x_pos
                 #"COND_Y_POS"               ,
-                self._Values[6]=self._args.y_pos
+                self._Values[6][0]=self._args.y_pos
                 #"COND_Z_POS"               ,
-                self._Values[7]=self._args.z_pos
+                self._Values[7][0]=self._args.z_pos
                 #"COND_VOLTAGE"             ,
-                self._Values[8]=self._args.voltage
+                self._Values[8][0]=self._args.voltage
                 #"TRIG_COUNTS_SHUTTER"      ,
-                self._Values[9]=0
+                self._Values[9][0]=0
                 #"TRIG_COUNTS_TOTAL_SHUTTER",
-                self._Values[10]=0
+                self._Values[10][0]=0
                 #"TRIG_COUNTS_TOTAL"        ,
-                self._Values[11]=0
+                self._Values[11][0]=0
                 #"TRIG_OFFSET_BEAM"         ,
-                self._Values[12]=0
+                self._Values[12][0]=0
                 #"TRIG_OFFSET_MPA"
-                self._Values[13]=0
+                self._Values[13][0]=0
                 for i in range(self._number_mpa_light):
                     #print self._Result_Dict[self._number_of_cond_vars+i]
                     #print self._Result_Dict[self._number_of_cond_vars+i+self._number_mpa_light]
