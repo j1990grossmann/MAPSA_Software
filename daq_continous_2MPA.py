@@ -15,21 +15,6 @@ import itertools
 
 parser = ArgumentParser()
 
-parser.add_argument('-s', '--setting',   action='store',
-default =       'default',
-dest    =       'setting',
-help    =       'settings ie default,  testbeam etc')
-
-parser.add_argument('-C', '--calib',   action='store',
-default =       'False',
-dest    =       'calib',
-help    =       'calibration')
-
-parser.add_argument('-r', '--readout',   action='store',
-default =       'both',
-dest    =       'readout',
-help    =       'readout which data ie counters, memory, both')
-
 parser.add_argument('-f', '--format',   action='store',
 default =       'noprocessing',
 dest    =       'format',
@@ -40,65 +25,11 @@ default =       0,
 dest    =       'mpa',
 help    =       'mpa to configure (0 for all)')
 
-parser.add_argument('-t', '--threshold',  type=int, action='store',
-default =       180,
-dest    =       'threshold',
-help    =       'threshold as int a Number between 0 and 255')
-
-parser.add_argument('-T', '--testclock',   action='store',
-default =       'glib',
-dest    =       'testclock',
-help    =       'test beam clock')
-
-# parser.add_argument('-x', '--record',   action='store',
-# default =       'True',
-# dest    =       'record',
-# help    =       'record this daq cycle')
-
-parser.add_argument('-y', '--daqstring',   action='store',
-default =       'none',
-dest    =       'daqstring',
-help    =       'string to append on daq folder name')
-
-parser.add_argument('-z', '--monitor',   action='store',
-default =       'False',
-dest    =       'monitor',
-help    =       'start event monitor in background')
-
 parser.add_argument('-w', '--shutterdur',  type=int, action='store',
 default =       0xFFFFF,
 dest    =       'shutterdur',
 help    =       'shutter duration')
 
-parser.add_argument('-v', '--skip',   action='store',
-default =       'True',
-dest    =       'skip',
-help    =       'skip zero counts')
-
-parser.add_argument('-u', '--autospill',   action='store',
-default =       'True',
-dest    =       'autospill',
-help    =       'write every spill')
-
-# parser.add_argument('-N', '--norm',   action='store',
-# default =       'False',
-# dest    =       'norm',
-# help    =       'use normalization mpa scheme')
-
-parser.add_argument('-D', '--direction',   action='store',
-default =       'glib',
-dest    =       'direction',
-help    =       'strip direction (glib or mpa)')
-
-parser.add_argument('-L', '--loops',  type=int, action='store',
-default =       -1,
-dest    =       'loops',
-help    =       'number of daq loops')
-
-parser.add_argument('-p', '--phase',  type=int, action='store',
-default =       0,
-dest    =       'phase',
-help    =       'beam phase offset')
 
 parser.add_argument('-x', '--external-clock',  type=int, action='store',
 default =       0,
@@ -150,13 +81,41 @@ default =       'run{number:04d}.root',
 dest    =       'root_fmt',
 help    =       'Format of the filename for ROOT file output. You can use the variables {number} and {assembly}.')
 
+parser.add_argument('-t', '--threshold',  type=int, action='store',
+default =       180,
+dest    =       'threshold',
+help    =       'threshold as int a Number between 0 and 255')
+
+parser.add_argument('--x_pos',  type=float, action='store',
+default =       0,
+dest    =       'x_pos',
+help    =       'x_position')
+
+parser.add_argument('--y_pos',  type=float, action='store',
+default =       0,
+dest    =       'y_pos',
+help    =       'y_position')
+
+parser.add_argument('--z_pos',  type=float, action='store',
+default =       0,
+dest    =       'z_pos',
+help    =       'z_position')
+
+parser.add_argument('--angle',  type=float, action='store',
+default =       0,
+dest    =       'angle',
+help    =       'angle')
+
+parser.add_argument('--voltage',  type=float, action='store',
+default =       0,
+dest    =       'voltage',
+help    =       'voltage')
+
 
 args1 = parser.parse_args()
 from ROOT import TGraph, TCanvas, TTree, TFile, TBranch
 
 print str(args1)
-
-
 
 class RippleCounterBranch(Structure):
     _fields_ = [
@@ -181,21 +140,20 @@ class daq_continous_2MPA:
         self._Parser=parser
         self._assembly = []
         self._number_mpa_light=0
+        self._number_of_cond_vars=0
         self._memmode=''
         self._threshold=100
         #Get Workingdir, DataDir, Config Dir
         self._datapath, self._runNumber, self._config_dir = self._create_data_dir()
         self.timestr = datetime.datetime.now().time().isoformat().replace(":","").replace(".","")
         self._args = self._parse_args()
-        self._tfile = TFile()
-        self._tree  = TTree()
-        self.create_tree()
         self._a= uasic(connection="file://connections_test.xml", device="board0")
         self._glib = self._a._hw
+        self._tree , self._tfile = self.create_tree()
+        #self._tree = self.create_tree()
 
         ##filepath = os.path.dirname(os.path.realpath(__file__))
         ##create ttree and open root file
-        #create_ttree(tree_vars, number_mpa_light, assembly, datapath)
     def _parse_args(self):
         args=self._Parser.parse_args()
 
@@ -243,6 +201,9 @@ class daq_continous_2MPA:
             "COND_THRESHOLD"           ,
             "COND_TIMESTAMP"           ,
             "COND_ANGLE"               ,
+            "COND_X_POS"               ,
+            "COND_Y_POS"               ,
+            "COND_Z_POS"               ,
             "COND_VOLTAGE"             ,
             "TRIG_COUNTS_SHUTTER"      ,
             "TRIG_COUNTS_TOTAL_SHUTTER",
@@ -250,40 +211,48 @@ class daq_continous_2MPA:
             "TRIG_OFFSET_BEAM"         ,
             "TRIG_OFFSET_MPA"
             ]
-        # self._assembly = [2,5]
+        self._number_of_cond_vars=len(self._Keys)
         self._number_mpa_light=len(self._assembly)
         for i in range(0,self._number_mpa_light):
-            self._Keys.append("AR_MPA_"+str(i))
-            self._Keys.append("SR_BX_MPA_"+str(i))
-            self._Keys.append("SR_MPA_"+str(i))
+            self._Keys.append("counter_mpa_"+str(i))
+        for i in range(0,self._number_mpa_light):
+            self._Keys.append("noprocessing_mpa_"+str(i))
         for key in self._Keys:
             if "COND" in key:
                 self._Values.append(array('L',[0]))
             if "TRIG_COUNTS" in key:
                 self._Values.append(array('L',[0]))
             if "TRIG_OFFSET" in key:
-                self._Values.append(array('L',[0]*2048))
-            if "AR_MPA" in key:
-                self._Values.append(array('L',[0]*48))
-            if "SR" in key:
-                self._Values.append(array('L',[0]*96))
+                #self._Values.append(array('L',[0]*2048))
+                self._Values.append(array('L',[0]))
+            if "counter" in key:
+                self._Values.append(RippleCounterBranch())
+            if "noprocessing" in key:
+                self._Values.append(MemoryNoProcessingBranch())
+
         self._Result_Dict=zip(self._Keys,self._Values)
-        self._tfile = TFile(self._datapath+'/{:09d}'.format(self._runNumber)+'.root','recreate')
-        self._tree = TTree("Tree","Tree")
+        tfile = TFile(self._datapath+'/{:09d}'.format(self._runNumber)+'.root','recreate')
+        tfile.SetCompressionLevel(1)
+        ttree = TTree("Tree","Tree")
+
+        counterFormat = "pixel[48]/s"
+        noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
+
         for key in self._Result_Dict:
             if "COND" in key[0]:
-                self._tree.Branch(key[0],key[1],key[0]+"[1]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
             if "TRIG_COUNTS" in key[0]:
-                self._tree.Branch(key[0],key[1],key[0]+"[1]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
             if "TRIG_OFFSET" in key[0]:
-                self._tree.Branch(key[0],key[1],key[0]+"[2048]/l")
-            if "AR_MPA" in key[0]:
-                self._tree.Branch(key[0],key[1],key[0]+"[48]/l")
-            if "SR" in key[0]:
-                self._tree.Branch(key[0],key[1],key[0]+"[96]/l")
+                #ttree.Branch(key[0],key[1],key[0]+"[2048]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
+            if "counter" in key[0]:
+                ttree.Branch(key[0],key[1],counterFormat)
+            if "noprocessing" in key[0]:
+                ttree.Branch(key[0],key[1],noProcessingFormat)
+        return ttree, tfile
     def write_close(self):
-        #self._tree.Write('tree',ROOT.TObject.kOverwrite)
-        #self._tfile.Write()
+        self._tree.Write()
         self._tfile.Close()
     def acquisition_start(self):
         # Connection and GLIB
@@ -405,6 +374,7 @@ class daq_continous_2MPA:
                 # Continuous operation in bash loop
                 if shutterCounter == numTriggers:
                     endTimeStamp = time.time()
+                    break
                 # Required for automation! Do not stop DAQ until at least
                 # 2 seconds after reaching the num trigger limit
                 if shutterCounter > numTriggers:
@@ -435,89 +405,124 @@ class daq_continous_2MPA:
             print "All files saved"
         else:
             print "\x1b[1mNo data acquired, ignore.\x1b[m"
-    
+            
     def recordRoot(self):
         spinner = "--\\\\||//"
         progress = ["-"]*20
         filename = os.path.join(self._args.output_dir,
                 self._args.root_fmt.format(number=self._runNumber, assembly=self._args.assembly))
-        self._tfile = TFile(filename, "RECREATE")
-        trees = []
-        counterFormat = "pixel[48]/s"
-        noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
-        flood = [{
-            "counter": RippleCounterBranch(),
-            "noProcessing": MemoryNoProcessingBranch(),
-        }]*len(self._assembly)
-        for i, mpa in enumerate(self._assembly):
-            tree = TTree("mpa{0}".format(mpa), "MPA{0} event tree".format(mpa))
-            trees.append(tree)
-            tree.Branch("rippleCounter", flood[i]["counter"], counterFormat)
-            tree.Branch("memoryNoProcessing", flood[i]["noProcessing"], noProcessingFormat)
+        #self._tfile = TFile(filename, "RECREATE")
+        counterArray = []
+        memoryArray = []
         try:
-            totalEvents = 0
-            for shutter, counters, memories, freeBuffers, frequency in self._acquire(self._args.num_triggers):
-                for data, tree, counter, memory in zip(flood, trees, counters, memories):
-                    for i, val in enumerate(itertools.islice(counter, 1, len(counter))):
-                        # According to Moritz:
-                        # "Mask to select left pixel. First bit is not
-                        # considered as this seems sometimes to be set
-                        # erronously. (Lots of entries with
-                        # 0b1000000000000000)"
-                        data["counter"].pixels[i*2 + 0] = val & 0x7FFF # left
-                        data["counter"].pixels[i*2 + 1] = (val >> 16) & 0x7FFF # right
-                    # convert memory from uhal-format to ctype bytes array
-                    memory_ints = (c_uint*216)(*memory)
-                    memory_bytes = cast(memory_ints, POINTER(c_ubyte))
-                    # reset fill array
-                    data["noProcessing"].pixelMatrix = (c_ulonglong*96)(0)
-                    data["noProcessing"].bunchCrossingId = (c_ushort*96)(0)
-                    data["noProcessing"].header = (c_ubyte*96)(0)
-                    data["noProcessing"].corrupt = c_ubyte(0)
-                    # iterate over memory in multipletts of 9 bytes (one 72 bit event)
-                    evtIdx = 0
-                    numEvents = 0
-                    for evtIdx in reversed(xrange(0, 96)):
-                        evtData = tuple(
-                            itertools.islice(memory_bytes,
-                                evtIdx*9, evtIdx*9 + 9))
-                        data["noProcessing"].header[95-evtIdx] = evtData[8]
-                        if data["noProcessing"].header[95-evtIdx] == 0x00:
-                            break
-                        elif data["noProcessing"].header[95-evtIdx] != 0xFF:
-                            data["noProcessing"].corrupt = c_ubyte(evtIdx + 1)
-                            break
-                        numEvents += 1
-                        # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
-                        pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
-                                       (evtData[3] << 24) | (evtData[2] << 16) |
-                                       (evtData[1] << 8) | evtData[0])
-                        bxid = ((evtData[7] << 8) | evtData[6])
-                        data["noProcessing"].bunchCrossingId[95-evtIdx] = bxid
-                        data["noProcessing"].pixelMatrix[95-evtIdx] = pixelMatrix
-                    totalEvents += numEvents
-                    data["noProcessing"].numEvents = c_ubyte(numEvents)
-                    tree.Fill()
-                # Fancy shmancy visual output
-                progress[int(len(progress)*float(shutter)/float(self._args.num_triggers)) % len(progress)] = "#"
-                sys.stdout.write("\r\x1b[K [{3}] Shutter={0}  Free bufs={1}  freq={2:.0f} Hz  #events={6}  [{4}] {5:.0f}%".format(
-                    shutter, freeBuffers, frequency,
-                    spinner[shutter % len(spinner)],
-                    "".join(progress),
-                    float(shutter) / float(self._args.num_triggers) * 100,
-                    totalEvents
-                ))
-                sys.stdout.flush()
+            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+                counterArray.append(counter)
+                memoryArray.append(memory)
+                print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
-        sys.stdout.write("\n")
-        self._tfile.Write()
-        self._tfile.Close()
+        if len(counterArray):
+            print "End of Run %s write raw file" % self._runNumber
+            memoryFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_memory.txt', 'w')
+            counterFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_counter.txt', 'w')
+            for i, shutter in enumerate(counterArray):
+                for j, mpa in enumerate(shutter):
+                    counterFile.write(str(mpa.value()) + "\n")
+                    memoryFile.write(str(memoryArray[i][j].value()) + "\n")
+            counterFile.close()
+            memoryFile.close()
+            print "Fill the tree"
+            try:
+                totalEvents = 0
+                #"COND_NO_MPA_LIGHT"        ,
+                self._Values[0]=self._number_mpa_light                
+                #"COND_SPILL"               ,
+                self._Values[1]=0
+                #"COND_THRESHOLD"           ,
+                self._Values[2]=(int)(self._threshold)
+                #"COND_TIMESTAMP"           ,
+                self._Values[3]=0
+                #"COND_ANGLE"               ,
+                self._Values[4]=self._args.angle
+                #"COND_X_POS"               ,
+                self._Values[5]=self._args.x_pos
+                #"COND_Y_POS"               ,
+                self._Values[6]=self._args.y_pos
+                #"COND_Z_POS"               ,
+                self._Values[7]=self._args.z_pos
+                #"COND_VOLTAGE"             ,
+                self._Values[8]=self._args.voltage
+                #"TRIG_COUNTS_SHUTTER"      ,
+                self._Values[9]=0
+                #"TRIG_COUNTS_TOTAL_SHUTTER",
+                self._Values[10]=0
+                #"TRIG_COUNTS_TOTAL"        ,
+                self._Values[11]=0
+                #"TRIG_OFFSET_BEAM"         ,
+                self._Values[12]=0
+                #"TRIG_OFFSET_MPA"
+                self._Values[13]=0
+                for i in range(self._number_mpa_light):
+                    #print self._Result_Dict[self._number_of_cond_vars+i]
+                    #print self._Result_Dict[self._number_of_cond_vars+i+self._number_mpa_light]
+                    self._Values[self._number_of_cond_vars+self._number_mpa_light+i].pixelMatrix = (c_ulonglong*96)(0)
+                    self._Values[self._number_of_cond_vars+self._number_mpa_light+i].bunchCrossingId = (c_ushort*96)(0)
+                    self._Values[self._number_of_cond_vars+self._number_mpa_light+i].header = (c_ubyte*96)(0)
+                    self._Values[self._number_of_cond_vars+self._number_mpa_light+i].corrupt = c_ubyte(0)
+                for event in range(len(counterArray)):
+                    for j in range(self._number_mpa_light):
+                        #print counterArray[event][j], memoryArray[event][j]
+                        for k, val in enumerate(itertools.islice(counterArray[event][j], 1, len(counterArray[event][j]))):
+                            self._Values[self._number_of_cond_vars+j].pixels[k*2 + 0] = val & 0x7FFF # left
+                            self._Values[self._number_of_cond_vars+j].pixels[k*2 + 1] = (val >> 16) & 0x7FFF # right
+                        #print self._Values[self._number_of_cond_vars+j].pixels[:]
+                        memory_ints = (c_uint*216)(*memoryArray[event][j])
+                        memory_bytes = cast(memory_ints, POINTER(c_ubyte))
+                        # iterate over memory in multipletts of 9 bytes (one 72 bit event)
+                        evtIdx = 0
+                        numEvents = 0
+                        for evtIdx in reversed(xrange(0, 96)):
+                            evtData = tuple(
+                                itertools.islice(memory_bytes,
+                                                 evtIdx*9, evtIdx*9 + 9))
+                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] = evtData[8]
+                            if self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] == 0x00:
+                                break
+                            elif self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] != 0xFF:
+                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].corrupt = c_ubyte(evtIdx + 1)
+                                break
+                            numEvents += 1
+                            # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
+                            pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
+                                           (evtData[3] << 24) | (evtData[2] << 16) |
+                                           (evtData[1] << 8) | evtData[0])
+                            bxid = ((evtData[7] << 8) | evtData[6])
+                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].bunchCrossingId[95-evtIdx] = bxid
+                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].pixelMatrix[95-evtIdx] = pixelMatrix
+                            totalEvents += numEvents
+                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].numEvents = c_ubyte(numEvents)
+                    self._tree.Fill()
+                    # Spinner
+                    if event%100==0:
+                        progress[int(len(progress)*float(event)/float(self._args.num_triggers)) % len(progress)] = "#"
+                        sys.stdout.write("\r\x1b[K [{1}] Event={0}  #events={4}  [{2}] {3:.0f}%".format(
+                            event,
+                            spinner[event % len(spinner)],
+                            "".join(progress),
+                            float(event) / float(self._args.num_triggers) * 100,
+                            event
+                            ))
+                        sys.stdout.flush()
+
+                print "All files saved"
+            except KeyboardInterrupt:
+                pass
+        else:
+            print "\x1b[1mNo data acquired, ignore.\x1b[m"
+
         print "End of Run", self._runNumber	
 		
 daq= daq_continous_2MPA(parser)
-
-daq.create_tree()
 daq.acquisition_start()
 daq.write_close()
 
