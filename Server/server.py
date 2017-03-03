@@ -49,8 +49,8 @@ def recv_timeout():
                         print options
                         connection.sendall("Starting DAQ with options\t")
                         connection.sendall(options)
-                        error_daq = subprocess.check_call(["sleep","1"])
-                        result=subprocess.check_output("ls -rt ../readout_data/", shell=True)
+                        error_daq=subprocess.check_call(["python ./daq_continous_2MPA.py",options], shell=True)
+                        result=subprocess.check_output("ls -rt ./readout_data/", shell=True)
                         last=result.splitlines()[-1]
                         connection.sendall("Run Number\t" + last.rstrip('\n')+"\tDAQ state\t"+str(error_daq)+"\toptions"+options)
                         connection.sendall("\n")
