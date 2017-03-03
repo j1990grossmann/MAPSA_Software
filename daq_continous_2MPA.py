@@ -87,17 +87,17 @@ dest    =       'threshold',
 help    =       'threshold as int a Number between 0 and 255')
 
 parser.add_argument('--x_pos',  type=float, action='store',
-default =       -1,
+default =       10,
 dest    =       'x_pos',
 help    =       'x_position')
 
 parser.add_argument('--y_pos',  type=float, action='store',
-default =       -1,
+default =       10,
 dest    =       'y_pos',
 help    =       'y_position')
 
 parser.add_argument('--z_pos',  type=float, action='store',
-default =       -1,
+default =       10,
 dest    =       'z_pos',
 help    =       'z_position')
 
@@ -107,7 +107,7 @@ dest    =       'angle',
 help    =       'angle')
 
 parser.add_argument('--voltage',  type=float, action='store',
-default =       -1,
+default =       10,
 dest    =       'voltage',
 help    =       'voltage')
 
