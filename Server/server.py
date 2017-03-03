@@ -3,8 +3,9 @@ import sys
 import time
 import subprocess
 
-TCP_IP = '127.0.0.1'
-TCP_PORT = 5101
+# TCP_IP = '127.0.0.1'
+TCP_IP = ''
+TCP_PORT = 51010
 BUFFER_SIZE = 1024
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
