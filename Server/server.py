@@ -3,8 +3,8 @@ import sys
 import time
 import subprocess
 
-# TCP_IP = '127.0.0.1'
-TCP_IP = ''
+TCP_IP = '127.0.0.1'
+# TCP_IP = ''
 TCP_PORT = 51010
 BUFFER_SIZE = 1024
 
@@ -50,7 +50,7 @@ def recv_timeout():
                         print options
                         connection.sendall("Starting DAQ with options\t")
                         connection.sendall(options)
-                        error_daq=subprocess.check_call(["python ./daq_continous_2MPA.py",options], shell=True)
+                        error_daq=subprocess.check_call("python ./daq_continous_2MPA.py"+options, shell=True)
                         result=subprocess.check_output("ls -rt ./readout_data/", shell=True)
                         last=result.splitlines()[-1]
                         connection.sendall("Run Number\t" + last.rstrip('\n')+"\tDAQ state\t"+str(error_daq)+"\toptions"+options)
