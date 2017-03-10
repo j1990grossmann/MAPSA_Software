@@ -47,18 +47,13 @@
 #include "TArray.h"
 #include "TArrayI.h"
 
+#include "../Tools/Producer.h"
+
+#define CHANNELS 48
+
 namespace fs =boost::filesystem;
 // using namespace std;
 namespace po = boost::program_options;
-
-struct MemoryNoProcessingBranch_t 
-{
-   ULong64_t       pixelMatrix[96];
-   UShort_t        bunchCrossingId[96];
-   UChar_t         header[96];
-   UChar_t         numEvents;
-   UChar_t         corrupt;
-};
 
 
 bool check_file_path(const std::string& file_path_str, fs::path& p);
@@ -66,21 +61,22 @@ std::vector<std::string>get_list_of_files(std::string const& run_file, std::stri
 int  read_ttree(std::string const& root_file);
 
 int main(int argc, char **argv) {
-
     std::string path;
     std::string run_file;
     std::string out_file;
     std::string mask_file;
+    std::string geo_file;
     std::vector<std::string> filenames;
     bool mask_toggle;
     try{
         po::options_description desc("Allowed options");
         desc.add_options()
         ("help,h", "A programm to produce the clustered TTrees and Generate prompt offline Visual feedback from 2 MAPSA-light TTree data.")
-        ("path,p",            po::value<std::string>(&path)     ->default_value("./"),             "Default path for run files ./")
+        ("path,p",            po::value<std::string>(&path)     ->default_value("./"),             "Default path for run files")
         ("signal_files,s",    po::value<std::string>(&run_file) ->default_value("signal.txt"),     "A file with list of run files ROOT")
         ("out_file,o",        po::value<std::string>(&out_file) ->default_value("analysis.root"),  "Destination file")
         ("pixel_mask_file,m", po::value<std::string>(&mask_file)->default_value("pixel_mask.txt"), "Pixel mask file")
+        ("geometry_file,g",   po::value<std::string>(&geo_file )->default_value("geo_file.txt"),   "Geometry   file")
         ("mask_toggle,t",     po::value<bool>(&mask_toggle)     ->default_value(false), "Toggle pixel mask")
         ;
         po::variables_map vm;
@@ -100,6 +96,7 @@ int main(int argc, char **argv) {
             std::cout<<std::setw(20)<<std::left<<"Run list:"<<std::right<<run_file<<"\n";
             std::cout<<std::setw(20)<<std::left<<"Destination file:"<<std::right<<out_file<<"\n";
             std::cout<<std::setw(20)<<std::left<<"Pixel Mask  file:"<<std::right<<mask_file<<"\n";
+            std::cout<<std::setw(20)<<std::left<<"Geometry    file:"<<std::right<<geo_file<<"\n";
             std::cout<<std::setw(20)<<std::left<<"Mask  toggle:"<<std::right<<mask_toggle<<"\n";
             std::cout<<line<<std::endl;
         }
@@ -109,13 +106,54 @@ int main(int argc, char **argv) {
         std::cout << e.what()<<std::endl;
         return 0;
     }
-    filenames=get_list_of_files(run_file,path);
-    std::cout<<"Files for processing:\n";
-    for( auto const &i : filenames)
-    {
-        std::cout<<i<<"\n";
+    PRODUCER::Producer t;
+// Read Geo File
+    fs::path geo_f,mask_f;
+    if(check_file_path(geo_file,geo_f)){
+        std::vector<bool> geom_vec(6,false);
+        std::ifstream input( geo_f.string());
+        int line_c=0;
+        for( std::string line; getline( input, line ); )
+        {
+            if(line_c<2)
+                for(auto i = 0; i < line.length(); ++i)
+                    if(i<3 && line[i]=='1')
+                        geom_vec.at(i+line_c*3)=true;
+            line_c++;
+        }
+        t.SetGeometry(geom_vec);
+        input.close();
     }
-    std::flush(std::cout);
+//     Read Mask Files
+    if(check_file_path(mask_file,mask_f)){
+        std::ifstream input( mask_f.string());
+        int line_c=0;
+        for( std::string line; getline( input, line ); )
+        {
+            if(line_c<2)
+            {
+                std::vector<bool> mask_vec(CHANNELS,false);
+                for(auto i = 0; i < line.length(); ++i)
+                    if(i<CHANNELS && line[i]=='1')
+                        mask_vec.at(i)=true;
+                t.Set_PixelMaskMPA(line_c,mask_vec);
+            }
+            line_c++;
+        }
+        input.close();
+    }
+    t.Print_GeometryMaskMPA();
+    t.Print_PixelMaskMPA();
+    
+    
+
+//     filenames=get_list_of_files(run_file,path);
+//     std::cout<<"Files for processing:\n";
+//     for( auto const &i : filenames)
+//     {
+//         std::cout<<i<<"\n";
+//     }
+//     std::flush(std::cout);
 
     return 0;
 }
@@ -157,6 +195,7 @@ std::vector<std::string>get_list_of_files(std::string const& run_file, std::stri
             if(line!="" && check_file_path(path+line,data_file_path))
                 result.push_back(data_file_path.string());
         }
+        input.close();
     }
     return result;
 }
@@ -177,7 +216,7 @@ int read_ttree(const std::string& root_file)
         std::cout<<"Error opening file\t"<<root_file<<std::endl;
     TTree *tree = (TTree*)file->Get("Tree");
     tree->Print();
-
+    file->Close();
 //     TRandom rndm;
 //     //       Workers are defined;
 //     std::forward_list<UInt_t> workerIDs(Workers);
