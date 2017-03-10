@@ -43,7 +43,7 @@ help    =       'Name of the assembly, used to differentiate trimming configurat
 
 parser.add_argument('-i', '--mpa-index',  type=int, choices=range(1,7), nargs='+', action='store',
 # parser.add_argument('-i', '--mpa-index',  type=int, choices=range(1,7), action='store',
-default =       [],
+default =       [1,2],
 dest    =       'mpa_index',
 help    =       'Specify the indices of the MPAs in the SPI chain.')
 
@@ -276,6 +276,7 @@ class daq_continous_2MPA:
 	        mpa.append(MPA(self._glib, iMPA + 1))
 	        # conf.append(mpa[iMPA].config("data/Conf_trimcalib_MPA" + str(nMPA)+
 	        # "_masked.xml")) # Use trimcalibrated config
+                print str(os.path.join(self._config_dir,self._args.config.format(mpa=nMPA, assembly=self._args.assembly)))
 	        conf.append(mpa[iMPA].config(
 	            os.path.join(
 	                self._config_dir,
@@ -359,14 +360,15 @@ class daq_continous_2MPA:
                         (time.time() - startTime)
                 MAPSACounter = []
                 MAPSAMemory = []
-                for iMPA, nMPA in enumerate(self._assembly):
+                # for iMPA, nMPA in enumerate(self._assembly):
+                for iMPA, nMPA in enumerate([2,5]):
                     counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
                         "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
                     memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
                         "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
-                    self._glib.dispatch()
                     MAPSACounter.append(counterData)
                     MAPSAMemory.append(memoryData)
+		self._glib.dispatch()                    
                 ibuffer = (ibuffer + 1) % 4
                 shutterCounter += 1
                 yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
@@ -387,7 +389,8 @@ class daq_continous_2MPA:
             for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if shutter%100==0:
+                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
@@ -418,7 +421,8 @@ class daq_continous_2MPA:
             for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if shutter%100==0:
+                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
