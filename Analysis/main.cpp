@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
         ;
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);    
+        po::notify(vm);
         
         if (vm.count("help")) {
             std::cout << desc << "\n";
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
         std::vector<bool> geom_vec(6,false);
         std::ifstream input( geo_f.string());
         int line_c=0;
-        for( std::string line; getline( input, line ); )
+        for( std::string line; std::getline( input, line ); )
         {
             if(line_c<2)
                 for(auto i = 0; i < line.length(); ++i)
@@ -128,16 +128,13 @@ int main(int argc, char **argv) {
     if(check_file_path(mask_file,mask_f)){
         std::ifstream input( mask_f.string());
         int line_c=0;
-        for( std::string line; getline( input, line ); )
+        for( std::string line; std::getline( input, line ); )
         {
-            if(line_c<2)
-            {
-                std::vector<bool> mask_vec(CHANNELS,false);
-                for(auto i = 0; i < line.length(); ++i)
-                    if(i<CHANNELS && line[i]=='1')
-                        mask_vec.at(i)=true;
+            std::vector<bool> mask_vec(CHANNELS,false);
+            for(auto i = 0; i < line.length(); ++i)
+                if(i<CHANNELS && line[i]=='1')
+                    mask_vec.at(i)=true;
                 t.Set_PixelMaskMPA(line_c,mask_vec);
-            }
             line_c++;
         }
         input.close();
@@ -147,13 +144,15 @@ int main(int argc, char **argv) {
     
     
 
-//     filenames=get_list_of_files(run_file,path);
-//     std::cout<<"Files for processing:\n";
-//     for( auto const &i : filenames)
-//     {
+    filenames=get_list_of_files(run_file,path);
+    std::cout<<"Files for processing:\n";
+//     for(const auto &i : filenames.begin())
+    for(auto it(filenames.begin()+28); it != filenames.begin()+29; ++it)
+    {
 //         std::cout<<i<<"\n";
-//     }
-//     std::flush(std::cout);
+        t.SetFile(*it);
+    }
+    std::flush(std::cout);
 
     return 0;
 }
@@ -190,7 +189,7 @@ std::vector<std::string>get_list_of_files(std::string const& run_file, std::stri
     if(check_file_path(run_file,p)){
         fs::path data_file_path;
         std::ifstream input( p.string());
-        for( std::string line; getline( input, line ); )
+        for( std::string line; std::getline( input, line ); )
         {
             if(line!="" && check_file_path(path+line,data_file_path))
                 result.push_back(data_file_path.string());
@@ -205,7 +204,7 @@ int read_ttree(const std::string& root_file)
     const Int_t Workers = 4;
 //     const Int_t Events  = 1000000;
 //     const Int_t N_events  = Events/Workers;
-    ROOT::EnableThreadSafety();
+//     ROOT::EnableThreadSafety();
     TFile *file = new TFile();
     file->Open("DEPPER","READ");
     if(file->IsZombie()){
