@@ -24,12 +24,57 @@
 #include <vector>
 #include <string>
 
+#include "Riostream.h"
+#include "TApplication.h"
+#include "TArray.h"
+#include "TArrayI.h"
+// #include "TAttLine.h"
+// #include "TAttMarker.h"
+// #include "TAxis.h"
+#include "TBits.h"
+// #include "TCanvas.h"
+// #include "TClass.h"
+// #include "TColor.h"
+// #include "TDirectory.h"
+// #include "TExec.h"
+// #include "TF1.h"
+// #include "TF2.h"
+#include "TFile.h"
+// #include "TFormula.h"
+// #include "TGaxis.h"
+// #include "TGraphErrors.h"
+// #include "TGraph.h"
+#include "TH1.h"
+// #include "TH2.h"
+// #include "TKey.h"
+// #include "TLatex.h"
+// #include "TLegend.h"
+// #include "TList.h"
+// #include "TMath.h"
+// #include "TMultiGraph.h"
+// #include "TObject.h"
+// #include "TPad.h"
+#include "TProcPool.h"
+#include "TRandom3.h"
 #include "TROOT.h"
+#include "TROOT.h"
+#include "TString.h"
+// #include "TStyle.h"
+#include "TSystem.h"
+#include "TTree.h"
+#include "TTreeReader.h"
+#include "TTreeReaderValue.h"
+#include "TTreeReaderArray.h"
+// TTreeReaderValueArray
+// #include "TTreeReaderValueArray.h"
+// #include "TTreeReaderValueBase.h"
+
+
 static constexpr int MEMORY=96;
 static constexpr int CHANNELS=48;
 static constexpr int COLUMNS=16;
 static constexpr int ROWS=3;
-static constexpr int ASSEMBLY=3;
+static constexpr int ASSEMBLY=2;
 
 namespace PRODUCER{
     
@@ -41,6 +86,13 @@ namespace PRODUCER{
         UChar_t         numEvents;
         UChar_t         corrupt;
     };
+    struct RippleCounterBranch_t{
+            UInt_t   header;
+            UShort_t pixels[CHANNELS];
+    };
+//     struct RippleCounterBranch_t{
+//             UShort_t pixels[CHANNELS];
+//     };
     struct GlobalHit 
     {
         double  x;
@@ -78,7 +130,8 @@ namespace PRODUCER{
 //         This have to be set before Construction
         geometryMask({ true,false,false,true, false, false }),
         pixelMask(CHANNELS, true),
-        MaPSAMask(ASSEMBLY,pixelMask)
+        MaPSAMask(ASSEMBLY,pixelMask),
+        no_MPA_light(0)
         {
         }
         Strip_Coordinate GetStripCoordinate(int channel, int mpa_no);
@@ -96,6 +149,7 @@ namespace PRODUCER{
         void ProduceDQM_Cluster_Hits();
     private:
 //         Geometry information
+        int no_MPA_light;
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
         std::vector<std::vector<bool>> MaPSAMask;
@@ -111,6 +165,8 @@ namespace PRODUCER{
         
         Strip_Coordinate MapCounterLocal(int Channel_f);
         Strip_Coordinate MapGlobal(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
+        Strip_Coordinate MapGeometry(int MPA_no);
+        bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
         
     protected:
     };
