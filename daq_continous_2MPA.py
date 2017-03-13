@@ -240,12 +240,12 @@ class daq_continous_2MPA:
 
         for key in self._Result_Dict:
             if "COND" in key[0]:
-                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/i")
             if "TRIG_COUNTS" in key[0]:
-                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/i")
             if "TRIG_OFFSET" in key[0]:
                 #ttree.Branch(key[0],key[1],key[0]+"[2048]/l")
-                ttree.Branch(key[0],key[1],key[0]+"[1]/l")
+                ttree.Branch(key[0],key[1],key[0]+"[1]/i")
             if "counter" in key[0]:
                 ttree.Branch(key[0],key[1],counterFormat)
             if "noprocessing" in key[0]:
