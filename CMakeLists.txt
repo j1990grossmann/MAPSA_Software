@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+project(MapsaAnalysis)
+set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
+list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+# MESSAGE( STATUS "CMAKE_PREFIX_PATH:         " ${CMAKE_PREFIX_PATH} )
+# MESSAGE( STATUS "CMAKE_MODULE_PATH:         " ${CMAKE_MODULE_PATH} )
+
+add_subdirectory(Analysis)
