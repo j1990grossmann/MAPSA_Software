@@ -111,6 +111,11 @@ default =       10,
 dest    =       'voltage',
 help    =       'voltage')
 
+parser.add_argument('--delay',  type=int, action='store',
+default =       0,
+dest    =       'delay',
+help    =       'shutter delay')
+
 
 args1 = parser.parse_args()
 from ROOT import TGraph, TCanvas, TTree, TFile, TBranch
@@ -305,7 +310,8 @@ class daq_continous_2MPA:
 	# happen before starting the sequencer.
 	self._glib.getNode("Configuration").getNode("mode").write(NO_MPA - 1)
 	conf[0]._spi_wait()  # includes dispatch
-	
+        if self._args.delay:
+	    self._glib.getNode("Control").getNode('shutter_delay').write(self._args.delay)	
 	if self._args.external_clock:
 	    self._glib.getNode("Control").getNode('testbeam_clock').write(0x1)
 	else:
@@ -314,9 +320,9 @@ class daq_continous_2MPA:
 	self._glib.dispatch()
 	
 	# shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-	shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
+	# shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
 	# Start sequencer in continous daq mode. Already contains the 'write'
-	mapsaClasses.daq().Sequencer_init(0x1, shutterDur, mem=1)
+	mapsaClasses.daq().Sequencer_init(0x1, self._args.shutterdur, mem=1)
 	
 	
 	print """Command Line Configuration
