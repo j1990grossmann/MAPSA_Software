@@ -349,54 +349,63 @@ class daq_continous_2MPA:
 
 
     def _acquire(self,numTriggers, stopDelay=2):
-        ibuffer = 0
-        shutterCounter = 0
+        # ibuffer = 0
+        readoutCounter = 0
         frequency = float("NaN")
         while True:
             freeBuffers = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             self._glib.dispatch()
             # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
             # avoids this.
-            if freeBuffers < 3:
-                if shutterCounter % 2000 == 0:
+            # print "free Buffers", freeBuffers
+            if freeBuffers ==0:
+                # print "free Buffers", freeBuffers
+                if readoutCounter % 2000 == 0:
                     startTime = time.time()
-                    shutterTimeStart = shutterCounter
-                if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
-                    frequency = (shutterCounter - shutterTimeStart) / \
+                    shutterTimeStart = readoutCounter
+                if readoutCounter % 100 == 0 and readoutCounter % 2000 !=0:
+                    frequency = (readoutCounter - shutterTimeStart) / \
                         (time.time() - startTime)
                 MAPSACounter = []
                 MAPSAMemory = []
                 # for iMPA, nMPA in enumerate(self._assembly):
-                for iMPA, nMPA in enumerate([2,5]):
-                    counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
-                        "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
-                    memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
-                        "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
-                    MAPSACounter.append(counterData)
-                    MAPSAMemory.append(memoryData)
-		self._glib.dispatch()                    
-                ibuffer = (ibuffer + 1) % 4
-                shutterCounter += 1
-                yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
+                # print "free Buffers", freeBuffers, "readoutCounter", readoutCounter
+                for ibuffer in range(0,4):
+                    for iMPA, nMPA in enumerate([2,5]):
+                        # print "read ibuffer ",(ibuffer+1), "iMPA", iMPA, "nMPA", nMPA
+                        counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
+                            "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
+                        memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
+                            "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
+                        MAPSACounter.append(counterData)
+                        MAPSAMemory.append(memoryData)
+                self._glib.dispatch()                    
+                print "shutter", readoutCounter
+                # for i in range(0,len(MAPSACounter)):
+                #     print str(MAPSACounter[i])
+                for i in range(0,len(MAPSAMemory)):
+                    print str(MAPSAMemory[i])
+                readoutCounter += 1
+                yield readoutCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
     
                 # Continuous operation in bash loop
-                if shutterCounter == numTriggers:
+                if readoutCounter == ceil(numTriggers/4):
                     endTimeStamp = time.time()
                     break
                 # Required for automation! Do not stop DAQ until at least
                 # 2 seconds after reaching the num trigger limit
-                if shutterCounter > numTriggers:
-                    if time.time() - endTimeStamp > stopDelay:
-                        break
+                # if readoutCounter > ceil(numTriggers/4):
+                #     if time.time() - endTimeStamp > stopDelay:
+                #         break
     def recordPlaintext(self):
         counterArray = []
         memoryArray = []
         try:
-            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+            for readout_counter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                if shutter%100==0:
-                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if readout_counter%100==0:
+                    print "Event counter: %s Free buffers: %s Frequency: %s " % (readout_counter*4, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
@@ -405,8 +414,8 @@ class daq_continous_2MPA:
                 self._args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
             counterFile = open(os.path.join(
                 self._args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
-            for i, shutter in enumerate(counterArray):
-                for j, mpa in enumerate(shutter):
+            for i, readout in enumerate(counterArray):
+                for j, mpa in enumerate(readout):
                     counterFile.write(str(mpa.value()) + "\n")
                     memoryFile.write(str(memoryArray[i][j].value()) + "\n")
             counterFile.close()
@@ -424,19 +433,19 @@ class daq_continous_2MPA:
         counterArray = []
         memoryArray = []
         try:
-            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+            for readout_counter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                if shutter%100==0:
-                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if readout_counter%100==0:
+                    print "Event counter: %s Free buffers: %s Frequency: %s " % (readout_counter*4, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
             print "End of Run %s write raw file" % self._runNumber
             memoryFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_memory.txt', 'w')
             counterFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_counter.txt', 'w')
-            for i, shutter in enumerate(counterArray):
-                for j, mpa in enumerate(shutter):
+            for i, readout in enumerate(counterArray):
+                for j, mpa in enumerate(readout):
                     counterFile.write(str(mpa.value()) + "\n")
                     memoryFile.write(str(memoryArray[i][j].value()) + "\n")
             counterFile.close()
