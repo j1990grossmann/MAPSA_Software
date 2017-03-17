@@ -225,7 +225,7 @@ class daq_continous_2MPA:
         for key in self._Keys:
             if "COND_THRESHOLD" in key:
                 self._Values.append(array('H',[0]))
-            if (not "COND_THRESHOLD" in key) and "COND" in key:
+            if "COND" in key and not "COND_THRESHOLD" in key:
                 self._Values.append(array('f',[0]))
             if "TRIG_COUNTS" in key:
                 self._Values.append(array('L',[0]))
@@ -248,7 +248,7 @@ class daq_continous_2MPA:
         for key in self._Result_Dict:
             if "COND_THRESHOLD" in key[0]:
                 ttree.Branch(key[0],key[1],key[0]+"[1]/s")
-            if (not "COND_THRESHOLD" in key) and "COND" in key:
+            if "COND" in key and not "COND_THRESHOLD" in key:
                 ttree.Branch(key[0],key[1],key[0]+"[1]/F")
             if "TRIG_COUNTS" in key[0]:
                 ttree.Branch(key[0],key[1],key[0]+"[1]/i")
@@ -500,6 +500,7 @@ class daq_continous_2MPA:
                         # Fill the counters
                         for k, val in enumerate(itertools.islice(counterArray[readout],(l*self._number_mpa_light),((l+1)*self._number_mpa_light))):
                             # Loop over all pixels 
+                            self._Values[self._number_of_cond_vars+k].header=c_uint(0)
                             for k1, val1 in enumerate (itertools.islice(val,1,None)):
                                 self._Values[self._number_of_cond_vars+k].pixels[k1*2 + 0] = val1 & 0x7FFF # left
                                 self._Values[self._number_of_cond_vars+k].pixels[k1*2 + 1] = (val1 >> 16) & 0x7FFF # right
