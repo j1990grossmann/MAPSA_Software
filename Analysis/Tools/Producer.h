@@ -43,9 +43,9 @@
 // #include "TFormula.h"
 // #include "TGaxis.h"
 // #include "TGraphErrors.h"
-// #include "TGraph.h"
+#include "TGraph.h"
 #include "TH1.h"
-// #include "TH2.h"
+#include "TH2.h"
 // #include "TKey.h"
 // #include "TLatex.h"
 // #include "TLegend.h"
@@ -65,39 +65,80 @@
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
 #include "TTreeReaderArray.h"
+#include "TMap.h"
+#include "TObject.h"
 // TTreeReaderValueArray
 // #include "TTreeReaderValueArray.h"
 // #include "TTreeReaderValueBase.h"
 
+#include "dataformat_tree.h"
 
-static constexpr int MEMORY=96;
-static constexpr int CHANNELS=48;
-static constexpr int COLUMNS=16;
-static constexpr int ROWS=3;
-static constexpr int ASSEMBLY=2;
 
 namespace PRODUCER{
-    
-    struct MemoryNoProcessingBranch_t 
-    {
-        ULong64_t       pixelMatrix[MEMORY];
-        UShort_t        bunchCrossingId[MEMORY];
-        UChar_t         header[MEMORY];
-        UChar_t         numEvents;
-        UChar_t         corrupt;
-    };
-    struct RippleCounterBranch_t{
-            UInt_t   header;
-            UShort_t pixels[CHANNELS];
-    };
 //     struct RippleCounterBranch_t{
 //             UShort_t pixels[CHANNELS];
 //     };
-    struct GlobalHit 
-    {
+ enum Mapsa_TH1{
+  k_counter_Hits_per_Event,
+  k_counter_Cluster_per_Event,
+  k_counter_Hits_vs_Channel,
+  k_counter_Hits_vs_Row,
+  k_counter_Centroid_Cluster,
+  k_memory_Hits_per_Event,
+  k_memory_Cluster_per_Event,
+  k_memory_Hits_vs_Channel,
+  k_memory_Hits_vs_Row,
+  k_memory_Centroid_Cluster,
+  k_memory_Hits_vs_Timestamp,
+ };
+ enum Mapsa_TH2{
+  k_counter_Hits_vs_Channel_2d,
+  k_counter_Centroid_Cluster_2d,
+  k_memory_Hits_vs_Channel_2d,
+  k_memory_Hits_vs_Timestamp_2d,
+ };
+ enum Mapsa_TGraph{
+  TGraph_Hits_vs_Event,
+  TGraph_Cluster_vs_Event
+ };
+ 
+ static const char* th_names[] = {
+  "Counter_Hits_per_Event"   , 
+  "Counter_Cluster_per_Event",
+  "Counter_Hits_vs_Channel"  ,
+  "Counter_Hits_vs_Row"      ,
+  "Counter_Centroid_Cluster" , 
+  "Memory_Hits_per_Event"   , 
+  "Memory_Cluster_per_Event",
+  "Memory_Hits_vs_Channel"  ,
+  "Memory_Hits_vs_Row"      ,
+  "Memory_Centroid_Cluster" , 
+  "Memory_Hits_vs_Timestamp"  
+ };
+ static const char* th_title_ax[] = {
+  "Counter Hits; # Hits; # Events; "     , 
+  "Counter Clusters; # Events; # Clusters",
+  "Counter Hits; # Channel; # Hits"       ,
+  "Counter Hits; # Row;  # Hits; "        ,
+  "Counter Centroids; #Centroid_Clusters; #Event",
+  "Memory Hits; # Hits; # Events; "     , 
+  "Memory Clusters; # Events; # Clusters",
+  "Memory Hits; # Channel; # Hits"       ,
+  "Memory Hits; # Row;  # Hits; "        ,
+  "Memory Centroids; #Centroid_Clusters; #Event",
+  "Hits; Timestamp (25ns); #Hits"    ,
+ };
+static const char* th_title_ax_tgr[] = {
+  "Counter Hits; # Events; # Hits",
+  "Counter Cluster; # Events; # Cluster",
+}; 
+ 
+
+struct GlobalHit 
+{
         double  x;
         double  y;
-    };
+};
     struct Strip_Coordinate
     {
 //         unsigned char  x;
@@ -126,14 +167,21 @@ namespace PRODUCER{
     class Producer
     {
     public:
-        Producer():
+        Producer(const std::string& prod_root_file_f):
 //         This have to be set before Construction
         geometryMask({ true,false,false,true, false, false }),
         pixelMask(CHANNELS, true),
         MaPSAMask(ASSEMBLY,pixelMask),
         no_MPA_light(0)
         {
+//             RecreateRootFile(prod_root_file_f);
         }
+        ~Producer()
+        {
+            DeleteHists();
+            prod_root_file->Close();
+        };
+        
         Strip_Coordinate GetStripCoordinate(int channel, int mpa_no);
         GlobalHit GetHitCoordinate(Strip_Coordinate);
         
@@ -142,31 +190,49 @@ namespace PRODUCER{
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
         void SetFile(const std::string& root_file_f);
+        void SaveResetHists(const std::string& in_file_f);
         
         void ProduceGlobalHit();
+        
         void ProduceCluster();
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
     private:
+
 //         Geometry information
         int no_MPA_light;
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
         std::vector<std::vector<bool>> MaPSAMask;
 
-        std::vector<uint64_t> counter_channels;
-        std::vector<uint64_t> memory_channels;
-
+        std::vector<std::string> histos;
+        std::vector<std::vector<TH1*> >   hists_1d;
+        std::vector<std::vector<TH2*> >   hists_2d;
+        std::vector<std::vector<TGraph> > tgraphs;
+        TFile* prod_root_file;
+        
         std::vector<GlobalClusterHit> Event_GlobalClusterHit_vec;
         std::vector<GlobalHit>        Event_GlobalHit_vec;
 
         std::vector<GlobalClusterHit> GlobalClusterHit_vec;
         std::vector<GlobalHit>        GlobalHit_vec;
+        TMap Map;
         
         Strip_Coordinate MapCounterLocal(int Channel_f);
+        int MapCounterLocal_X(int Channel_f);
+        int MapCounterLocal_Y(int Channel_f);
         Strip_Coordinate MapGlobal(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
+        int MapGlobal_X(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
+        int MapGlobal_Y(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
+
         Strip_Coordinate MapGeometry(int MPA_no);
+        
         bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
+        void RecreateRootFile(const std::string& prod_root_file_f);
+        void InitializeHists();
+        void FillCounterHists_Run();
+        void FillMemoryHists_Run();
+        void DeleteHists();
         
     protected:
     };
