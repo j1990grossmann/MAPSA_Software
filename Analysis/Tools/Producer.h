@@ -75,74 +75,81 @@
 
 
 namespace PRODUCER{
-//     struct RippleCounterBranch_t{
-//             UShort_t pixels[CHANNELS];
-//     };
- enum Mapsa_TH1{
-  k_counter_Hits_per_Event,
-  k_counter_Cluster_per_Event,
-  k_counter_Hits_vs_Channel,
-  k_counter_Hits_vs_Row,
-  k_counter_Centroid_Cluster,
-  k_memory_Hits_per_Event,
-  k_memory_Cluster_per_Event,
-  k_memory_Hits_vs_Channel,
-  k_memory_Hits_vs_Row,
-  k_memory_Centroid_Cluster,
-  k_memory_Hits_vs_Timestamp,
- };
- enum Mapsa_TH2{
-  k_counter_Hits_vs_Channel_2d,
-  k_counter_Centroid_Cluster_2d,
-  k_memory_Hits_vs_Channel_2d,
-  k_memory_Hits_vs_Timestamp_2d,
- };
- enum Mapsa_TGraph{
-  TGraph_Hits_vs_Event,
-  TGraph_Cluster_vs_Event
- };
- 
- static const char* th_names[] = {
-  "Counter_Hits_per_Event"   , 
-  "Counter_Cluster_per_Event",
-  "Counter_Hits_vs_Channel"  ,
-  "Counter_Hits_vs_Row"      ,
-  "Counter_Centroid_Cluster" , 
-  "Memory_Hits_per_Event"   , 
-  "Memory_Cluster_per_Event",
-  "Memory_Hits_vs_Channel"  ,
-  "Memory_Hits_vs_Row"      ,
-  "Memory_Centroid_Cluster" , 
-  "Memory_Hits_vs_Timestamp"  
- };
- static const char* th_title_ax[] = {
-  "Counter Hits; # Hits; # Events; "     , 
-  "Counter Clusters; # Events; # Clusters",
-  "Counter Hits; # Channel; # Hits"       ,
-  "Counter Hits; # Row;  # Hits; "        ,
-  "Counter Centroids; #Centroid_Clusters; #Event",
-  "Memory Hits; # Hits; # Events; "     , 
-  "Memory Clusters; # Events; # Clusters",
-  "Memory Hits; # Channel; # Hits"       ,
-  "Memory Hits; # Row;  # Hits; "        ,
-  "Memory Centroids; #Centroid_Clusters; #Event",
-  "Hits; Timestamp (25ns); #Hits"    ,
- };
-static const char* th_title_ax_tgr[] = {
-  "Counter Hits; # Events; # Hits",
-  "Counter Cluster; # Events; # Cluster",
-}; 
- 
-
-struct GlobalHit 
-{
+    //     struct RippleCounterBranch_t{
+    //             UShort_t pixels[CHANNELS];
+    //     };
+    enum Mapsa_TH1{
+        k_counter_Hits_per_Event,
+        k_counter_Cluster_per_Event,
+        k_counter_Hits_vs_Channel,
+        k_counter_Hits_vs_Row,
+        k_counter_Centroid_Cluster,
+        k_memory_Hits_per_Event,
+        k_memory_Cluster_per_Event,
+        k_memory_Hits_vs_Channel,
+        k_memory_Hits_vs_Row,
+        k_memory_Centroid_Cluster,
+        k_memory_Hits_vs_Timestamp,
+    };
+    enum Mapsa_TH2{
+        k_counter_Hits_vs_Channel_2d,
+        k_counter_Centroid_Cluster_2d,
+        k_memory_Hits_vs_Channel_2d,
+        k_memory_Hits_vs_Timestamp_2d,
+    };
+    enum Mapsa_TGraph{
+        TGraph_Hits_vs_Event,
+        TGraph_Cluster_vs_Event
+    };
+    
+    static const char* th_names[] = {
+        "Counter_Hits_per_Event"   , 
+        "Counter_Cluster_per_Event",
+        "Counter_Hits_vs_Channel"  ,
+        "Counter_Hits_vs_Row"      ,
+        "Counter_Centroid_Cluster" , 
+        "Memory_Hits_per_Event"   , 
+        "Memory_Cluster_per_Event",
+        "Memory_Hits_vs_Channel"  ,
+        "Memory_Hits_vs_Row"      ,
+        "Memory_Centroid_Cluster" , 
+        "Memory_Hits_vs_Timestamp"  
+    };
+    static const char* th_title_ax[] = {
+        "Counter Hits; # Hits; # Events; "     , 
+        "Counter Clusters; # Events; # Clusters",
+        "Counter Hits; # Channel; # Hits"       ,
+        "Counter Hits; # Row;  # Hits; "        ,
+        "Counter Centroids; #Centroid_Clusters; #Event",
+        "Memory Hits; # Hits; # Events; "     , 
+        "Memory Clusters; # Events; # Clusters",
+        "Memory Hits; # Channel; # Hits"       ,
+        "Memory Hits; # Row;  # Hits; "        ,
+        "Memory Centroids; #Centroid_Clusters; #Event",
+        "Hits; Timestamp (25ns); #Hits"    ,
+    };
+    static const char* th_title_ax_2d[] = {
+        "Counter_Hits_vs_Channel_2D"  ,
+        "Counter_Centroid_Cluster_2D" , 
+        "Memory_Hits_vs_Channel_2D"  ,
+        "Memory_Centroid_Cluster_2D"
+    };
+    
+    static const char* th_title_ax_tgr[] = {
+        "Counter Hits; # Events; # Hits",
+        "Counter Cluster; # Events; # Cluster",
+    }; 
+    
+    
+    struct GlobalHit 
+    {
         double  x;
         double  y;
-};
+    };
     struct Strip_Coordinate
     {
-//         unsigned char  x;
-//         unsigned char  y;
+        //         unsigned char  x;
+        //         unsigned char  y;
         unsigned int x;
         unsigned int y;
     };
@@ -168,13 +175,13 @@ struct GlobalHit
     {
     public:
         Producer(const std::string& prod_root_file_f):
-//         This have to be set before Construction
+        //         This have to be set before Construction
         geometryMask({ true,false,false,true, false, false }),
         pixelMask(CHANNELS, true),
         MaPSAMask(ASSEMBLY,pixelMask),
         no_MPA_light(0)
         {
-//             RecreateRootFile(prod_root_file_f);
+            //             RecreateRootFile_1(prod_root_file_f);
         }
         ~Producer()
         {
@@ -197,14 +204,17 @@ struct GlobalHit
         void ProduceCluster();
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
+        void test_a_file();
+        void RecreateRootFile_1(const std::string& prod_root_file_f);
+        
     private:
-
-//         Geometry information
+        
+        //         Geometry information
         int no_MPA_light;
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
         std::vector<std::vector<bool>> MaPSAMask;
-
+        
         std::vector<std::string> histos;
         std::vector<std::vector<TH1*> >   hists_1d;
         std::vector<std::vector<TH2*> >   hists_2d;
@@ -213,7 +223,7 @@ struct GlobalHit
         
         std::vector<GlobalClusterHit> Event_GlobalClusterHit_vec;
         std::vector<GlobalHit>        Event_GlobalHit_vec;
-
+        
         std::vector<GlobalClusterHit> GlobalClusterHit_vec;
         std::vector<GlobalHit>        GlobalHit_vec;
         TMap Map;
@@ -224,11 +234,10 @@ struct GlobalHit
         Strip_Coordinate MapGlobal(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_X(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_Y(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
-
+        
         Strip_Coordinate MapGeometry(int MPA_no);
         
         bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
-        void RecreateRootFile(const std::string& prod_root_file_f);
         void InitializeHists();
         void FillCounterHists_Run();
         void FillMemoryHists_Run();

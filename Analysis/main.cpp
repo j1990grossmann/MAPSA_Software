@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
 //     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
     {
         std::cout<<*it<<"\n";
-        t.SetFile(*it);
-        t.SaveResetHists(fs::path(*it).stem().c_str());
+//         t.SetFile(*it);
+//         t.SaveResetHists(fs::path(*it).stem().c_str());
     }
     std::flush(std::cout);
 
