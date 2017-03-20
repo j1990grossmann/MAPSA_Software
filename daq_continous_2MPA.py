@@ -368,7 +368,7 @@ class daq_continous_2MPA:
                         "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
                     MAPSACounter.append(counterData)
                     MAPSAMemory.append(memoryData)
-		self._glib.dispatch()                    
+		self._glib.dispatch()
                 ibuffer = (ibuffer + 1) % 4
                 shutterCounter += 1
                 yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
