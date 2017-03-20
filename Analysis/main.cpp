@@ -49,7 +49,6 @@
 
 #include "../Tools/Producer.h"
 
-#define CHANNELS 48
 
 namespace fs =boost::filesystem;
 // using namespace std;
@@ -58,7 +57,6 @@ namespace po = boost::program_options;
 
 bool check_file_path(const std::string& file_path_str, fs::path& p);
 std::vector<std::string>get_list_of_files(std::string const& run_file, std::string const& path);
-int  read_ttree(std::string const& root_file);
 
 int main(int argc, char **argv) {
     std::string path;
@@ -106,7 +104,7 @@ int main(int argc, char **argv) {
         std::cout << e.what()<<std::endl;
         return 0;
     }
-    PRODUCER::Producer t;
+    PRODUCER::Producer t(out_file);
 // Read Geo File
     fs::path geo_f,mask_f;
     if(check_file_path(geo_file,geo_f)){
@@ -142,15 +140,14 @@ int main(int argc, char **argv) {
     t.Print_GeometryMaskMPA();
     t.Print_PixelMaskMPA();
     
-    
-
     filenames=get_list_of_files(run_file,path);
     std::cout<<"Files for processing:\n";
-//     for(const auto &i : filenames.begin())
-    for(auto it(filenames.begin()+28); it != filenames.begin()+29; ++it)
+    for(auto it(filenames.begin()); it != filenames.end(); ++it)
+//     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
     {
-//         std::cout<<i<<"\n";
+        std::cout<<*it<<"\n";
         t.SetFile(*it);
+        t.SaveResetHists(fs::path(*it).stem().c_str());
     }
     std::flush(std::cout);
 
@@ -199,174 +196,3 @@ std::vector<std::string>get_list_of_files(std::string const& run_file, std::stri
     return result;
 }
 
-int read_ttree(const std::string& root_file)
-{
-    const Int_t Workers = 4;
-//     const Int_t Events  = 1000000;
-//     const Int_t N_events  = Events/Workers;
-//     ROOT::EnableThreadSafety();
-    TFile *file = new TFile();
-    file->Open("DEPPER","READ");
-    if(file->IsZombie()){
-        std::cout<<"Error opening file"<<std::endl;
-        return 0;
-    }
-    else
-        std::cout<<"Error opening file\t"<<root_file<<std::endl;
-    TTree *tree = (TTree*)file->Get("Tree");
-    tree->Print();
-    file->Close();
-//     TRandom rndm;
-//     //       Workers are defined;
-//     std::forward_list<UInt_t> workerIDs(Workers);
-//     std::iota(std::begin(workerIDs), std::end(workerIDs), 0);
-//     // Parameters:
-//     //     Single Channel Noise, Common Mode Noise, Vector Of Bad/Sick Channels, 
-//     const int channels = 288;
-//     Int_t channelInt_t;
-//     double sigma_channel=1;
-//     double s_channel=2;
-//     double offset_spread=0;
-//     double threshold=0;
-//     std::vector<float> OffsetChannel;
-//     std::vector<float> SigmaChannel;
-//     std::vector<float> CommonMode;
-//     
-//     double sigma_channel_min  =0;
-//     double sigma_channel_max  =5.1;
-//     int sigma_channel_int  =51;
-//     double sigma_channel_fac= (sigma_channel_max-sigma_channel_min)/sigma_channel_int;
-//     
-//     
-//     double offset_spread_min  =0.00;
-//     double offset_spread_max  =2.20;
-//     int offset_spread_int  =11;
-//     double offset_spread_fac= (offset_spread_max-offset_spread_min)/offset_spread_int;
-//     
-//     double s_channel_min =0;
-//     double s_channel_max =4.1;
-//     int s_channel_int =41;
-//     double s_channel_fac = (s_channel_max-s_channel_min)/s_channel_int;
-//     
-//     double threshold_min=-0.1;
-//     double threshold_max=0.2;
-//     int threshold_int=3;
-//     double threshold_fac=(threshold_max-threshold_min)/threshold_int;
-//     
-//     
-//     std::vector<TH1I> histograms;
-//     std::vector<TRandom3> randoms;
-//     histograms.reserve(Workers);
-//     randoms.reserve(Workers);
-//     for (auto workerID : workerIDs){
-//         histograms.emplace_back(TH1I(Form("NumberOfHits_%u", workerID), Form("NumberOfHits_%u",workerID), channels, 0, channels));
-//         randoms.emplace_back(TRandom3(workerID));
-//     }
-//     
-//     TH1I *NumberOfHits = new TH1I("numberofhits","numberofhits", channels, 0, channels);
-//     channelInt_t = (Int_t)NumberOfHits->GetSize();
-//     Int_t *numberofhits_arr = new Int_t[channelInt_t];
-//     
-//     //   Generate initial channel offsets vector
-//     TBits *bits = new TBits(channels);
-//     //     tree->Branch("bits","TBits",&bits,32000,0);
-//     tree->Branch("sigma_channel", &sigma_channel,32000);
-//     tree->Branch("s_channel", &s_channel, 32000);
-//     tree->Branch("offset_spread", &offset_spread, 32000);
-//     tree->Branch("threshold", &threshold, 32000);
-//     tree->Branch("NumberOfHits","TH1I",&NumberOfHits,32000);
-//     tree->Branch("channelInt_t",&channelInt_t,"channelInt_t/I");
-//     tree->Branch("NumberOfHits_Arr",&numberofhits_arr,"numberofhits_arr[channelInt_t]/I",32000);
-//     //       tree->Branch("BitArrayEvents","TBits",&bits,32000);
-//     
-//     OffsetChannel.resize(channels);
-//     SigmaChannel.resize(channels);
-//     CommonMode.resize(channels);
-//     
-//     uint allcounter =0;
-//     for(int i=0; i<channels; i++){
-//         OffsetChannel.at(i)=rndm.Rndm()*2*offset_spread-.5*offset_spread;
-//         //                                   OffsetChannel.at(i)=rndm.Uniform((-1)*offset_spread,offset_spread);
-//         numberofhits_arr[i]=0;
-//         // OffsetChannel.at(i)=0;
-//         SigmaChannel.at(i)=sigma_channel;
-//         //                                   CommonMode.at(i)=s_channel;
-//     }
-//     
-//     for(int i3=0; i3<sigma_channel_int; i3++)
-//     {
-//         sigma_channel=i3*sigma_channel_fac+sigma_channel_min;
-//         for(int i4=0; i4<channels; i4++)
-//             SigmaChannel.at(i4)=sigma_channel;
-//         for(int i0=0; i0<threshold_int; i0++)
-//         {
-//             threshold=i0*threshold_fac+threshold_min;
-//             //                       for(int i1=0; i1<offset_spread_int; i1++)
-//             //                       {
-//             //                               offset_spread=i1*offset_spread_fac+offset_spread_min;
-//             for(int i2=0; i2<s_channel_int; i2++)
-//             {
-//                 s_channel=i2*s_channel_fac+s_channel_min;
-//                 printf("generate distribution: threshold %f s_channel %f sigma_channel %f\n",threshold, s_channel, sigma_channel);
-//                 std::fflush(stdout);
-//                 // We define our work item
-//                 auto workItem = [&histograms, &randoms, SigmaChannel, &CommonMode, OffsetChannel, N_events, channels, threshold, s_channel](UInt_t workerID) {
-//                     TH1I& histo  = histograms.at(workerID);
-//                     histo.Reset();
-//                     TRandom3& random = randoms.at(workerID);
-//                     u_int counter=0;
-//                     for(u_int indey = 0; indey  < N_events; indey++){
-//                         counter=0;
-//                         double cm = random.Gaus(0,s_channel);
-//                         for(u_int index = 0; index  < channels; index++)
-//                         {
-//                             CommonMode.at(index)=cm;
-//                         }
-//                         for(u_int index = 0; index  < channels; index++)
-//                         {
-//                             if(random.Gaus(0,SigmaChannel.at(index))+OffsetChannel.at(index)+CommonMode.at(index)>threshold)
-//                             {
-//                                 counter++;
-//                                 //                       bits->SetBitNumber(j);
-//                             }
-//                             //                                                       histo.Fill(counter);
-//                             
-//                         };
-//                         histo.Fill(counter);
-//                     }
-//                 };
-//                 // Spawn workers
-//                 // Fill the "pool" with workers
-//                 // Create the collection which will hold the threads, our "pool"
-//                 std::vector<std::thread> workers;
-//                 for (auto workerID : workerIDs) {
-//                     workers.emplace_back(workItem, workerID);
-//                 }
-//                 //                   joind 
-//                 for (auto&& worker : workers) worker.join();
-//                 NumberOfHits->Reset();
-//                 std::for_each(std::begin(histograms), std::end(histograms),
-//                               [&NumberOfHits,allcounter](const TH1I & h) {
-//                                   NumberOfHits->Add(&h);
-//                                   //                                                       h.Print("base");
-//                                   //                                                       h.Write(Form("allcountericd_%u",allcounter));
-//                               });
-//                 allcounter++;
-//                 numberofhits_arr = (NumberOfHits->GetArray());
-//                 //                           std::copy(std::begin(varray),std::end(varray),std::begin(numberofhits_arr));
-//                 //                           NumberOfHits->Write(Form("allcounter_%u",allcounter));
-//                 //                           NumberOfHits->SetDirectory(0);
-//                 tree->Fill();
-//                 // And reduce
-//                 
-//                 //                                                   tree->Fill();
-//             }
-//             //                       }
-//         }
-//     }
-//     
-//     tree->Write("tree");
-//     file->Write();
-    file->Close();
-    return 0;
-}
