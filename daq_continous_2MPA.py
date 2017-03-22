@@ -111,6 +111,11 @@ default =       10,
 dest    =       'voltage',
 help    =       'voltage')
 
+parser.add_argument('--delay',  type=int, action='store',
+default =       0,
+dest    =       'delay',
+help    =       'shutter delay')
+
 
 args1 = parser.parse_args()
 from ROOT import TGraph, TCanvas, TTree, TFile, TBranch
@@ -218,8 +223,10 @@ class daq_continous_2MPA:
         for i in range(0,self._number_mpa_light):
             self._Keys.append("noprocessing_mpa_"+str(i))
         for key in self._Keys:
-            if "COND" in key:
-                self._Values.append(array('L',[0]))
+            if "COND_THRESHOLD" in key:
+                self._Values.append(array('H',[0]))
+            if "COND" in key and not "COND_THRESHOLD" in key:
+                self._Values.append(array('f',[0]))
             if "TRIG_COUNTS" in key:
                 self._Values.append(array('L',[0]))
             if "TRIG_OFFSET" in key:
@@ -235,12 +242,14 @@ class daq_continous_2MPA:
         tfile.SetCompressionLevel(1)
         ttree = TTree("Tree","Tree")
 
-        counterFormat = "pixel[48]/s"
+        counterFormat = "header[1]/i:pixel[48]/s"
         noProcessingFormat = "pixels[96]/l:bunchCrossingId[96]/s:header[96]/b:numEvents/b:corrupt/b"
 
         for key in self._Result_Dict:
-            if "COND" in key[0]:
-                ttree.Branch(key[0],key[1],key[0]+"[1]/i")
+            if "COND_THRESHOLD" in key[0]:
+                ttree.Branch(key[0],key[1],key[0]+"[1]/s")
+            if "COND" in key and not "COND_THRESHOLD" in key:
+                ttree.Branch(key[0],key[1],key[0]+"[1]/F")
             if "TRIG_COUNTS" in key[0]:
                 ttree.Branch(key[0],key[1],key[0]+"[1]/i")
             if "TRIG_OFFSET" in key[0]:
@@ -305,7 +314,8 @@ class daq_continous_2MPA:
 	# happen before starting the sequencer.
 	self._glib.getNode("Configuration").getNode("mode").write(NO_MPA - 1)
 	conf[0]._spi_wait()  # includes dispatch
-	
+        if self._args.delay:
+	    self._glib.getNode("Control").getNode('shutter_delay').write(self._args.delay)	
 	if self._args.external_clock:
 	    self._glib.getNode("Control").getNode('testbeam_clock').write(0x1)
 	else:
@@ -314,9 +324,9 @@ class daq_continous_2MPA:
 	self._glib.dispatch()
 	
 	# shutterDur = 0xFFFFFFFF #0xFFFFFFFF is maximum, in clock cycles
-	shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
+	# shutterDur = 0xFFFFFF  # 0xFFFFFFFF is maximum, in clock cycles
 	# Start sequencer in continous daq mode. Already contains the 'write'
-	mapsaClasses.daq().Sequencer_init(0x1, shutterDur, mem=1)
+	mapsaClasses.daq().Sequencer_init(0x1, self._args.shutterdur, mem=1)
 	
 	
 	print """Command Line Configuration
@@ -343,54 +353,64 @@ class daq_continous_2MPA:
 
 
     def _acquire(self,numTriggers, stopDelay=2):
-        ibuffer = 0
-        shutterCounter = 0
+        # ibuffer = 0
+        readoutCounter = 0
         frequency = float("NaN")
         while True:
-            freeBuffers = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+            freeBuffers  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+            # buffers_index = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_index').read()
             self._glib.dispatch()
             # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
             # avoids this.
-            if freeBuffers < 3:
-                if shutterCounter % 2000 == 0:
+            # time.sleep(.1)
+            # print "free Buffers", freeBuffers, "buffers_index", buffers_index
+            if freeBuffers ==0:
+                # print "free Buffers Readout 4 Buffers!", freeBuffers
+                if readoutCounter % 2000 == 0:
                     startTime = time.time()
-                    shutterTimeStart = shutterCounter
-                if shutterCounter % 100 == 0 and (shutterCounter - shutterTimeStart) >= 0.1:
-                    frequency = (shutterCounter - shutterTimeStart) / \
+                    shutterTimeStart = readoutCounter
+                if readoutCounter % 100 == 0 and readoutCounter % 2000 !=0:
+                    frequency = (readoutCounter - shutterTimeStart) / \
                         (time.time() - startTime)
                 MAPSACounter = []
                 MAPSAMemory = []
                 # for iMPA, nMPA in enumerate(self._assembly):
-                for iMPA, nMPA in enumerate([2,5]):
-                    counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
-                        "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
-                    memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
-                        "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
-                    MAPSACounter.append(counterData)
-                    MAPSAMemory.append(memoryData)
-		self._glib.dispatch()
-                ibuffer = (ibuffer + 1) % 4
-                shutterCounter += 1
-                yield shutterCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
-    
+                # print "free Buffers", freeBuffers, "readoutCounter", readoutCounter
+                for ibuffer in range(0,4):
+                    for iMPA, nMPA in enumerate([2,5]):
+                        # print "read ibuffer ",(ibuffer+1), "iMPA", iMPA, "nMPA", nMPA
+                        counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
+                            "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
+                        memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
+                            "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
+                        MAPSACounter.append(counterData)
+                        MAPSAMemory.append(memoryData)
+                self._glib.dispatch()                    
+                # print "Readout", readoutCounter
+                # for i in range(0,len(MAPSACounter)):
+                #     print str(MAPSACounter[i])
+                # for i in range(0,len(MAPSAMemory)):
+                #     print str(MAPSAMemory[i])
+                readoutCounter += 1
+                yield readoutCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
                 # Continuous operation in bash loop
-                if shutterCounter == numTriggers:
+                if readoutCounter == math.ceil(numTriggers/4):
                     endTimeStamp = time.time()
                     break
                 # Required for automation! Do not stop DAQ until at least
                 # 2 seconds after reaching the num trigger limit
-                if shutterCounter > numTriggers:
-                    if time.time() - endTimeStamp > stopDelay:
-                        break
+                # if readoutCounter > math.ceil(numTriggers/4):
+                #     if time.time() - endTimeStamp > stopDelay:
+                #         break
     def recordPlaintext(self):
         counterArray = []
         memoryArray = []
         try:
-            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+            for readout_counter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                if shutter%100==0:
-                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if readout_counter%100==0:
+                    print "Event counter: %s Free buffers: %s Frequency: %s " % (readout_counter*4, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
@@ -399,8 +419,8 @@ class daq_continous_2MPA:
                 self._args.output_dir, 'run%s_memory.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
             counterFile = open(os.path.join(
                 self._args.output_dir, 'run%s_counter.txt' % ('{0:04d}'.format(self._runNumber))), 'w')
-            for i, shutter in enumerate(counterArray):
-                for j, mpa in enumerate(shutter):
+            for i, readout in enumerate(counterArray):
+                for j, mpa in enumerate(readout):
                     counterFile.write(str(mpa.value()) + "\n")
                     memoryFile.write(str(memoryArray[i][j].value()) + "\n")
             counterFile.close()
@@ -418,26 +438,25 @@ class daq_continous_2MPA:
         counterArray = []
         memoryArray = []
         try:
-            for shutter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
+            for readout_counter, counter, memory, freeBuffers, frequency in self._acquire(self._args.num_triggers):
                 counterArray.append(counter)
                 memoryArray.append(memory)
-                if shutter%100==0:
-                    print "Shutter counter: %s Free buffers: %s Frequency: %s " % (shutter, freeBuffers, frequency)
+                if readout_counter%100==0:
+                    print "Event counter: %s Free buffers: %s Frequency: %s " % (readout_counter*4, freeBuffers, frequency)
         except KeyboardInterrupt:
             pass
         if len(counterArray):
             print "End of Run %s write raw file" % self._runNumber
             memoryFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_memory.txt', 'w')
             counterFile = open(self._datapath+'/{:09d}'.format(self._runNumber)+'_counter.txt', 'w')
-            for i, shutter in enumerate(counterArray):
-                for j, mpa in enumerate(shutter):
+            for i, readout in enumerate(counterArray):
+                for j, mpa in enumerate(readout):
                     counterFile.write(str(mpa.value()) + "\n")
                     memoryFile.write(str(memoryArray[i][j].value()) + "\n")
             counterFile.close()
             memoryFile.close()
             print "Fill the tree"
             try:
-                totalEvents = 0
                 #"COND_NO_MPA_LIGHT"        ,
                 self._Values[0][0]=self._number_mpa_light                
                 #"COND_SPILL"               ,
@@ -447,15 +466,15 @@ class daq_continous_2MPA:
                 #"COND_TIMESTAMP"           ,
                 self._Values[3][0]=0
                 #"COND_ANGLE"               ,
-                self._Values[4][0]=self._args.angle
+                self._Values[4][0]=(float)(self._args.angle)
                 #"COND_X_POS"               ,
-                self._Values[5][0]=self._args.x_pos
+                self._Values[5][0]=(float)(self._args.x_pos)
                 #"COND_Y_POS"               ,
-                self._Values[6][0]=self._args.y_pos
+                self._Values[6][0]=(float)(self._args.y_pos)
                 #"COND_Z_POS"               ,
-                self._Values[7][0]=self._args.z_pos
+                self._Values[7][0]=(float)(self._args.z_pos)
                 #"COND_VOLTAGE"             ,
-                self._Values[8][0]=self._args.voltage
+                self._Values[8][0]=(float)(self._args.voltage)
                 #"TRIG_COUNTS_SHUTTER"      ,
                 self._Values[9][0]=0
                 #"TRIG_COUNTS_TOTAL_SHUTTER",
@@ -473,50 +492,58 @@ class daq_continous_2MPA:
                     self._Values[self._number_of_cond_vars+self._number_mpa_light+i].bunchCrossingId = (c_ushort*96)(0)
                     self._Values[self._number_of_cond_vars+self._number_mpa_light+i].header = (c_ubyte*96)(0)
                     self._Values[self._number_of_cond_vars+self._number_mpa_light+i].corrupt = c_ubyte(0)
-                for event in range(len(counterArray)):
-                    for j in range(self._number_mpa_light):
-                        #print counterArray[event][j], memoryArray[event][j]
-                        for k, val in enumerate(itertools.islice(counterArray[event][j], 1, len(counterArray[event][j]))):
-                            self._Values[self._number_of_cond_vars+j].pixels[k*2 + 0] = val & 0x7FFF # left
-                            self._Values[self._number_of_cond_vars+j].pixels[k*2 + 1] = (val >> 16) & 0x7FFF # right
-                        #print self._Values[self._number_of_cond_vars+j].pixels[:]
-                        memory_ints = (c_uint*216)(*memoryArray[event][j])
-                        memory_bytes = cast(memory_ints, POINTER(c_ubyte))
-                        # iterate over memory in multipletts of 9 bytes (one 72 bit event)
-                        evtIdx = 0
-                        numEvents = 0
-                        for evtIdx in reversed(xrange(0, 96)):
-                            evtData = tuple(
-                                itertools.islice(memory_bytes,
-                                                 evtIdx*9, evtIdx*9 + 9))
-                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] = evtData[8]
-                            if self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] == 0x00:
-                                break
-                            elif self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] != 0xFF:
-                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].corrupt = c_ubyte(evtIdx + 1)
-                                break
-                            numEvents += 1
-                            # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
-                            pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
-                                           (evtData[3] << 24) | (evtData[2] << 16) |
-                                           (evtData[1] << 8) | evtData[0])
-                            bxid = ((evtData[7] << 8) | evtData[6])
-                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].bunchCrossingId[95-evtIdx] = bxid
-                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].pixelMatrix[95-evtIdx] = pixelMatrix
-                            totalEvents += numEvents
-                            self._Values[self._number_of_cond_vars+self._number_mpa_light+j].numEvents = c_ubyte(numEvents)
-                    self._tree.Fill()
-                    # Spinner
-                    if event%100==0:
-                        progress[int(len(progress)*float(event)/float(self._args.num_triggers)) % len(progress)] = "#"
-                        sys.stdout.write("\r\x1b[K [{1}] Event={0}  #events={4}  [{2}] {3:.0f}%".format(
-                            event,
-                            spinner[event % len(spinner)],
-                            "".join(progress),
-                            float(event) / float(self._args.num_triggers) * 100,
-                            event
-                            ))
-                        sys.stdout.flush()
+                for readout in range(len(counterArray)):
+                    # Loop over chunks of 4 (buffers readout)
+                    for l in range (0,4):
+                        # Loop over all MPA-light
+                        # Fill the counters
+                        for k, val in enumerate(itertools.islice(counterArray[readout],(l*self._number_mpa_light),((l+1)*self._number_mpa_light))):
+                            # Loop over all pixels 
+                            self._Values[self._number_of_cond_vars+k].header=c_uint(0)
+                            for k1, val1 in enumerate (itertools.islice(val,1,None)):
+                                self._Values[self._number_of_cond_vars+k].pixels[k1*2 + 0] = val1 & 0x7FFF # left
+                                self._Values[self._number_of_cond_vars+k].pixels[k1*2 + 1] = (val1 >> 16) & 0x7FFF # right
+                            # print self._Values[self._number_of_cond_vars+k].pixels[:]
+                        # Loop over all MPA-light
+                        # Fill the memory structs
+                        for j, val in enumerate(itertools.islice(memoryArray[readout],(l*self._number_mpa_light),((l+1)*self._number_mpa_light))):
+                            memory_ints = (c_uint*216)(*val)
+                            memory_bytes = cast(memory_ints, POINTER(c_ubyte))
+                            # iterate over memory in multipletts of 9 bytes (one 72 bit readout)
+                            evtIdx = 0
+                            numEvents = 0
+                            for evtIdx in reversed(xrange(0, 96)):
+                                evtData = tuple(
+                                    itertools.islice(memory_bytes,
+                                                     evtIdx*9, evtIdx*9 + 9))
+                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] = evtData[8]
+                                if self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] == 0x00:
+                                    break
+                                elif self._Values[self._number_of_cond_vars+self._number_mpa_light+j].header[95-evtIdx] != 0xFF:
+                                    self._Values[self._number_of_cond_vars+self._number_mpa_light+j].corrupt = c_ubyte(evtIdx + 1)
+                                    break
+                                numEvents += 1
+                                # bytes 1-8 as 64 bit integer, 1&2 are buch crossing id
+                                pixelMatrix = ((evtData[5] << 40) | (evtData[4] << 32) |
+                                               (evtData[3] << 24) | (evtData[2] << 16) |
+                                               (evtData[1] << 8) | evtData[0])
+                                bxid = ((evtData[7] << 8) | evtData[6])
+                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].bunchCrossingId[95-evtIdx] = bxid
+                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].pixelMatrix[95-evtIdx] = pixelMatrix
+                                self._Values[self._number_of_cond_vars+self._number_mpa_light+j].numEvents = c_ubyte(numEvents)
+                            # print self._Values[self._number_of_cond_vars+self._number_mpa_light+j].pixelMatrix[:]
+                        self._tree.Fill()
+                        # Spinner
+                        if readout%25==0:
+                            progress[int(len(progress)*float(readout*4)/float(self._args.num_triggers)) % len(progress)] = "#"
+                            sys.stdout.write("\r\x1b[K [{1}] Event={0}  #events={4}  [{2}] {3:.0f}%".format(
+                                readout*4,
+                                spinner[readout*4 % len(spinner)],
+                                "".join(progress),
+                                float(readout*4) / float(self._args.num_triggers) * 100,
+                                readout*4
+                                ))
+                            sys.stdout.flush()
 
                 print "All files saved"
             except KeyboardInterrupt:
