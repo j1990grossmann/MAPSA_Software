@@ -195,7 +195,7 @@ void Producer::SetFile(const std::string& root_file_f)
 {
     
     TFile *file = new TFile(root_file_f.c_str(),"READ");
-    if(file->IsZombie()){
+    if(file->TObject::IsZombie()){
         std::cout<<"Error opening file "<<root_file_f<<std::endl;
         exit(1);
     }
@@ -511,11 +511,11 @@ void Producer::DeleteHists()
         //             std::cout<<j->GetName()<<j->GetTitle()<<j->GetXaxis()->GetTitle()<<std::endl;
     }
 }
-void Producer::RecreateRootFile_1(const std::string& prod_root_file_f)
+void Producer::RecreateRootFile(const std::string& prod_root_file_f)
 {
-    prod_root_file =new TFile("test_1.root","RECREATE");
-
+        this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
+//     prod_root_file =new TFile("test_1.root","RECREATE");
 }
-//     prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
+
 
 }

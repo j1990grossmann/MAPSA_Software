@@ -139,15 +139,16 @@ int main(int argc, char **argv) {
     }
     t.Print_GeometryMaskMPA();
     t.Print_PixelMaskMPA();
-    
     filenames=get_list_of_files(run_file,path);
     std::cout<<"Files for processing:\n";
     for(auto it(filenames.begin()); it != filenames.end(); ++it)
 //     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
     {
-        std::cout<<*it<<"\n";
+//         std::cout<<*it<<"\n";
+        t.SetFile(*it);
 //         t.SetFile(*it);
-//         t.SaveResetHists(fs::path(*it).stem().c_str());
+//         t.SetFile(*it);
+        t.SaveResetHists(fs::path(*it).stem().c_str());
     }
     std::flush(std::cout);
 

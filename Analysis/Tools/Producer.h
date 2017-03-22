@@ -181,7 +181,7 @@ namespace PRODUCER{
         MaPSAMask(ASSEMBLY,pixelMask),
         no_MPA_light(0)
         {
-            //             RecreateRootFile_1(prod_root_file_f);
+         RecreateRootFile(prod_root_file_f);
         }
         ~Producer()
         {
@@ -205,7 +205,6 @@ namespace PRODUCER{
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
         void test_a_file();
-        void RecreateRootFile_1(const std::string& prod_root_file_f);
         
     private:
         
@@ -242,6 +241,7 @@ namespace PRODUCER{
         void FillCounterHists_Run();
         void FillMemoryHists_Run();
         void DeleteHists();
+        void RecreateRootFile(const std::string& prod_root_file_f);
         
     protected:
     };
