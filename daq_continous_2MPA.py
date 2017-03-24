@@ -356,16 +356,17 @@ class daq_continous_2MPA:
         # ibuffer = 0
         readoutCounter = 0
         frequency = float("NaN")
+        exceptioncounter=0
         while True:
             freeBuffers  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
-            # buffers_index = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_index').read()
+            buffers_index = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_index').read()
             self._glib.dispatch()
-            # When set to 4 this produces duplicate entries, 3 (= 2 full buffers)
-            # avoids this.
-            # time.sleep(.1)
+            # time.sleep(.5)
             # print "free Buffers", freeBuffers, "buffers_index", buffers_index
             if freeBuffers ==0:
-                # print "free Buffers Readout 4 Buffers!", freeBuffers
+                # if buffers_index !=3:
+                    # print "free Buffers Readout 4 Buffers! freeBuffers", freeBuffers,"Buffers_index", buffers_index,"readout Counter", readoutCounter
+                # time.sleep(.5)
                 if readoutCounter % 2000 == 0:
                     startTime = time.time()
                     shutterTimeStart = readoutCounter
@@ -374,7 +375,6 @@ class daq_continous_2MPA:
                         (time.time() - startTime)
                 MAPSACounter = []
                 MAPSAMemory = []
-                # for iMPA, nMPA in enumerate(self._assembly):
                 # print "free Buffers", freeBuffers, "readoutCounter", readoutCounter
                 for ibuffer in range(0,4):
                     for iMPA, nMPA in enumerate([2,5]):
@@ -385,7 +385,25 @@ class daq_continous_2MPA:
                             "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
                         MAPSACounter.append(counterData)
                         MAPSAMemory.append(memoryData)
-                self._glib.dispatch()                    
+                freeBuffers1  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+                buffers_index1  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_index').read()
+                self._glib.dispatch()
+                while freeBuffers1<2:
+                    exceptioncounter+=1
+                    # print "freebuffers1  ", freeBuffers1,  " buffers_index1 ", buffers_index1
+                    # print "readoutCounter", readoutCounter," buffers_index  ", buffers_index
+                    print "exception _no",  exceptioncounter
+                    # print "free Buffers before", freeBuffers, 
+                    for ibuffer in range(0,4-freeBuffers1):
+                        for iMPA, nMPA in enumerate([2,5]):
+                            counterData = self._glib.getNode("Readout").getNode("Counter").getNode(
+                                "MPA" + str(iMPA + 1)).getNode("buffer_" + str(ibuffer+1)).readBlock(25)
+                            memoryData = self._glib.getNode("Readout").getNode("Memory").getNode(
+                                "MPA" + str(nMPA)).getNode("buffer_" + str(ibuffer+1)).readBlock(216)
+                            MAPSACounter.append(counterData)
+                            MAPSAMemory.append(memoryData)
+                    freeBuffers1  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
+                    self._glib.dispatch()
                 # print "Readout", readoutCounter
                 # for i in range(0,len(MAPSACounter)):
                 #     print str(MAPSACounter[i])
@@ -395,6 +413,7 @@ class daq_continous_2MPA:
                 yield readoutCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
                 # Continuous operation in bash loop
                 if readoutCounter == math.ceil(numTriggers/4):
+                    print "total no of exception",  exceptioncounter                    
                     endTimeStamp = time.time()
                     break
                 # Required for automation! Do not stop DAQ until at least
@@ -493,8 +512,16 @@ class daq_continous_2MPA:
                     self._Values[self._number_of_cond_vars+self._number_mpa_light+i].header = (c_ubyte*96)(0)
                     self._Values[self._number_of_cond_vars+self._number_mpa_light+i].corrupt = c_ubyte(0)
                 for readout in range(len(counterArray)):
-                    # Loop over chunks of 4 (buffers readout)
-                    for l in range (0,4):
+                    # Loop over chunks of usually 4 (buffers readout)
+                    if readout==0:
+                        print "standard length", len(counterArray[readout])/self._number_mpa_light
+                    if len(counterArray[readout])/self._number_mpa_light !=4:
+                        print "Possible overflow at", len(counterArray[readout])/self._number_mpa_light
+                    for l in range (0,len(counterArray[readout])/self._number_mpa_light):
+                        if len(counterArray[readout])/self._number_mpa_light !=4:                        
+                            self._Values[9][0]=len(counterArray[readout])/self._number_mpa_light
+                        else:
+                            self._Values[9][0]=0
                         # Loop over all MPA-light
                         # Fill the counters
                         for k, val in enumerate(itertools.islice(counterArray[readout],(l*self._number_mpa_light),((l+1)*self._number_mpa_light))):
