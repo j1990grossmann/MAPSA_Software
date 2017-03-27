@@ -191,7 +191,7 @@ Strip_Coordinate Producer::MapGlobal(const Strip_Coordinate& LocCoord_f, int MPA
         exit(1);
     }
 }
-void Producer::SetFile(const std::string& root_file_f)
+void Producer::SetFile(const std::string& root_file_f, Counter& counter)
 {
     
     TFile *file = new TFile(root_file_f.c_str(),"READ");
@@ -244,7 +244,7 @@ void Producer::SetFile(const std::string& root_file_f)
     TTreeReaderArray<UShort_t> t_counter1_pixel (reader, ("counter_mpa_1.pixel"));
     TTreeReaderArray<UInt_t>   t_counter1_header(reader, ("counter_mpa_1.header"));
  
-//     TTreeReaderArray<ULong_t>   t_0_MemoryNoProcessing_pixelMatrix(reader,     ("noprocessing_mpa_0.pixels"));
+//     TTreeReaderArray<unsigned long long>   t_0_MemoryNoProcessing_pixelMatrix(reader,     ("noprocessing_mpa_0.pixels"));
 //     TTreeReaderArray<UShort_t>  t_0_MemoryNoProcessing_bunchCrossingId(reader, ("noprocessing_mpa_0.bunchCrossingId"));
 //     TTreeReaderArray<UChar_t>   t_0_MemoryNoProcessing_header(reader,          ("noprocessing_mpa_0.header"));
 //     TTreeReaderValue<UChar_t>   t_0_MemoryNoProcessing_numEvents(reader,       ("noprocessing_mpa_0.numEvents"));
@@ -276,6 +276,20 @@ void Producer::SetFile(const std::string& root_file_f)
     unsigned int counter_hits_per_event_0=0;
     unsigned int counter_hits_per_event_1=0;
     while (reader.Next()) {
+        if(event==0)
+        {
+//             counter.angle      = t_COND_ANGLE;
+//             counter.no_events  = ;
+            counter.no_shutter = reader.GetEntries(kTRUE);
+//             counter.pos_x      = t_COND_X_POS;
+//             counter.pos_y      = t_COND_Y_POS;
+//             counter.pos_z      = t_COND_Z_POS;
+            counter.threshold  = (unsigned int)*t_COND_THRESHOLD.Get();
+            std::cout<<"Threshold"<<counter.threshold<<std::endl;
+//             counter.timestamp  =;
+//             counter.voltage = t_COND_VOLTAGE;
+        }
+            
 //         std::cout<<"event"<<event<<std::endl;
         //        t_counter1.GetLeaf();
         //        std::cout<<*t_COND_THRESHOLD.Get()<<std::endl;
@@ -286,7 +300,8 @@ void Producer::SetFile(const std::string& root_file_f)
         counter_hits_per_event_1=0;
         for(auto i=0; i<CHANNELS; i++){
             //            std::cout<<t_counter1.Get()->pixel[i]<<" ";
-            //            std::cout<<t_0_MemoryNoProcessing_pixelMatrix.At(i)<<" ";
+//             if(event<100)
+//                 std::cout<<t_0_MemoryNoProcessing_pixelMatrix.At(i)<<"\t";
             if(t_counter0_pixel.At(i))
             {
                 counter_hits_per_event+=t_counter0_pixel.At(i);
@@ -315,6 +330,7 @@ void Producer::SetFile(const std::string& root_file_f)
                 hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)t_counter0_pixel.At(i));
             }
         }
+//         std::cout<<std::endl;
         hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
         hists_1d[1][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_1);
         hists_1d[2][k_counter_Hits_per_Event]->Fill(counter_hits_per_event);
@@ -337,6 +353,18 @@ void Producer::SetFile(const std::string& root_file_f)
 //     tree->Print();/*
 //     file->ls();*/
 #endif
+// counter.mean_centroid_cluster =hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetMean(0);
+// counter.mean_cluster          =hists_1d[2][Mapsa_TH1::k_counter_Cluster_per_Event]->GetMean(0);
+// counter.mean_clustersize      =hists_1d[2][]->GetMean(0);
+counter.mean_hits             =hists_1d[2][Mapsa_TH1::k_counter_Hits_per_Event]->GetMean(0);
+// counter.stdev_centroid_cluster=hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetStdDev(0);
+// counter.stdev_cluster         =hists_1d[2][Mapsa_TH1::k_counter_Cluster_per_Event]->GetStdDev(0);
+// counter.stdev_clustersize     =hists_1d[2][]->GetStdDev(0);
+counter.stdev_hits            =hists_1d[2][Mapsa_TH1::k_counter_Hits_per_Event]->GetStdDev(0);
+for(auto i=0; i<(CHANNELS*ASSEMBLY+2); i++){
+    counter.pixel_counter[i]=hists_1d[2][Mapsa_TH1::k_counter_Hits_vs_Channel]->GetBinContent(i);
+//     counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
+}
     file->Close();
 }
 Strip_Coordinate Producer::MapGeometry ( int MPA_no )
@@ -487,7 +515,9 @@ void Producer::SaveResetHists(const std::string& in_file_f)
             j.Write(j.GetTitle());
             j.Set(0);
         }
-    }        
+    }
+//     prod_root_file->Close();
+//     return 0;
 }
 void Producer::DeleteHists()
 {
@@ -513,7 +543,7 @@ void Producer::DeleteHists()
 }
 void Producer::RecreateRootFile(const std::string& prod_root_file_f)
 {
-        this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
+    this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
 //     prod_root_file =new TFile("test_1.root","RECREATE");
 }
 

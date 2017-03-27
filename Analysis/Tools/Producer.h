@@ -72,7 +72,7 @@
 // #include "TTreeReaderValueBase.h"
 
 #include "dataformat_tree.h"
-
+#include "Scan.h"
 
 namespace PRODUCER{
     //     struct RippleCounterBranch_t{
@@ -181,6 +181,7 @@ namespace PRODUCER{
         MaPSAMask(ASSEMBLY,pixelMask),
         no_MPA_light(0)
         {
+         ROOT::EnableThreadSafety();
          RecreateRootFile(prod_root_file_f);
         }
         ~Producer()
@@ -196,7 +197,7 @@ namespace PRODUCER{
         void Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f);
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
-        void SetFile(const std::string& root_file_f);
+        void SetFile(const std::string& root_file_f, Counter& counter);
         void SaveResetHists(const std::string& in_file_f);
         
         void ProduceGlobalHit();
@@ -204,7 +205,6 @@ namespace PRODUCER{
         void ProduceCluster();
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
-        void test_a_file();
         
     private:
         
