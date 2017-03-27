@@ -10,8 +10,19 @@ ROOT_GENERATE_DICTIONARY(dataformat_treelib_Dict dataformat_tree.h LINKDEF dataf
 add_library(dataformat_tree SHARED dataformat_tree.cpp dataformat_treelib_Dict.cxx)
 target_link_libraries(dataformat_tree ${ROOT_LIBRARIES})
 # target_link_libraries(roottest my ${ROOT_LIBRARIES})
+add_library (Scan Scan.cpp)
+target_include_directories (Scan PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library (Producer Producer.cpp)
 target_include_directories (Producer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+set(lib_thread_pool
+    ThreadPool.cpp
+)
+
+add_library(ThreadPool SHARED ${lib_thread_pool})
+# add_library (ThreadPool SHARED ThreadPool.h)
+target_include_directories (ThreadPool PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 # message("TEST" ${ROOT_USE_FILE})
