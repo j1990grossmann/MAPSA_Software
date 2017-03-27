@@ -357,6 +357,7 @@ class daq_continous_2MPA:
         readoutCounter = 0
         frequency = float("NaN")
         exceptioncounter=0
+        additional_trigger=0
         while True:
             freeBuffers  = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_num').read()
             buffers_index = self._glib.getNode("Control").getNode('Sequencer').getNode('buffers_index').read()
@@ -390,6 +391,8 @@ class daq_continous_2MPA:
                 self._glib.dispatch()
                 while freeBuffers1<2:
                     exceptioncounter+=1
+                    additional_trigger+=(4-freeBuffers1)
+
                     # print "freebuffers1  ", freeBuffers1,  " buffers_index1 ", buffers_index1
                     # print "readoutCounter", readoutCounter," buffers_index  ", buffers_index
                     print "exception _no",  exceptioncounter
@@ -413,7 +416,7 @@ class daq_continous_2MPA:
                 yield readoutCounter, MAPSACounter, MAPSAMemory, freeBuffers, frequency
                 # Continuous operation in bash loop
                 if readoutCounter == math.ceil(numTriggers/4):
-                    print "total no of exception",  exceptioncounter                    
+                    print "total no of exception",  exceptioncounter, "no triggers acc ", (additional_trigger+numTriggers)                    
                     endTimeStamp = time.time()
                     break
                 # Required for automation! Do not stop DAQ until at least
