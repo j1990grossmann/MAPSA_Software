@@ -16,6 +16,7 @@ static constexpr int COLUMNS=16;
 static constexpr int ROWS=3;
 static constexpr int ASSEMBLY=2;
 static constexpr int TIMESTAMP_RANGE=65536;
+static constexpr int THRESHOLD_RANGE=256;
 // 
 struct MemoryNoProcessingBranch_t {
    ULong64_t       pixelMatrix[MEMORY];

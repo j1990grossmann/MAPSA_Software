@@ -191,9 +191,9 @@ Strip_Coordinate Producer::MapGlobal(const Strip_Coordinate& LocCoord_f, int MPA
         exit(1);
     }
 }
-void Producer::SetFile(const std::string& root_file_f)
+void Producer::SetFile(const std::string& root_file_f, Counter& counter)
 {
-    
+
     TFile *file = new TFile(root_file_f.c_str(),"READ");
     if(file->TObject::IsZombie()){
         std::cout<<"Error opening file "<<root_file_f<<std::endl;
@@ -201,118 +201,104 @@ void Producer::SetFile(const std::string& root_file_f)
     }
     else
         std::cout<<"Process file\t"<<root_file_f<<std::endl;
-    
-    TTree *tree = (TTree*)file->Get("Tree");
-    TTreeReader reader(tree);
-// Condition Data
-    
-//     TTreeReaderValue<unsigned long long> t_COND_NO_MPA_LIGHT(reader, "COND_NO_MPA_LIGHT");
-//     TTreeReaderValue<unsigned long long> t_COND_SPILL       (reader, "COND_SPILL");
-    TTreeReaderValue<unsigned short> t_COND_THRESHOLD   (reader, "COND_THRESHOLD");
-//     TTreeReaderValue<unsigned long long> t_COND_TIMESTAMP   (reader, "COND_TIMESTAMP");
-//     TTreeReaderValue<unsigned long long> t_COND_ANGLE       (reader, "COND_ANGLE");
-//     TTreeReaderValue<unsigned long long> t_COND_X_POS       (reader, "COND_X_POS");
-//     TTreeReaderValue<unsigned long long> t_COND_Y_POS       (reader, "COND_Y_POS");
-//     TTreeReaderValue<unsigned long long> t_COND_Z_POS       (reader, "COND_Z_POS");
-//     TTreeReaderValue<unsigned long long> t_COND_VOLTAGE     (reader, "COND_VOLTAGE");
-    TTreeReaderValue<unsigned int> t_TRIG_COUNTS_SHUTTER      (reader, "TRIG_COUNTS_SHUTTER");
-    TTreeReaderValue<unsigned int> t_TRIG_COUNTS_TOTAL_SHUTTER(reader, "TRIG_COUNTS_TOTAL_SHUTTER");
-    TTreeReaderValue<unsigned int> t_TRIG_COUNTS_TOTAL        (reader, "TRIG_COUNTS_TOTAL");
-    TTreeReaderValue<unsigned int> t_TRIG_OFFSET_BEAM         (reader, "TRIG_OFFSET_BEAM");
-    TTreeReaderValue<unsigned int> t_TRIG_OFFSET_MPA          (reader, "TRIG_OFFSET_MPA");
-//     if (!CheckValue(t_COND_NO_MPA_LIGHT)) exit(1);
-//     if (!CheckValue(t_COND_SPILL)) exit(1);
-    if (!CheckValue(t_COND_THRESHOLD)) exit(1);
-//     if (!CheckValue(t_COND_TIMESTAMP)) exit(1);
-//     if (!CheckValue(t_COND_ANGLE)) exit(1);
-//     if (!CheckValue(t_COND_X_POS)) exit(1);
-//     if (!CheckValue(t_COND_Y_POS)) exit(1);
-//     if (!CheckValue(t_COND_Z_POS)) exit(1);
-//     if (!CheckValue(t_COND_VOLTAGE)) exit(1);
-    if (!CheckValue(t_TRIG_COUNTS_SHUTTER)) exit(1);
-    if (!CheckValue(t_TRIG_COUNTS_TOTAL_SHUTTER)) exit(1);
-    if (!CheckValue(t_TRIG_COUNTS_TOTAL)) exit(1);
-    if (!CheckValue(t_TRIG_OFFSET_BEAM)) exit(1);
-    if (!CheckValue(t_TRIG_OFFSET_MPA)) exit(1);
-// // MPA_DATA!
-//     std::vector<TTreeReaderValue<RippleCounterBranch_t>> MPA_counter;
-//     std::vector<TTreeReaderValue<MemoryNoProcessingBranch_t>> MPA_memory;
-    
-//     TTreeReaderValue<RippleCounterBranch_t> t_counter1(reader, ("counter_mpa_0"));
-    TTreeReaderArray<UShort_t> t_counter0_pixel (reader, ("counter_mpa_0.pixel"));
-    TTreeReaderArray<UInt_t>   t_counter0_header(reader, ("counter_mpa_0.header"));
-    TTreeReaderArray<UShort_t> t_counter1_pixel (reader, ("counter_mpa_1.pixel"));
-    TTreeReaderArray<UInt_t>   t_counter1_header(reader, ("counter_mpa_1.header"));
- 
-//     TTreeReaderArray<ULong_t>   t_0_MemoryNoProcessing_pixelMatrix(reader,     ("noprocessing_mpa_0.pixels"));
-//     TTreeReaderArray<UShort_t>  t_0_MemoryNoProcessing_bunchCrossingId(reader, ("noprocessing_mpa_0.bunchCrossingId"));
-//     TTreeReaderArray<UChar_t>   t_0_MemoryNoProcessing_header(reader,          ("noprocessing_mpa_0.header"));
-//     TTreeReaderValue<UChar_t>   t_0_MemoryNoProcessing_numEvents(reader,       ("noprocessing_mpa_0.numEvents"));
-//     TTreeReaderValue<UChar_t>   t_0_MemoryNoProcessing_corrupt(reader,         ("noprocessing_mpa_0.corrupt"));
-// 
-//     TTreeReaderArray<ULong64_t> t_1_MemoryNoProcessing_pixelMatrix(reader,     ("noprocessing_mpa_1.pixels"));
-//     TTreeReaderArray<UShort_t>  t_1_MemoryNoProcessing_bunchCrossingId(reader, ("noprocessing_mpa_1.bunchCrossingId"));
-//     TTreeReaderArray<UChar_t>   t_1_MemoryNoProcessing_header(reader,          ("noprocessing_mpa_1.header"));
-//     TTreeReaderValue<UChar_t>   t_1_MemoryNoProcessing_numEvents(reader,       ("noprocessing_mpa_1.numEvents"));
-//     TTreeReaderValue<UChar_t>   t_1_MemoryNoProcessing_corrupt(reader,         ("noprocessing_mpa_1.corrupt"));
 
+    TTree* const tree = static_cast<TTree* const>(file->TDirectoryFile::Get("Tree"));
+
+    MemoryNoProcessingBranch_t memory_arr[ASSEMBLY];
+    RippleCounterBranch_t ripplecounter_arr[ASSEMBLY];
+    for(int i=0; i<ASSEMBLY; i++)
+    {
+        auto tmp_mem    = MemoryNoProcessingBranch_t();
+        auto tmp_ripple = RippleCounterBranch_t();
+        memory_arr[i]=tmp_mem;
+        ripplecounter_arr[i]=tmp_ripple;
+    }
+    tree->SetBranchAddress("noprocessing_mpa_0",&memory_arr[0]);
+    tree->SetBranchAddress("noprocessing_mpa_1",&memory_arr[1]);
+    tree->SetBranchAddress("counter_mpa_0",&ripplecounter_arr[0]);
+    tree->SetBranchAddress("counter_mpa_1",&ripplecounter_arr[1]);
+
+    unsigned long long     t_COND_NO_MPA_LIGHT;
+    unsigned long long            t_COND_SPILL;
+    unsigned short            t_COND_THRESHOLD;
+    unsigned long long        t_COND_TIMESTAMP;
+    unsigned long long            t_COND_ANGLE;
+    unsigned long long            t_COND_X_POS;
+    unsigned long long            t_COND_Y_POS;
+    unsigned long long            t_COND_Z_POS;
+    unsigned long long          t_COND_VOLTAGE;
+    unsigned int         t_TRIG_COUNTS_SHUTTER;
+    unsigned int   t_TRIG_COUNTS_TOTAL_SHUTTER;
+    unsigned int           t_TRIG_COUNTS_TOTAL;
+    unsigned int            t_TRIG_OFFSET_BEAM;
+    unsigned int             t_TRIG_OFFSET_MPA;
     
-    //     TTreeReaderValue<RippleCounterBranch_t> t_counter2(reader, ("counter_mpa_1"));
-//     for(auto i=0; i<no_MPA_light;i++) {
-//         TTreeReaderValue<RippleCounterBranch_t> t_counter(reader, ("counter_mpa_"+std::to_string(i)).c_str());
-//         TTreeReaderValue<MemoryNoProcessingBranch_t> t_memory(reader, ("noprocessing_mpa_"+std::to_string(i)).c_str());
-//         MPA_counter.push_back(t_counter);
-//         MPA_memory.push_back(t_memory);
-//         if (!CheckValue(t_counter)) exit(1);
-//         if (!CheckValue(t_memory)) exit(1);
-//     }
+//     tree->SetBranchAddress("COND_NO_MPA_LIGHT",&t_COND_NO_MPA_LIGHT);
+//     tree->SetBranchAddress("COND_SPILL",&t_COND_SPILL);
+    tree->SetBranchAddress("COND_THRESHOLD",&t_COND_THRESHOLD);
+//     tree->SetBranchAddress("COND_TIMESTAMP",&t_COND_TIMESTAMP);
+//     tree->SetBranchAddress("COND_ANGLE",&t_COND_ANGLE);
+//     tree->SetBranchAddress("COND_X_POS",&t_COND_X_POS);
+//     tree->SetBranchAddress("COND_Y_POS",&t_COND_Y_POS);
+//     tree->SetBranchAddress("COND_Z_POS",&t_COND_Z_POS);
+//     tree->SetBranchAddress("COND_VOLTAGE",&t_COND_VOLTAGE);
+    tree->SetBranchAddress("TRIG_COUNTS_SHUTTER",&t_TRIG_COUNTS_SHUTTER);
+    tree->SetBranchAddress("TRIG_COUNTS_TOTAL_SHUTTER",&t_TRIG_COUNTS_TOTAL_SHUTTER);
+    tree->SetBranchAddress("TRIG_COUNTS_TOTAL",&t_TRIG_COUNTS_TOTAL);
+    tree->SetBranchAddress("TRIG_OFFSET_BEAM",&t_TRIG_OFFSET_BEAM);
+    tree->SetBranchAddress("TRIG_OFFSET_MPA",&t_TRIG_OFFSET_MPA);
 #ifndef DEBUG
 //     reader.GetTree()->Print();
 // auto tree1=reader.GetTree();
 
-    std::cout<<"Processing "<<reader.GetEntries(kTRUE)<<" Events"<<std::endl;
+//     std::cout<<"Processing "<<reader.GetEntries(kTRUE)<<" Events"<<std::endl;
     unsigned int event=0;
     unsigned int counter_hits_per_event=0;
     unsigned int counter_hits_per_event_0=0;
     unsigned int counter_hits_per_event_1=0;
-    while (reader.Next()) {
-//         std::cout<<"event"<<event<<std::endl;
-        //        t_counter1.GetLeaf();
-        //        std::cout<<*t_COND_THRESHOLD.Get()<<std::endl;
-        //        std::cout<<*t_TRIG_OFFSET_BEAM.Get()<<std::endl;
-        //        auto tmp = RippleCounterBranch_t(*MPA_counter.at(0).Get());
+    int nEntries = tree->GetEntries(); // Get the number of entries in this tree
+    for (int event = 0; event< nEntries; event++) {
+        tree->GetEntry(event);
+//     while (reader.Next()) {
+//         Conditions
+        if(event==0)
+        {
+//             counter.angle      = t_COND_ANGLE;
+//             counter.no_events  = ;
+            counter.no_shutter = tree->GetEntries();
+//             counter.pos_x      = t_COND_X_POS;
+//             counter.pos_y      = t_COND_Y_POS;
+//             counter.pos_z      = t_COND_Z_POS;
+            counter.threshold  = t_COND_THRESHOLD;
+            std::cout<<"Threshold"<<counter.threshold<<std::endl;
+//             counter.timestamp  =;
+//             counter.voltage = t_COND_VOLTAGE;
+        }
         counter_hits_per_event=0;
         counter_hits_per_event_0=0;
         counter_hits_per_event_1=0;
         for(auto i=0; i<CHANNELS; i++){
-            //            std::cout<<t_counter1.Get()->pixel[i]<<" ";
-            //            std::cout<<t_0_MemoryNoProcessing_pixelMatrix.At(i)<<" ";
-            if(t_counter0_pixel.At(i))
+            if(ripplecounter_arr[0].pixel[i])
             {
-                counter_hits_per_event+=t_counter0_pixel.At(i);
-                counter_hits_per_event_0+=t_counter0_pixel.At(i);
-                hists_1d[0][k_counter_Hits_vs_Channel]->Fill(i+1,(float)t_counter0_pixel.At(i));
-                hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)t_counter0_pixel.At(i));
+                counter_hits_per_event+=ripplecounter_arr[0].pixel[i];
+                counter_hits_per_event_0+=ripplecounter_arr[0].pixel[i];
+                hists_1d[0][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
+                hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
                 auto tmp = this->MapCounterLocal(i);
                 auto glob= this->MapGlobal(tmp,0,0);
-                hists_2d[0][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)t_counter0_pixel.At(i));
-                hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)t_counter0_pixel.At(i));
-//                 auto tmp=MapCounterLocal(i);
-//                 hists_2d[[0]
-//                 this->MapGlobal();
-//                 this->MapGeometry();
-//                 hists_2d[0][k_counter_Hits_vs_Channel_2d]->Fill(
+                hists_2d[0][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)ripplecounter_arr[0].pixel[i]);
+                hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)ripplecounter_arr[0].pixel[i]);
             }
-            if(t_counter1_pixel.At(i))
+            if(ripplecounter_arr[1].pixel[i])
             {
-                counter_hits_per_event+=t_counter1_pixel.At(i); 
-                counter_hits_per_event_1+=t_counter1_pixel.At(i);
-                hists_1d[1][k_counter_Hits_vs_Channel]->Fill(i+1,(float)t_counter1_pixel.At(i));
-                hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)t_counter1_pixel.At(i));
+                counter_hits_per_event+=ripplecounter_arr[1].pixel[i]; 
+                counter_hits_per_event_1+=ripplecounter_arr[1].pixel[i];
+                hists_1d[1][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[1].pixel[i]);
+                hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1+CHANNELS,(float)ripplecounter_arr[1].pixel[i]);
                 auto tmp = this->MapCounterLocal(i);
                 auto glob= this->MapGlobal(tmp,0,1);
-                hists_2d[1][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)t_counter0_pixel.At(i));
-                hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)t_counter0_pixel.At(i));
+                hists_2d[1][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)ripplecounter_arr[1].pixel[i]);
+                hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)ripplecounter_arr[1].pixel[i]);
             }
         }
         hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
@@ -321,22 +307,26 @@ void Producer::SetFile(const std::string& root_file_f)
         tgraphs[0][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_0);
         tgraphs[1][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_1);
         tgraphs[2][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event);
+        
+        this->FillMemoryHists(memory_arr[0],0);
+        this->FillMemoryHists(memory_arr[0],1);
         ++event;
 
-//         TGraph::SetPoint();
-        
-        //        std::cout<<std::endl;
-        
-       
-//        for(auto it(t_counter1.begin());it!=t_counter1.end();++it){
-//            std::cout<<it.fArray<<" ";
-//        }
-//            std::cout<<t_counter1<<" ";
-//        
-   } // TTree entry / event loop
-//     tree->Print();/*
-//     file->ls();*/
+   }
 #endif
+// counter.mean_centroid_cluster =hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetMean(0);
+// counter.mean_cluster          =hists_1d[2][Mapsa_TH1::k_counter_Cluster_per_Event]->GetMean(0);
+// counter.mean_clustersize      =hists_1d[2][]->GetMean(0);
+counter.mean_hits             =hists_1d[2][Mapsa_TH1::k_counter_Hits_per_Event]->GetMean(1);
+// counter.stdev_centroid_cluster=hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetStdDev(0);
+// counter.stdev_cluster         =hists_1d[2][Mapsa_TH1::k_counter_Cluster_per_Event]->GetStdDev(0);
+// counter.stdev_clustersize     =hists_1d[2][]->GetStdDev(0);
+counter.stdev_hits            =hists_1d[2][Mapsa_TH1::k_counter_Hits_per_Event]->GetStdDev(1);
+for(auto i=0; i<(CHANNELS*ASSEMBLY+2); i++){
+    counter.pixel_counter[i]=hists_1d[2][Mapsa_TH1::k_counter_Hits_vs_Channel]->GetBinContent(i);
+    counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
+//     counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
+}
     file->Close();
 }
 Strip_Coordinate Producer::MapGeometry ( int MPA_no )
@@ -375,28 +365,29 @@ void Producer::InitializeHists()
     tgraphs.resize((no_MPA_light+1));
     for(int i=0; i<(no_MPA_light+1); i++)
     {
-        tgraphs[i].resize(Mapsa_TGraph::TGraph_Cluster_vs_Event+1);
         hists_1d[i].resize(Mapsa_TH1::k_memory_Hits_vs_Timestamp+1);
         hists_2d[i].resize(Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d+1);
+        tgraphs[i].resize(Mapsa_TGraph::TGraph_Cluster_vs_Event+1);
         for(int type=0; type<Mapsa_TGraph::TGraph_Cluster_vs_Event+1; ++type){
             tgraphs[i][type]=TGraph();
             tgraphs[i][type].SetTitle(th_title_ax_tgr[type]);
         }
         for(int type=0; type<Mapsa_TH1::k_memory_Hits_vs_Timestamp+1; ++type)
         {
-            std::cout<<i<<type<<"\t"<<TString(th_names[type])+"_counter_mpa_"+std::to_string(i).c_str()<<std::endl;
             if(i<(no_MPA_light))
             {
                 if(type!=k_memory_Hits_vs_Timestamp){
+                    std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                     hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                  TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str()
                                                  ,CHANNELS,.5,CHANNELS+.5);
                 }else{
+                    std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                     hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                  TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str(),
                                                  TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
                 }
-            } 
+            }
             if(i==no_MPA_light){
                 if(type!=k_memory_Hits_vs_Timestamp){
                     hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
@@ -411,39 +402,46 @@ void Producer::InitializeHists()
         }
         if(i<(no_MPA_light))
         {
-            hists_2d[i][Mapsa_TH2::k_counter_Hits_vs_Channel_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_counter_Hits_vs_Channel])+"_mpa_"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_counter_Hits_vs_Channel])+"_mpa_"+std::to_string(i).c_str()
-                                                 ,COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
-            hists_2d[i][Mapsa_TH2::k_counter_Centroid_Cluster_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_counter_Centroid_Cluster])+"_mpa_"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_counter_Centroid_Cluster])+"_mpa_"+std::to_string(i).c_str()
-                                                 ,COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
-            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Channel_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_memory_Hits_vs_Channel])+"_mpa_"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_memory_Hits_vs_Channel])+"_mpa_"+std::to_string(i).c_str(),
+            hists_2d[i][Mapsa_TH2::k_counter_Hits_vs_Channel_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_counter_Hits_vs_Channel_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_counter_Hits_vs_Channel_2d])+"_mpa_"+std::to_string(i).c_str(),
                                                  COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
-            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_memory_Hits_vs_Timestamp])+"_mpa_"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_memory_Hits_vs_Timestamp])+"_mpa_"+std::to_string(i).c_str(),
+            hists_2d[i][Mapsa_TH2::k_counter_Centroid_Cluster_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_counter_Centroid_Cluster_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_counter_Centroid_Cluster_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Channel_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Channel_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Channel_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Centroid_Cluster_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Centroid_Cluster_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Centroid_Cluster_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_mpa_"+std::to_string(i).c_str(),
                                                  TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS,.5,CHANNELS+.5);
         } 
         if(i==no_MPA_light){
-            hists_2d[i][Mapsa_TH2::k_counter_Hits_vs_Channel_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_counter_Hits_vs_Channel])+"_glob"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_counter_Hits_vs_Channel])+"_glob"+std::to_string(i).c_str()
-                                                 ,COLUMNS*ROWS,.5,COLUMNS*ROWS+.5,ROWS*ASSEMBLY,.5,ROWS*ASSEMBLY+.5);
-            hists_2d[i][Mapsa_TH2::k_counter_Centroid_Cluster_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_counter_Centroid_Cluster])+"_glob"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_counter_Centroid_Cluster])+"_glob"+std::to_string(i).c_str()
-                                                 ,COLUMNS*ROWS,.5,COLUMNS*ROWS+.5,ROWS*ASSEMBLY,.5,ROWS*ASSEMBLY+.5);
-            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Channel_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_memory_Hits_vs_Channel])+"_glob"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_memory_Hits_vs_Channel])+"_glob"+std::to_string(i).c_str(),
-                                                 COLUMNS*ROWS,.5,COLUMNS*ROWS+.5,ROWS*ASSEMBLY,.5,ROWS*ASSEMBLY+.5);
-            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2F(TString(th_names[Mapsa_TH1::k_memory_Hits_vs_Timestamp])+"_glob"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[Mapsa_TH1::k_memory_Hits_vs_Timestamp])+"_glob"+std::to_string(i).c_str(),
-                                                 TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS*ASSEMBLY,.5,CHANNELS*ASSEMBLY+.5);
+            hists_2d[i][Mapsa_TH2::k_counter_Hits_vs_Channel_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_counter_Hits_vs_Channel_2d])+"_glob",
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_counter_Hits_vs_Channel_2d])+"_glob",
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_counter_Centroid_Cluster_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_counter_Centroid_Cluster_2d])+"_glob",
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_counter_Centroid_Cluster_2d])+"_mpa_"+std::to_string(i).c_str(),
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Channel_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Channel_2d])+"_glob",
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Channel_2d])+"_glob",
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Centroid_Cluster_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Centroid_Cluster_2d])+"_glob",
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Centroid_Cluster_2d])+"_glob",
+                                                 COLUMNS,.5,COLUMNS+.5,ROWS,.5,ROWS+.5);
+            hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2F(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_glob",
+                                                 TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_glob",
+                                                 TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS,.5,CHANNELS+.5);
         }
     }
+//     Map.Add();
 //     for(const auto& i:hists_1d)
 //     {
 //         for(const auto& j: i)
-//             Map.Add(j);
-// //             std::cout<<j->GetName()<<j->GetTitle()<<j->GetXaxis()->GetTitle()<<std::endl;
+// //             Map.Add(TObjString(j->GetTitle()),j);
+//             std::cout<<j->GetName()<<j->GetTitle()<<j->GetXaxis()->GetTitle()<<std::endl;
 //     }
 }
 // This is called after one run is completely analyzed
@@ -487,7 +485,9 @@ void Producer::SaveResetHists(const std::string& in_file_f)
             j.Write(j.GetTitle());
             j.Set(0);
         }
-    }        
+    }
+//     prod_root_file->Close();
+//     return 0;
 }
 void Producer::DeleteHists()
 {
@@ -513,8 +513,32 @@ void Producer::DeleteHists()
 }
 void Producer::RecreateRootFile(const std::string& prod_root_file_f)
 {
-        this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
+    this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
 //     prod_root_file =new TFile("test_1.root","RECREATE");
+}
+inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no)
+{
+
+//     MemoryNoProcessingBranch.bunchCrossingId;
+//     MemoryNoProcessingBranch.corrupt;
+//     MemoryNoProcessingBranch.header;
+//     MemoryNoProcessingBranch.numEvents;
+//     MemoryNoProcessingBranch.pixelMatrix;
+//     MemoryNoProcessingBranch.bunchCrossingId;
+    unsigned int hits_per_event=0;
+    for(auto i=0; i<MEMORY; i++){
+        hits_per_event=0;
+        for(auto j=0; j<CHANNELS; j++){
+            if(MemoryNoProcessingBranch.pixelMatrix[i] >> j & 1){
+                hits_per_event++;
+                hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j);
+                hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+MPA_no*CHANNELS);
+                hists_2d[MPA_no][Mapsa_TH2::k_memory_Hits_vs_Channel_2d]->Fill(Producer::MapCounterLocal(j).x,Producer::MapCounterLocal(j).y);
+            }
+        }
+        hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_per_Event]->Fill(hits_per_event);
+        hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i],hits_per_event);
+    }
 }
 
 

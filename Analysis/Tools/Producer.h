@@ -67,12 +67,14 @@
 #include "TTreeReaderArray.h"
 #include "TMap.h"
 #include "TObject.h"
+#include "TDirectoryFile.h"
+
 // TTreeReaderValueArray
 // #include "TTreeReaderValueArray.h"
 // #include "TTreeReaderValueBase.h"
 
 #include "dataformat_tree.h"
-
+#include "Scan.h"
 
 namespace PRODUCER{
     //     struct RippleCounterBranch_t{
@@ -91,17 +93,6 @@ namespace PRODUCER{
         k_memory_Centroid_Cluster,
         k_memory_Hits_vs_Timestamp,
     };
-    enum Mapsa_TH2{
-        k_counter_Hits_vs_Channel_2d,
-        k_counter_Centroid_Cluster_2d,
-        k_memory_Hits_vs_Channel_2d,
-        k_memory_Hits_vs_Timestamp_2d,
-    };
-    enum Mapsa_TGraph{
-        TGraph_Hits_vs_Event,
-        TGraph_Cluster_vs_Event
-    };
-    
     static const char* th_names[] = {
         "Counter_Hits_per_Event"   , 
         "Counter_Cluster_per_Event",
@@ -128,19 +119,35 @@ namespace PRODUCER{
         "Memory Centroids; #Centroid_Clusters; #Event",
         "Hits; Timestamp (25ns); #Hits"    ,
     };
-    static const char* th_title_ax_2d[] = {
+    enum Mapsa_TH2{
+        k_counter_Hits_vs_Channel_2d,
+        k_counter_Centroid_Cluster_2d,
+        k_memory_Hits_vs_Channel_2d,
+        k_memory_Centroid_Cluster_2d,
+        k_memory_Hits_vs_Timestamp_2d,
+    };
+    static const char* th_names_2d[] = {
         "Counter_Hits_vs_Channel_2D"  ,
         "Counter_Centroid_Cluster_2D" , 
         "Memory_Hits_vs_Channel_2D"  ,
-        "Memory_Centroid_Cluster_2D"
+        "Memory_Centroid_Cluster_2D" , 
+        "Memory_Hits_vs_Timestamp_2D"
     };
-    
+    static const char* th_title_ax_2d[] = {
+        "Counter_Hits_vs_Channel_2D ; Column; Row",
+        "Counter_Centroid_Cluster_2D; Column; Row", 
+        "Memory_Hits_vs_Channel_2D  ; Column; Row",
+        "Memory_Centroid_Cluster_2D ; Column; Row",
+        "Memory_Hits_vs_Timestamp_2D; t(25ns), #Channel"
+    };
+    enum Mapsa_TGraph{
+        TGraph_Hits_vs_Event,
+        TGraph_Cluster_vs_Event
+    };
     static const char* th_title_ax_tgr[] = {
-        "Counter Hits; # Events; # Hits",
-        "Counter Cluster; # Events; # Cluster",
+        "Counter Hits Graph   ; # Events; # Hits",
+        "Counter Cluster Graph; # Events; # Cluster",
     }; 
-    
-    
     struct GlobalHit 
     {
         double  x;
@@ -181,6 +188,7 @@ namespace PRODUCER{
         MaPSAMask(ASSEMBLY,pixelMask),
         no_MPA_light(0)
         {
+         ROOT::EnableThreadSafety();
          RecreateRootFile(prod_root_file_f);
         }
         ~Producer()
@@ -196,7 +204,7 @@ namespace PRODUCER{
         void Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f);
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
-        void SetFile(const std::string& root_file_f);
+        void SetFile(const std::string& root_file_f, Counter& counter);
         void SaveResetHists(const std::string& in_file_f);
         
         void ProduceGlobalHit();
@@ -204,7 +212,6 @@ namespace PRODUCER{
         void ProduceCluster();
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
-        void test_a_file();
         
     private:
         
@@ -242,6 +249,7 @@ namespace PRODUCER{
         void FillMemoryHists_Run();
         void DeleteHists();
         void RecreateRootFile(const std::string& prod_root_file_f);
+        void FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no);
         
     protected:
     };

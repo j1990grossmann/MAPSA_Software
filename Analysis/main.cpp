@@ -1,6 +1,10 @@
 #include <iostream>
 #include <thread>
 #include <forward_list>
+#include <mutex>
+#include <vector>
+#include <chrono>
+
 
 #include <boost/program_options.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -48,6 +52,9 @@
 #include "TArrayI.h"
 
 #include "../Tools/Producer.h"
+#include "../Tools/ThreadPool.cpp"
+#include "../Tools/dataformat_tree.h"
+#include "../Tools/Scan.h"
 
 
 namespace fs =boost::filesystem;
@@ -104,11 +111,12 @@ int main(int argc, char **argv) {
         std::cout << e.what()<<std::endl;
         return 0;
     }
+
     PRODUCER::Producer t(out_file);
 // Read Geo File
+    std::vector<bool> geom_vec(6,false);
     fs::path geo_f,mask_f;
     if(check_file_path(geo_file,geo_f)){
-        std::vector<bool> geom_vec(6,false);
         std::ifstream input( geo_f.string());
         int line_c=0;
         for( std::string line; std::getline( input, line ); )
@@ -119,6 +127,7 @@ int main(int argc, char **argv) {
                         geom_vec.at(i+line_c*3)=true;
             line_c++;
         }
+        std::cout<<"set geometry"<<std::endl;
         t.SetGeometry(geom_vec);
         input.close();
     }
@@ -141,17 +150,63 @@ int main(int argc, char **argv) {
     t.Print_PixelMaskMPA();
     filenames=get_list_of_files(run_file,path);
     std::cout<<"Files for processing:\n";
+
+//     ThreadPool pool(4);
+//     std::vector< std::future<int> > results;
+//     int thread_no=0;
+//     for(auto it(filenames.begin()); it != filenames.end(); ++it)
+//     {
+//         thread_no++;
+//         auto outfile_tmp=out_file+std::to_string(thread_no);
+//         pool.enqueue([outfile_tmp,it,geom_vec] {
+//             PRODUCER::Producer t1(outfile_tmp);
+//             t1.SetGeometry(geom_vec);
+//             std::cout<<*it<<std::endl;
+//             t1.SetFile(*it);
+//             t1.SaveResetHists(fs::path(*it).stem().c_str());
+//         });
+//     }
+// 
+//     for(auto && result: results)
+//         std::cout << result.get() << ' ';
+//     std::cout << std::endl;
+
+    SafeCounter ScanResults;
     for(auto it(filenames.begin()); it != filenames.end(); ++it)
 //     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
     {
-//         std::cout<<*it<<"\n";
-        t.SetFile(*it);
-//         t.SetFile(*it);
-//         t.SetFile(*it);
+        std::cout<<*it<<"\n";
+        Counter tmpcounter;
+        t.SetFile(*it, tmpcounter);
+        ScanResults.append(tmpcounter);
         t.SaveResetHists(fs::path(*it).stem().c_str());
     }
-    std::flush(std::cout);
-
+    std::flush(std::cout);    
+//     t.~Producer();
+    TFile * result = new TFile("Results.root","RECREATE");
+    result->mkdir("Results");
+    result->cd("Results");
+    
+    TH1F* Glob_Hits_vs_Treshold = new TH1F("Glob_Hits_vs_Treshold","Glob_Hits_vs_Treshold",THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
+    TH2F* Glob_Hits_vs_Channel_vs_Treshold= new TH2F("Hits_vs_Channel_vs_Treshold","Hits_vs_Channel_vs_Treshold",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
+    TH2F* Glob_Hits_vs_Channel_vs_Treshold_MEM= new TH2F("Hits_vs_Channel_vs_Treshold_MEM","Hits_vs_Channel_vs_Treshold_MEM",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
+    for(auto it(ScanResults.count_vec.begin()); it != ScanResults.count_vec.end(); ++it)
+    {
+        Counter tmp=Counter(*it);
+        Glob_Hits_vs_Treshold->Fill(tmp.threshold,tmp.mean_hits);
+//         Glob_Hits_vs_Treshold->SetBinError(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.stdev_hits);
+        for(int i=0; i<CHANNELS*ASSEMBLY+2; i++)
+        {
+            Glob_Hits_vs_Channel_vs_Treshold->Fill(i-1,tmp.threshold,tmp.pixel_counter[i]/tmp.no_shutter);
+            Glob_Hits_vs_Channel_vs_Treshold_MEM->Fill(i-1,tmp.threshold,tmp.pixel_memory[i]/tmp.no_shutter);
+//             Glob_Hits_vs_Channel_vs_Treshold->SetBinError(Glob_Hits_vs_Channel_vs_Treshold->FindBin(i-1,tmp.threshold),1/TMath::Sqrt(tmp.pixel_counter[i]));
+        }
+    }
+    Glob_Hits_vs_Channel_vs_Treshold->Write();
+    Glob_Hits_vs_Channel_vs_Treshold_MEM->Write();
+    Glob_Hits_vs_Treshold->Write();
+    result->Close();
+    
     return 0;
 }
 bool check_file_path(const std::string& file_path_str, fs::path& p){
