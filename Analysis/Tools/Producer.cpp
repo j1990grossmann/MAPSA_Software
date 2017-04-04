@@ -337,6 +337,7 @@ void Producer::SetFile(const std::string& root_file_f, Counter& counter)
         
         this->FillMemoryHists(memory_arr[0],0);
         this->FillMemoryHists(memory_arr[1],1);
+        ++event;
    }
 #endif
 // counter.mean_centroid_cluster =hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetMean(0);
@@ -574,6 +575,4 @@ inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNo
         hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i],hits_per_event);
     }
 }
-
-
 }
