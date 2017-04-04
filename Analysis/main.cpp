@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
                         geom_vec.at(i+line_c*3)=true;
             line_c++;
         }
+        std::cout<<"set geometry"<<std::endl;
         t.SetGeometry(geom_vec);
         input.close();
     }
@@ -188,18 +189,21 @@ int main(int argc, char **argv) {
     
     TH1F* Glob_Hits_vs_Treshold = new TH1F("Glob_Hits_vs_Treshold","Glob_Hits_vs_Treshold",THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
     TH2F* Glob_Hits_vs_Channel_vs_Treshold= new TH2F("Hits_vs_Channel_vs_Treshold","Hits_vs_Channel_vs_Treshold",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
+    TH2F* Glob_Hits_vs_Channel_vs_Treshold_MEM= new TH2F("Hits_vs_Channel_vs_Treshold_MEM","Hits_vs_Channel_vs_Treshold_MEM",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
     for(auto it(ScanResults.count_vec.begin()); it != ScanResults.count_vec.end(); ++it)
     {
         Counter tmp=Counter(*it);
-        Glob_Hits_vs_Treshold->SetBinContent(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.mean_hits);
-        Glob_Hits_vs_Treshold->SetBinError(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.stdev_hits);
+        Glob_Hits_vs_Treshold->Fill(tmp.threshold,tmp.mean_hits);
+//         Glob_Hits_vs_Treshold->SetBinError(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.stdev_hits);
         for(int i=0; i<CHANNELS*ASSEMBLY+2; i++)
         {
             Glob_Hits_vs_Channel_vs_Treshold->Fill(i-1,tmp.threshold,tmp.pixel_counter[i]/tmp.no_shutter);
-            Glob_Hits_vs_Channel_vs_Treshold->SetBinError(Glob_Hits_vs_Channel_vs_Treshold->FindBin(i-1,tmp.threshold),1/TMath::Sqrt(tmp.pixel_counter[i]));
+            Glob_Hits_vs_Channel_vs_Treshold_MEM->Fill(i-1,tmp.threshold,tmp.pixel_memory[i]/tmp.no_shutter);
+//             Glob_Hits_vs_Channel_vs_Treshold->SetBinError(Glob_Hits_vs_Channel_vs_Treshold->FindBin(i-1,tmp.threshold),1/TMath::Sqrt(tmp.pixel_counter[i]));
         }
     }
     Glob_Hits_vs_Channel_vs_Treshold->Write();
+    Glob_Hits_vs_Channel_vs_Treshold_MEM->Write();
     Glob_Hits_vs_Treshold->Write();
     result->Close();
     

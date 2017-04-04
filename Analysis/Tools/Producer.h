@@ -67,6 +67,8 @@
 #include "TTreeReaderArray.h"
 #include "TMap.h"
 #include "TObject.h"
+#include "TDirectoryFile.h"
+
 // TTreeReaderValueArray
 // #include "TTreeReaderValueArray.h"
 // #include "TTreeReaderValueBase.h"
@@ -91,17 +93,6 @@ namespace PRODUCER{
         k_memory_Centroid_Cluster,
         k_memory_Hits_vs_Timestamp,
     };
-    enum Mapsa_TH2{
-        k_counter_Hits_vs_Channel_2d,
-        k_counter_Centroid_Cluster_2d,
-        k_memory_Hits_vs_Channel_2d,
-        k_memory_Hits_vs_Timestamp_2d,
-    };
-    enum Mapsa_TGraph{
-        TGraph_Hits_vs_Event,
-        TGraph_Cluster_vs_Event
-    };
-    
     static const char* th_names[] = {
         "Counter_Hits_per_Event"   , 
         "Counter_Cluster_per_Event",
@@ -128,19 +119,35 @@ namespace PRODUCER{
         "Memory Centroids; #Centroid_Clusters; #Event",
         "Hits; Timestamp (25ns); #Hits"    ,
     };
-    static const char* th_title_ax_2d[] = {
+    enum Mapsa_TH2{
+        k_counter_Hits_vs_Channel_2d,
+        k_counter_Centroid_Cluster_2d,
+        k_memory_Hits_vs_Channel_2d,
+        k_memory_Centroid_Cluster_2d,
+        k_memory_Hits_vs_Timestamp_2d,
+    };
+    static const char* th_names_2d[] = {
         "Counter_Hits_vs_Channel_2D"  ,
         "Counter_Centroid_Cluster_2D" , 
         "Memory_Hits_vs_Channel_2D"  ,
-        "Memory_Centroid_Cluster_2D"
+        "Memory_Centroid_Cluster_2D" , 
+        "Memory_Hits_vs_Timestamp_2D"
     };
-    
+    static const char* th_title_ax_2d[] = {
+        "Counter_Hits_vs_Channel_2D ; Column; Row",
+        "Counter_Centroid_Cluster_2D; Column; Row", 
+        "Memory_Hits_vs_Channel_2D  ; Column; Row",
+        "Memory_Centroid_Cluster_2D ; Column; Row",
+        "Memory_Hits_vs_Timestamp_2D; t(25ns), #Channel"
+    };
+    enum Mapsa_TGraph{
+        TGraph_Hits_vs_Event,
+        TGraph_Cluster_vs_Event
+    };
     static const char* th_title_ax_tgr[] = {
-        "Counter Hits; # Events; # Hits",
-        "Counter Cluster; # Events; # Cluster",
+        "Counter Hits Graph   ; # Events; # Hits",
+        "Counter Cluster Graph; # Events; # Cluster",
     }; 
-    
-    
     struct GlobalHit 
     {
         double  x;
@@ -213,6 +220,7 @@ namespace PRODUCER{
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
         std::vector<std::vector<bool>> MaPSAMask;
+        std::vector<Strip_Coordinate> GeometryInfo;
         
         std::vector<std::string> histos;
         std::vector<std::vector<TH1*> >   hists_1d;
@@ -230,11 +238,18 @@ namespace PRODUCER{
         Strip_Coordinate MapCounterLocal(int Channel_f);
         int MapCounterLocal_X(int Channel_f);
         int MapCounterLocal_Y(int Channel_f);
+        
+        Strip_Coordinate MapMemoryLocal(int Channel_f);
+        int MapMemoryLocal_X(int Channel_f);
+        int MapMemoryLocal_Y(int Channel_f);
+
+        
         Strip_Coordinate MapGlobal(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_X(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_Y(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         
         Strip_Coordinate MapGeometry(int MPA_no);
+
         
         bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
         void InitializeHists();
@@ -242,6 +257,7 @@ namespace PRODUCER{
         void FillMemoryHists_Run();
         void DeleteHists();
         void RecreateRootFile(const std::string& prod_root_file_f);
+        void FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no);
         
     protected:
     };
