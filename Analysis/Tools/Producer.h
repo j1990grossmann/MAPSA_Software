@@ -91,6 +91,7 @@ namespace PRODUCER{
         k_memory_Hits_vs_Channel,
         k_memory_Hits_vs_Row,
         k_memory_Centroid_Cluster,
+        k_memory_TDC_specrum,
         k_memory_Hits_vs_Timestamp,
     };
     static const char* th_names[] = {
@@ -103,7 +104,8 @@ namespace PRODUCER{
         "Memory_Cluster_per_Event",
         "Memory_Hits_vs_Channel"  ,
         "Memory_Hits_vs_Row"      ,
-        "Memory_Centroid_Cluster" , 
+        "Memory_Centroid_Cluster" ,
+        "Memory_TDC_spectrum"     ,
         "Memory_Hits_vs_Timestamp"  
     };
     static const char* th_title_ax[] = {
@@ -117,6 +119,7 @@ namespace PRODUCER{
         "Memory Hits; # Channel; # Hits"       ,
         "Memory Hits; # Row;  # Hits; "        ,
         "Memory Centroids; #Centroid_Clusters; #Event",
+        "#DeltaT; #DeltaT (25ns); Counts"    ,
         "Hits; Timestamp (25ns); #Hits"    ,
     };
     enum Mapsa_TH2{

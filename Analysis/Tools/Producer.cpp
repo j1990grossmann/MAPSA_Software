@@ -404,27 +404,28 @@ void Producer::InitializeHists()
         {
             if(i<(no_MPA_light))
             {
-                if(type!=k_memory_Hits_vs_Timestamp){
-                    std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
-                    hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
-                                                 TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str()
-                                                 ,CHANNELS,.5,CHANNELS+.5);
-                }else{
+                if(type==Mapsa_TH1::k_memory_Hits_vs_Timestamp || type==Mapsa_TH1::k_memory_TDC_specrum){
                     std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                     hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                  TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str(),
                                                  TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
+                }else
+                {
+                    std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
+                    hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
+                                                 TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str()
+                                                 ,CHANNELS,.5,CHANNELS+.5);
                 }
             }
             if(i==no_MPA_light){
-                if(type!=k_memory_Hits_vs_Timestamp){
-                    hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
-                                                 TString(th_title_ax[type])+"_glob",
-                                                 CHANNELS*no_MPA_light,.5,CHANNELS*no_MPA_light+.5);
-                }else{
+                if(type==Mapsa_TH1::k_memory_Hits_vs_Timestamp || type==Mapsa_TH1::k_memory_TDC_specrum){
                     hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
                                                  TString(th_title_ax[type])+"_glob",
                                                  TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
+                }else{
+                    hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
+                                                 TString(th_title_ax[type])+"_glob",
+                                                 CHANNELS*no_MPA_light,.5,CHANNELS*no_MPA_light+.5);
                 }
             }
         }
@@ -570,8 +571,9 @@ inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNo
             }
         }
         hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_per_Event]->Fill(hits_per_event);
-//         if(i>0)
-//             hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i]-MemoryNoProcessingBranch.bunchCrossingId[i-1]);
+        if(i>0)
+            hists_1d[MPA_no][Mapsa_TH1::k_memory_TDC_specrum]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i]-MemoryNoProcessingBranch.bunchCrossingId[i-1]);
+            hists_1d[2][Mapsa_TH1::k_memory_TDC_specrum]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i]-MemoryNoProcessingBranch.bunchCrossingId[i-1]);
         hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i],hits_per_event);
     }
 }
