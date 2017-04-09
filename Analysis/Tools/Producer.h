@@ -151,6 +151,18 @@ namespace PRODUCER{
         "Counter Hits Graph   ; # Events; # Hits",
         "Counter Cluster Graph; # Events; # Cluster",
     }; 
+    enum MaskCases{
+        corner_upper_left,
+        corner_upper_right,
+        corner_lower_left,
+        corner_lower_right,
+        limit_top,
+        limit_bottom,
+        limit_right,
+        limit_left,
+        no_edge
+    };
+
     struct GlobalHit 
     {
         double  x;
@@ -162,6 +174,13 @@ namespace PRODUCER{
         //         unsigned char  y;
         unsigned int x;
         unsigned int y;
+    };
+    struct Loc_Strip_Coordinate
+    {
+        //         unsigned char  x;
+        //         unsigned char  y;
+        UShort_t x;
+        UShort_t y;
     };
     struct GlobalClusterHit 
     {
@@ -193,6 +212,7 @@ namespace PRODUCER{
         {
          ROOT::EnableThreadSafety();
          RecreateRootFile(prod_root_file_f);
+         ResetPixelMatrix();
         }
         ~Producer()
         {
@@ -212,13 +232,15 @@ namespace PRODUCER{
         
         void ProduceGlobalHit();
         
-        void ProduceCluster();
         void ProduceDQM_Hits();
         void ProduceDQM_Cluster_Hits();
         
     private:
         
         //         Geometry information
+        bool Pixel_Matrix_Arr[COLUMNS][ROWS];
+        unsigned char Pixel_Matrix_Labels[COLUMNS][ROWS];
+        
         int no_MPA_light;
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
@@ -230,7 +252,7 @@ namespace PRODUCER{
         std::vector<std::vector<TH2*> >   hists_2d;
         std::vector<std::vector<TGraph> > tgraphs;
         TFile* prod_root_file;
-        
+
         std::vector<GlobalClusterHit> Event_GlobalClusterHit_vec;
         std::vector<GlobalHit>        Event_GlobalHit_vec;
         
@@ -261,6 +283,9 @@ namespace PRODUCER{
         void DeleteHists();
         void RecreateRootFile(const std::string& prod_root_file_f);
         void FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no);
+        void ResetPixelMatrix();
+        void ProduceCluster();
+        MaskCases GetCase(int x, int y);
         
     protected:
     };
