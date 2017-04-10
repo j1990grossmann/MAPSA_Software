@@ -23,6 +23,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 #include "Riostream.h"
 #include "TApplication.h"
@@ -208,11 +209,13 @@ namespace PRODUCER{
         geometryMask({ true,false,false,true, false, false }),
         pixelMask(CHANNELS, true),
         MaPSAMask(ASSEMBLY,pixelMask),
-        no_MPA_light(0)
+        no_MPA_light(0),
+        Pixel_Matrix_Arr({{0}}),
+        Pixel_Matrix_Labels({{0}})
         {
          ROOT::EnableThreadSafety();
          RecreateRootFile(prod_root_file_f);
-         ResetPixelMatrix();
+//          ResetPixelMatrix();
         }
         ~Producer()
         {
@@ -238,14 +241,16 @@ namespace PRODUCER{
     private:
         
         //         Geometry information
-        bool Pixel_Matrix_Arr[COLUMNS][ROWS];
-        unsigned char Pixel_Matrix_Labels[COLUMNS][ROWS];
+        std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Arr;
+        std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Labels;
+//         unsigned short Pixel_Matrix_Arr[COLUMNS][ROWS];
+//         unsigned short Pixel_Matrix_Labels[COLUMNS][ROWS];
         
         int no_MPA_light;
         std::vector<bool> pixelMask;
         std::vector<bool> geometryMask;
         std::vector<std::vector<bool>> MaPSAMask;
-        std::vector<Strip_Coordinate> GeometryInfo;
+        std::vector<PRODUCER::Strip_Coordinate> GeometryInfo;
         
         std::vector<std::string> histos;
         std::vector<std::vector<TH1*> >   hists_1d;

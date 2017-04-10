@@ -69,7 +69,8 @@ void Producer::Print_PixelMaskMPA()
     for(auto i = 0; i < geometryMask.size(); ++i){
         if(geometryMask.at(i)){
             auto tmp=MapGeometry(i);
-            this->GeometryInfo.push_back(tmp);
+            GeometryInfo.push_back(tmp);
+            std::cout<<tmp.x<<"-"<<tmp.y<<" Pushed_back";
             for(auto j = 0; j < MaPSAMask[mpa_no].size(); ++j){
                 auto tmp_cor(MapGlobal(MapCounterLocal(j),tmp.x,tmp.y));
 //                 auto tmp_cor(MapCounterLocal(j));
@@ -113,112 +114,116 @@ void Producer::ProduceCluster()
         }
         std::cout<<std::endl;
     }
+    std::cout<<std::endl;
     //    Two pass connected component labeling
-    std::vector<std::set<int>> linked;
-    int NextLabel=0;
+    std::vector<std::set<unsigned int>> linked;
+    unsigned short NextLabel=0;
     bool neighbours_empty=true;
-//     u_int LabelMin=0;
-//     for(auto j=0; j<ROWS; j++){
-//         for(auto i=0; i<COLUMNS; i++){
-//             if(Pixel_Matrix_Arr[i][j])
-//             {
-//                 std::cout<<"Hit at: "<<i<<j<<"\t";
-//                 //                 std::cout<<"Pixel: "<<i<<j<<"\t";
-//                 neighbours_empty=true;
-//                 switch (GetCase(j,i)) {
-//                     case MaskCases::no_edge:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
-//                             linked[Pixel_Matrix_Labels[i-1][j]].insert(Pixel_Matrix_Labels[i-1][j]);
-//                         }
-// //                         std::cout << "\tno_edge";
-//                         break;
-//                     case MaskCases::limit_top:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j+1]});
-//                         }
-//                         //                         std::cout << "\tlimit_top";
-//                         break;
-//                     case MaskCases::limit_bottom:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1]});
-//                         }
-// //                         std::cout << "\tlimit_bottom";
-//                         break;
-//                     case MaskCases::limit_left:
-//                         if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
-//                         }
-// //                         std::cout << "\tlimit_left";
-//                         break;
-//                     case MaskCases::limit_right:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
-//                         }
-// //                         std::cout << "\tlimit_right";
-//                         break;
-//                     case MaskCases::corner_upper_left:
-//                         if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j+1]});
-//                         }
-// //                         std::cout << "\tcorner_upper_left";
-//                         break;
-//                     case MaskCases::corner_upper_right:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j+1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j+1]});
-//                         }
-// //                         std::cout << "\tcorner_upper_right";
-//                         break;
-//                     case MaskCases::corner_lower_right:
-//                         if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j-1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j-1]});
-//                         }
-// //                         std::cout << "\tcorner_lower_right";
-//                         break;
-//                     case MaskCases::corner_lower_left:
-//                         if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1])
-//                         {
-//                             neighbours_empty=false;
-//                             LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1]});
-//                         }
-// //                         std::cout << "\tcorner_lower_left";
-//                         break;
-//                 }
-//                 if(neighbours_empty)
-//                 {
-//                     std::set<int> tmp_set;
-//                     tmp_set.insert(NextLabel);
-//                     linked.emplace_back(tmp_set);
-//                     Pixel_Matrix_Labels[i][j]=NextLabel;
-//                     std::cout<<"neighbours_empty "<<NextLabel<<std::endl;
-//                     NextLabel++;
-//                 }else {
-//                     Pixel_Matrix_Labels[i][j]=LabelMin;
-//                     linked[LabelMin];
-// //                     for label in L
-// //                        linked[label] = union(linked[label], L)
-//                     
-//                 }
-//             }
-//         }
-//         std::cout<<std::endl;
-//     }
+    unsigned short LabelMin=0;
+    for(auto j=0; j<ROWS; j++){
+        for(auto i=0; i<COLUMNS; i++){
+            if(Pixel_Matrix_Arr[i][j])
+            {
+                std::cout<<"Hit at: "<<i<<j<<"\t";
+                //                 std::cout<<"Pixel: "<<i<<j<<"\t";
+                neighbours_empty=true;
+                switch (GetCase(j,i)) {
+                    case MaskCases::no_edge:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
+                            linked[Pixel_Matrix_Labels[i-1][j]].insert(Pixel_Matrix_Labels[i-1][j]);
+                        }
+//                         std::cout << "\tno_edge";
+                        break;
+                    case MaskCases::limit_top:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j+1]});
+                        }
+                        //                         std::cout << "\tlimit_top";
+                        break;
+                    case MaskCases::limit_bottom:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1]});
+                        }
+//                         std::cout << "\tlimit_bottom";
+                        break;
+                    case MaskCases::limit_left:
+                        if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
+                        }
+//                         std::cout << "\tlimit_left";
+                        break;
+                    case MaskCases::limit_right:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j-1] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j-1],Pixel_Matrix_Labels[i][j+1]});
+                        }
+//                         std::cout << "\tlimit_right";
+                        break;
+                    case MaskCases::corner_upper_left:
+                        if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j+1]});
+                        }
+//                         std::cout << "\tcorner_upper_left";
+                        break;
+                    case MaskCases::corner_upper_right:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j+1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j+1]});
+                        }
+//                         std::cout << "\tcorner_upper_right";
+                        break;
+                    case MaskCases::corner_lower_right:
+                        if(Pixel_Matrix_Arr[i-1][j] || Pixel_Matrix_Arr[i][j-1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i-1][j],Pixel_Matrix_Labels[i][j-1]});
+                        }
+//                         std::cout << "\tcorner_lower_right";
+                        break;
+                    case MaskCases::corner_lower_left:
+                        if(Pixel_Matrix_Arr[i+1][j] || Pixel_Matrix_Arr[i][j-1])
+                        {
+                            neighbours_empty=false;
+                            LabelMin=std::min({Pixel_Matrix_Labels[i+1][j],Pixel_Matrix_Labels[i][j-1]});
+                        }
+//                         std::cout << "\tcorner_lower_left";
+                        break;
+                }
+                if(neighbours_empty)
+                {
+                    std::set<unsigned int> tmp_set;
+                    tmp_set.insert(NextLabel);
+                    linked.emplace_back(tmp_set);
+                    Pixel_Matrix_Labels[i][j]=NextLabel;
+                    std::cout<<"neighbours_empty "<<NextLabel<<std::endl;
+                    NextLabel++;
+                }else {
+                    Pixel_Matrix_Labels[i][j]=LabelMin;
+                    std::cout<<"linked.at(LabelMin)"<<LabelMin<<std::endl;
+//                     std::cout<<"linked.at(LabelMin)"<<linked[0][0]<<std::endl;
+//                     std::ostream_iterator< int > output( std::cout, " " );
+//                     std::copy(linked.at(LabelMin).begin(), linked.at(LabelMin).end(), output );
+//                     for label in L
+//                        linked[label] = union(linked[label], L)
+                    
+                }
+            }
+        }
+        std::cout<<std::endl;
+    }
 //     std::cout<<std::endl;
 }
 MaskCases Producer::GetCase(int x, int y)
@@ -471,7 +476,6 @@ void Producer::SetFile(const std::string& root_file_f, Counter& counter)
         tgraphs[0][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_0);
         tgraphs[1][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_1);
         tgraphs[2][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event);
-        
         this->FillMemoryHists(memory_arr[0],0);
         this->FillMemoryHists(memory_arr[1],1);
         ++event;
@@ -491,8 +495,6 @@ for(auto i=0; i<(CHANNELS*ASSEMBLY+2); i++){
 //     counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
 }
     file->Close();
-    for(auto j: this->GeometryInfo)
-        std::cout<<"gemoetry "<<j.x<<"\t"<<j.y<<std::endl;
 }
 Strip_Coordinate Producer::MapGeometry ( int MPA_no )
 {
@@ -696,16 +698,13 @@ inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNo
     Strip_Coordinate glob;
     for(auto i=0; i<MEMORY; i++){
         ResetPixelMatrix();
-        std::cout<<"Memory "<<i<<std::endl;
-//         ProduceCluster();
-        
         hits_per_event=0;
         for(auto j=0; j<CHANNELS; j++){
             if(MemoryNoProcessingBranch.pixelMatrix[i] >> j & 1){
 //                 std::cout<<"1";
                 hits_per_event++;
                 strip_cor=PRODUCER::Producer::MapMemoryLocal(j);
-                Pixel_Matrix_Arr[strip_cor.x][strip_cor.y]=true;
+                Pixel_Matrix_Arr[strip_cor.x][strip_cor.y]=1;
                 glob=MapGlobal(strip_cor,GeometryInfo.at(MPA_no).x-1,GeometryInfo.at(MPA_no).y);
                 hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+1);
                 hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+MPA_no*CHANNELS+1);
@@ -715,7 +714,7 @@ inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNo
 //             }else
 //                 std::cout<<"0";
         }
-        std::cout<<std::endl;
+//         std::cout<<std::endl;
         hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_per_Event]->Fill(hits_per_event);
         if(i>0)
             hists_1d[MPA_no][Mapsa_TH1::k_memory_TDC_specrum]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i]-MemoryNoProcessingBranch.bunchCrossingId[i-1]);
@@ -726,10 +725,12 @@ inline void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNo
         }
     }
 }
-inline void Producer::ResetPixelMatrix()
+void Producer::ResetPixelMatrix()
 {
-    std::fill( &Pixel_Matrix_Arr[0][0], &Pixel_Matrix_Arr[0][0] + sizeof(Pixel_Matrix_Arr) /* / sizeof(flags[0][0]) */, 0 );
-    std::fill( &Pixel_Matrix_Labels[0][0], &Pixel_Matrix_Labels[0][0] + sizeof(Pixel_Matrix_Labels) /* / sizeof(flags[0][0]) */, 0 );
+    for(auto i=0; i<COLUMNS; i++){
+        Pixel_Matrix_Arr[i].fill(0);
+        Pixel_Matrix_Labels[i].fill(0);
+    }
     
 }
 
