@@ -92,8 +92,9 @@ namespace PRODUCER{
         k_memory_Hits_vs_Channel,
         k_memory_Hits_vs_Row,
         k_memory_Centroid_Cluster,
+        k_memory_vs_counter_Efficiency,
         k_memory_TDC_specrum,
-        k_memory_Hits_vs_Timestamp,
+        k_memory_Hits_vs_Timestamp
     };
     static const char* th_names[] = {
         "Counter_Hits_per_Event"   , 
@@ -106,6 +107,7 @@ namespace PRODUCER{
         "Memory_Hits_vs_Channel"  ,
         "Memory_Hits_vs_Row"      ,
         "Memory_Centroid_Cluster" ,
+        "Memory_Counter_Efficiency" ,
         "Memory_TDC_spectrum"     ,
         "Memory_Hits_vs_Timestamp"  
     };
@@ -120,28 +122,35 @@ namespace PRODUCER{
         "Memory Hits; # Channel; # Hits"       ,
         "Memory Hits; # Row;  # Hits; "        ,
         "Memory Centroids; #Centroid_Clusters; #Event",
+        "Memory vs Counter Efficiency; Counts; Efficiency",
         "#DeltaT; #DeltaT (25ns); Counts"    ,
-        "Hits; Timestamp (25ns); #Hits"    ,
+        "Hits; Timestamp (25ns); #Hits"
     };
     enum Mapsa_TH2{
         k_counter_Hits_vs_Channel_2d,
         k_counter_Centroid_Cluster_2d,
         k_memory_Hits_vs_Channel_2d,
         k_memory_Centroid_Cluster_2d,
-        k_memory_Hits_vs_Timestamp_2d,
+        k_counter_counter_cor_2d,
+        k_memory_counter_cor_2d,
+        k_memory_Hits_vs_Timestamp_2d
     };
     static const char* th_names_2d[] = {
         "Counter_Hits_vs_Channel_2D"  ,
         "Counter_Centroid_Cluster_2D" , 
         "Memory_Hits_vs_Channel_2D"  ,
         "Memory_Centroid_Cluster_2D" , 
+        "Counter_Counter_Corr_2D" , 
+        "Memory_Counter_Corr_Eff_2D" , 
         "Memory_Hits_vs_Timestamp_2D"
     };
     static const char* th_title_ax_2d[] = {
         "Counter_Hits_vs_Channel_2D ; Column; Row",
-        "Counter_Centroid_Cluster_2D; Column; Row", 
+        "Counter_Centroid_Cluster_2D; Column; Row",
         "Memory_Hits_vs_Channel_2D  ; Column; Row",
         "Memory_Centroid_Cluster_2D ; Column; Row",
+        "Counter_Counter_Corr_2D ; Counter Channel #; Counter Channel #",
+        "Memory_Counter_Corr_Eff_2D ; Counter; Memory",
         "Memory_Hits_vs_Timestamp_2D; t(25ns), #Channel"
     };
     enum Mapsa_TGraph{
@@ -150,7 +159,7 @@ namespace PRODUCER{
     };
     static const char* th_title_ax_tgr[] = {
         "Counter Hits Graph   ; # Events; # Hits",
-        "Counter Cluster Graph; # Events; # Cluster",
+        "Counter Cluster Graph; # Events; # Cluster"
     }; 
     enum MaskCases{
         corner_upper_left,
@@ -243,6 +252,9 @@ namespace PRODUCER{
         //         Geometry information
         std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Arr;
         std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Labels;
+
+        std::array<std::array<unsigned short, ROWS*ASSEMBLY>, COLUMNS> Counter_Pixel_Matrix;
+        std::array<std::array<unsigned short, ROWS*ASSEMBLY>, COLUMNS> Memory_Pixel_Matrix;
 //         unsigned short Pixel_Matrix_Arr[COLUMNS][ROWS];
 //         unsigned short Pixel_Matrix_Labels[COLUMNS][ROWS];
         
@@ -289,6 +301,8 @@ namespace PRODUCER{
         void RecreateRootFile(const std::string& prod_root_file_f);
         void FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no);
         void ResetPixelMatrix();
+        void ResetMemoryEfficiency();
+        void GetMemoryEfficiency(unsigned int total_counter_hits);
         void ProduceCluster();
         MaskCases GetCase(int x, int y);
         
