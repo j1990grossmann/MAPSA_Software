@@ -199,7 +199,6 @@ namespace PRODUCER{
                         //                     for label in L
                         //                        linked[label] = union(linked[label], L)
                     }
-                    
                     std::cout<<"Labels\n";
                     for(auto j1=0; j1<ROWS; j1++)
                     {
@@ -209,7 +208,6 @@ namespace PRODUCER{
                         }
                         std::cout<<std::endl;
                     }
-                    
                 }
             }
         }
@@ -351,7 +349,6 @@ namespace PRODUCER{
     }
     void Producer::SetFile(const std::string& root_file_f, Counter& counter)
     {
-        
         TFile *file = new TFile(root_file_f.c_str(),"READ");
         if(file->TObject::IsZombie()){
             std::cout<<"Error opening file "<<root_file_f<<std::endl;
@@ -359,9 +356,7 @@ namespace PRODUCER{
         }
         else
             std::cout<<"Process file\t"<<root_file_f<<std::endl;
-        
         TTree* const tree = static_cast<TTree* const>(file->TDirectoryFile::Get("Tree"));
-        
         MemoryNoProcessingBranch_t memory_arr[ASSEMBLY];
         RippleCounterBranch_t ripplecounter_arr[ASSEMBLY];
         for(int i=0; i<ASSEMBLY; i++)
@@ -375,7 +370,6 @@ namespace PRODUCER{
         tree->SetBranchAddress("noprocessing_mpa_5",&memory_arr[1]);
         tree->SetBranchAddress("counter_mpa_2",&ripplecounter_arr[0]);
         tree->SetBranchAddress("counter_mpa_5",&ripplecounter_arr[1]);
-        std::cout<<"Got Tree"<<std::endl;
         
         unsigned long long     t_COND_NO_MPA_LIGHT;
         unsigned long long            t_COND_SPILL;
@@ -383,11 +377,11 @@ namespace PRODUCER{
         int                 t_COND_THRESHOLD;
         //         ULong64_t                 t_COND_THRESHOLD;
         unsigned long long        t_COND_TIMESTAMP;
-        unsigned long long            t_COND_ANGLE;
-        unsigned long long            t_COND_X_POS;
-        unsigned long long            t_COND_Y_POS;
-        unsigned long long            t_COND_Z_POS;
-        unsigned long long          t_COND_VOLTAGE;
+        int            t_COND_ANGLE;
+        int            t_COND_X_POS;
+        int            t_COND_Y_POS;
+        int            t_COND_Z_POS;
+        int          t_COND_VOLTAGE;
         int         t_TRIG_COUNTS_SHUTTER;
         int   t_TRIG_COUNTS_TOTAL_SHUTTER;
         int           t_TRIG_COUNTS_TOTAL;
@@ -398,11 +392,11 @@ namespace PRODUCER{
         //     tree->SetBranchAddress("COND_SPILL",&t_COND_SPILL);
         tree->SetBranchAddress("COND_THRESHOLD",&t_COND_THRESHOLD);
         //     tree->SetBranchAddress("COND_TIMESTAMP",&t_COND_TIMESTAMP);
-        //     tree->SetBranchAddress("COND_ANGLE",&t_COND_ANGLE);
-        //     tree->SetBranchAddress("COND_X_POS",&t_COND_X_POS);
-        //     tree->SetBranchAddress("COND_Y_POS",&t_COND_Y_POS);
-        //     tree->SetBranchAddress("COND_Z_POS",&t_COND_Z_POS);
-        //     tree->SetBranchAddress("COND_VOLTAGE",&t_COND_VOLTAGE);
+        tree->SetBranchAddress("COND_ANGLE",&t_COND_ANGLE);
+        tree->SetBranchAddress("COND_X_POS",&t_COND_X_POS);
+        tree->SetBranchAddress("COND_Y_POS",&t_COND_Y_POS);
+        tree->SetBranchAddress("COND_Z_POS",&t_COND_Z_POS);
+        tree->SetBranchAddress("COND_VOLTAGE",&t_COND_VOLTAGE);
         tree->SetBranchAddress("TRIG_COUNTS_SHUTTER",&t_TRIG_COUNTS_SHUTTER);
         tree->SetBranchAddress("TRIG_COUNTS_TOTAL_SHUTTER",&t_TRIG_COUNTS_TOTAL_SHUTTER);
         tree->SetBranchAddress("TRIG_COUNTS_TOTAL",&t_TRIG_COUNTS_TOTAL);
@@ -418,7 +412,12 @@ namespace PRODUCER{
         unsigned int counter_hits_per_event_0=0;
         unsigned int counter_hits_per_event_1=0;
         int nEntries = tree->GetEntries(); // Get the number of entries in this tree
+        int cut_low =10;
+        int cut_up=10;
+        int lower =( nEntries-cut_low> 0) ? cut_low : 0;
+        int upper =( nEntries-cut_up> 0) ? (nEntries-cut_up) : nEntries;
         for (int event = 0; event< nEntries; event++) {
+//         for (int event = 0; event< 100; event++) {
             tree->GetEntry(event);
             //     while (reader.Next()) {
             //         Conditions
@@ -445,39 +444,50 @@ namespace PRODUCER{
                 {
                     counter_hits_per_event+=ripplecounter_arr[0].pixel[i];
                     counter_hits_per_event_0+=ripplecounter_arr[0].pixel[i];
-                    hists_1d[0][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
-                    hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
                     auto tmp = this->MapCounterLocal(i);
                     auto glob= this->MapGlobal(tmp,this->GeometryInfo.at(0).x-1,this->GeometryInfo.at(0).y);
-                    hists_2d[0][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)ripplecounter_arr[0].pixel[i]);
-                    hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)ripplecounter_arr[0].pixel[i]);
                     Counter_Pixel_Matrix[glob.x][glob.y]+=(float)ripplecounter_arr[0].pixel[i];
+                    if(event>lower && event<upper)
+                    {
+                        hists_1d[0][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
+                        hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
+                        hists_2d[0][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)ripplecounter_arr[0].pixel[i]);
+                        hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)ripplecounter_arr[0].pixel[i]);
+                    }
                 }
                 if(ripplecounter_arr[1].pixel[i])
                 {
                     counter_hits_per_event+=ripplecounter_arr[1].pixel[i]; 
                     counter_hits_per_event_1+=ripplecounter_arr[1].pixel[i];
-                    hists_1d[1][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[1].pixel[i]);
-                    hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1+CHANNELS,(float)ripplecounter_arr[1].pixel[i]);
                     auto tmp = this->MapCounterLocal(i);
                     auto glob= this->MapGlobal(tmp,this->GeometryInfo.at(1).x-1,this->GeometryInfo.at(1).y);
+                    Counter_Pixel_Matrix[glob.x][glob.y]+=(float)ripplecounter_arr[1].pixel[i];
+                    if(event>lower && event<upper)
+                    {
+                    hists_1d[1][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[1].pixel[i]);
+                    hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1+CHANNELS,(float)ripplecounter_arr[1].pixel[i]);
                     hists_2d[1][k_counter_Hits_vs_Channel_2d]->Fill(tmp.x+1,tmp.y+1,(float)ripplecounter_arr[1].pixel[i]);
                     hists_2d[2][k_counter_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1,(float)ripplecounter_arr[1].pixel[i]);
-                    Counter_Pixel_Matrix[glob.x][glob.y]+=(float)ripplecounter_arr[1].pixel[i];
+                    }
                 }
             }
-            hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
-            hists_1d[1][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_1);
-            hists_1d[2][k_counter_Hits_per_Event]->Fill(counter_hits_per_event);
+            if(event>lower && event<upper)
+            {
+                hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
+                hists_1d[1][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_1);
+                hists_1d[2][k_counter_Hits_per_Event]->Fill(counter_hits_per_event);
+                this->FillMemoryHists(memory_arr[0],0);
+                this->FillMemoryHists(memory_arr[1],1);
+                GetMemoryEfficiency(counter_hits_per_event);
+            }
             tgraphs[0][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_0);
             tgraphs[1][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event_1);
             tgraphs[2][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event);
-            this->FillMemoryHists(memory_arr[0],0);
-            this->FillMemoryHists(memory_arr[1],1);
-            GetMemoryEfficiency(counter_hits_per_event);
+            if(event%500==0)
+//                 std::cout<<"Progress:\t"<<std::setprecision(3)<<100*(float)(event)/(float)(nEntries)<<" % of\t "<<nEntries<<" events \r"<<std::flush;
+                std::cout<<"Progress:\t"<<std::setw(5)<<std::setprecision(1)<<std::fixed<<100*(float)(event)/(float)(nEntries)<<" % of\t "<<nEntries<<" events \r"<<std::flush;
         }
-        if(event%100==0)
-            std::cout<<"Processing\t"<<event<<std::endl;
+        std::cout<<std::endl;
         #endif
         // counter.mean_centroid_cluster =hists_1d[2][Mapsa_TH1::k_counter_Centroid_Cluster]->GetMean(0);
         // counter.mean_cluster          =hists_1d[2][Mapsa_TH1::k_counter_Cluster_per_Event]->GetMean(0);
@@ -542,19 +552,19 @@ namespace PRODUCER{
                 if(i<(no_MPA_light))
                 {
                     if(type==Mapsa_TH1::k_memory_Hits_vs_Timestamp || type==Mapsa_TH1::k_memory_TDC_specrum){
-                        std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
+//                         std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                         hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                      TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str(),
                                                      TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
                     }else if(type==Mapsa_TH1::k_memory_vs_counter_Efficiency)
                     {
-                        std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
+//                         std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                         hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                      TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str()
-                                                     ,100,0,1);
+                                                     ,2,-.5,1.5);
                     }else
                     {
-                        std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
+//                         std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_mpa_"+std::to_string(i).c_str()<<std::endl;
                         hists_1d[i][type] = new TH1F(TString(th_names[type])+"_mpa_"+std::to_string(i).c_str(),
                                                      TString(th_title_ax[type])+"_mpa_"+std::to_string(i).c_str()
                                                      ,CHANNELS+1,-.5,CHANNELS+.5);
@@ -567,10 +577,10 @@ namespace PRODUCER{
                                                      TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
                     }else if(type==Mapsa_TH1::k_memory_vs_counter_Efficiency)
                     {
-                        std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_glob"+std::to_string(i).c_str()<<std::endl;
+//                         std::cout<<i<<"\t"<<type<<"\t"<<TString(th_names[type])+"_glob"+std::to_string(i).c_str()<<std::endl;
                         hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
                                                      TString(th_title_ax[type])+"_glob"
-                                                     ,100,0,1);
+                                                     ,2,-.5,1.5);
                     }else
                     {
                         hists_1d[i][type] = new TH1F(TString(th_names[type])+"_glob",
@@ -627,22 +637,19 @@ namespace PRODUCER{
                                                                                  TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS,.5,CHANNELS+.5);
             }
         }
-        //     Map.Add();
-        //     for(const auto& i:hists_1d)
-        //     {
-        //         for(const auto& j: i)
-        // //             Map.Add(TObjString(j->GetTitle()),j);
-        //             std::cout<<j->GetName()<<j->GetTitle()<<j->GetXaxis()->GetTitle()<<std::endl;
-        //     }
     }
     // This is called after one run is completely analyzed
-    void Producer::SaveResetHists(const std::string& in_file_f)
+    void Producer::SaveResetHists(const std::string& in_file_f, const std::string& path)
     {
+        std::string tmp(path);
+        tmp+=in_file_f;tmp+=".root";
+        RecreateRootFile(tmp);
         //     Make a new dir for each run and save the files in the directory
-        prod_root_file->mkdir(in_file_f.c_str());
+//         prod_root_file->mkdir(in_file_f.c_str());
         //  Make a new dir in for each MPA and Global and Save histos
         for(auto i=0; i<no_MPA_light+1; i++){
-            prod_root_file->cd(in_file_f.c_str());
+//             prod_root_file->cd(in_file_f.c_str());
+            prod_root_file->cd();
             char buffer [50];
             if(i<no_MPA_light){
                 std::snprintf ( buffer, 50, "MPA_%d", i );
@@ -677,7 +684,7 @@ namespace PRODUCER{
                 j.Set(0);
             }
         }
-        //     prod_root_file->Close();
+        prod_root_file->Close();
         //     return 0;
     }
     void Producer::DeleteHists()
@@ -704,12 +711,12 @@ namespace PRODUCER{
     }
     void Producer::RecreateRootFile(const std::string& prod_root_file_f)
     {
+        std::cout<<"Write to file "<<prod_root_file_f<<std::endl;
         this->prod_root_file =new TFile(prod_root_file_f.c_str(),"RECREATE");
         //     prod_root_file =new TFile("test_1.root","RECREATE");
     }
     void Producer::FillMemoryHists(const MemoryNoProcessingBranch_t& MemoryNoProcessingBranch, int MPA_no)
     {
-        
         //     MemoryNoProcessingBranch.bunchCrossingId;
         //     MemoryNoProcessingBranch.corrupt;
         //     MemoryNoProcessingBranch.header;
@@ -720,25 +727,22 @@ namespace PRODUCER{
         Strip_Coordinate strip_cor;
         Strip_Coordinate glob;
         for(auto i=0; i<MEMORY; i++){
-            //             ResetPixelMatrix();
+//             ResetPixelMatrix();
             hits_per_event=0;
             for(auto j=0; j<CHANNELS; j++){
                 if(MemoryNoProcessingBranch.pixelMatrix[i] >> j & 1){
                     //                 std::cout<<"1";
                     hits_per_event++;
-                    strip_cor=PRODUCER::Producer::MapMemoryLocal(j);
-                    Pixel_Matrix_Arr[strip_cor.x][strip_cor.y]=1;
+                    strip_cor=MapMemoryLocal(j);
                     glob=MapGlobal(strip_cor,GeometryInfo.at(MPA_no).x-1,GeometryInfo.at(MPA_no).y);
+                    Pixel_Matrix_Arr[strip_cor.x][strip_cor.y]=1;
                     Memory_Pixel_Matrix[glob.x][glob.y]+=1;
                     hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+1);
                     hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+MPA_no*CHANNELS+1);
                     hists_2d[MPA_no][Mapsa_TH2::k_memory_Hits_vs_Channel_2d]->Fill(strip_cor.x+1,strip_cor.y+1);
                     hists_2d[2][Mapsa_TH2::k_memory_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1);
                 }
-                //             }else
-                //                 std::cout<<"0";
             }
-            //         std::cout<<std::endl;
             hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_per_Event]->Fill(hits_per_event);
             if(i>0)
                 hists_1d[MPA_no][Mapsa_TH1::k_memory_TDC_specrum]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i]-MemoryNoProcessingBranch.bunchCrossingId[i-1]);
@@ -787,16 +791,9 @@ namespace PRODUCER{
                             hists_2d[2][Mapsa_TH2::k_counter_counter_cor_2d]->Fill(j*ROWS*ASSEMBLY+i, j1*ROWS*ASSEMBLY+i1);
                     }
                 }
-//                 if(Counter_Pixel_Matrix[i][j]==1)
-//                 {
-//                     if(Memory_Pixel_Matrix[i][j]>0)
-//                     {
-//                         memory_hit++;
-//                     }
-//                 }
             }
         }
-        if(inefficient_memory=true && total_counter_hits==0)
+        if(inefficient_memory=true && total_counter_hits==1)
             hists_1d[2][Mapsa_TH1::k_memory_vs_counter_Efficiency]->Fill(0);
     }
 }

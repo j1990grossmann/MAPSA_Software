@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
         ("help,h", "A programm to produce the clustered TTrees and Generate prompt offline Visual feedback from 2 MAPSA-light TTree data.")
         ("path,p",            po::value<std::string>(&path)     ->default_value("./"),             "Default path for run files")
         ("signal_files,s",    po::value<std::string>(&run_file) ->default_value("signal.txt"),     "A file with list of run files ROOT")
-        ("out_file,o",        po::value<std::string>(&out_file) ->default_value("analysis.root"),  "Destination file")
+        ("out_file_path,o",        po::value<std::string>(&out_file) ->default_value("./"),  "Destination file")
         ("pixel_mask_file,m", po::value<std::string>(&mask_file)->default_value("pixel_mask.txt"), "Pixel mask file")
         ("geometry_file,g",   po::value<std::string>(&geo_file )->default_value("geo_file.txt"),   "Geometry   file")
         ("mask_toggle,t",     po::value<bool>(&mask_toggle)     ->default_value(false), "Toggle pixel mask")
@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
         Counter tmpcounter;
         t.SetFile(*it, tmpcounter);
         ScanResults.append(tmpcounter);
-        t.SaveResetHists(fs::path(*it).stem().c_str());
+        t.SaveResetHists(fs::path(*it).stem().c_str(),out_file);
     }
     std::flush(std::cout);    
 //     t.~Producer();

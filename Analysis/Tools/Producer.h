@@ -210,6 +210,15 @@ namespace PRODUCER{
         std::vector<unsigned char>  Header;
         std::vector<unsigned char>  NumEvents;
     };
+    struct CounterCluster{
+        Float_t cog_x;
+        Float_t cog_y;
+        UShort_t size_x;
+        UShort_t size_y;
+        UShort_t clustersize;
+        Int_t Chip_Position;
+        Int_t InterChipPosition;
+    };
     class Producer
     {
     public:
@@ -223,7 +232,6 @@ namespace PRODUCER{
         Pixel_Matrix_Labels({{0}})
         {
          ROOT::EnableThreadSafety();
-         RecreateRootFile(prod_root_file_f);
 //          ResetPixelMatrix();
         }
         ~Producer()
@@ -240,7 +248,7 @@ namespace PRODUCER{
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
         void SetFile(const std::string& root_file_f, Counter& counter);
-        void SaveResetHists(const std::string& in_file_f);
+        void SaveResetHists(const std::string& in_file_f, const std::string& path);
         
         void ProduceGlobalHit();
         
