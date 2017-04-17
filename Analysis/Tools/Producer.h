@@ -161,22 +161,26 @@ namespace PRODUCER{
         "Counter Hits Graph   ; # Events; # Hits",
         "Counter Cluster Graph; # Events; # Cluster"
     }; 
-    enum MaskCases{
-        corner_upper_left,
-        corner_upper_right,
-        corner_lower_left,
-        corner_lower_right,
-        limit_top,
-        limit_bottom,
-        limit_right,
-        limit_left,
-        no_edge
+    enum MaskCases: unsigned char{
+        no_edge = 0,
+        limit_top = 1,
+        limit_bottom = 2,
+        limit_right  = 4,
+        limit_left   = 8,
+        corner_upper_left=16,
+        corner_upper_right=32,
+        corner_lower_left=64,
+        corner_lower_right=128
     };
-
-    struct GlobalHit 
+    enum class MapsaMask{
+        Mapsa_2 = 1,
+        Mapsa_5 = 2
+    };
+    struct LocalHitCor 
     {
-        double  x;
-        double  y;
+        float  x;
+        float  y;
+        float  area;
     };
     struct Strip_Coordinate
     {
@@ -198,12 +202,12 @@ namespace PRODUCER{
         double  y;
     };
     struct Counter_Event{
-        std::vector<GlobalHit> Hits;
+        std::vector<LocalHitCor> Hits;
         std::vector<GlobalClusterHit> Clusters;
         std::vector<GlobalClusterHit> CMS_Clusters;
     };
     struct Memory_Event{
-        std::vector<GlobalHit> Hits;
+        std::vector<LocalHitCor> Hits;
         std::vector<GlobalClusterHit> Clusters;
         std::vector<GlobalClusterHit> CMS_Clusters;
         std::vector<unsigned short> BX_ID;
@@ -213,11 +217,21 @@ namespace PRODUCER{
     struct CounterCluster{
         Float_t cog_x;
         Float_t cog_y;
+        Float_t size_x;
+        Float_t size_y;
+        UShort_t clustersize;
+        Short_t Chip_Position_Mask;
+        Short_t IntraChipPosition;
+    };
+    struct MemoryCluster{
+        Float_t cog_x;
+        Float_t cog_y;
         UShort_t size_x;
         UShort_t size_y;
         UShort_t clustersize;
-        Int_t Chip_Position;
-        Int_t InterChipPosition;
+        Int_t Chip_Position_Mask;
+        Int_t IntraChipPosition;
+        unsigned short BX_ID;
     };
     class Producer
     {
@@ -231,8 +245,8 @@ namespace PRODUCER{
         Pixel_Matrix_Arr({{0}}),
         Pixel_Matrix_Labels({{0}})
         {
-         ROOT::EnableThreadSafety();
-//          ResetPixelMatrix();
+            ROOT::EnableThreadSafety();
+            //          ResetPixelMatrix();
         }
         ~Producer()
         {
@@ -241,7 +255,7 @@ namespace PRODUCER{
         };
         
         Strip_Coordinate GetStripCoordinate(int channel, int mpa_no);
-        GlobalHit GetHitCoordinate(Strip_Coordinate);
+        LocalHitCor GetHitCoordinate(const unsigned x, const MaskCases mask);
         
         void SetGeometry(const std::vector<bool>& geometryMask_f);
         void Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f);
@@ -258,13 +272,15 @@ namespace PRODUCER{
     private:
         
         //         Geometry information
-        std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Arr;
-        std::array<std::array<unsigned short, ROWS>, COLUMNS> Pixel_Matrix_Labels;
-
+        std::array<std::array<unsigned short, ROWS+2>, COLUMNS+2> Pixel_Matrix_Arr;
+        std::array<std::array<unsigned short, ROWS+2>, COLUMNS+2> Pixel_Matrix_Labels;
+        
         std::array<std::array<unsigned short, ROWS*ASSEMBLY>, COLUMNS> Counter_Pixel_Matrix;
         std::array<std::array<unsigned short, ROWS*ASSEMBLY>, COLUMNS> Memory_Pixel_Matrix;
-//         unsigned short Pixel_Matrix_Arr[COLUMNS][ROWS];
-//         unsigned short Pixel_Matrix_Labels[COLUMNS][ROWS];
+        std::vector<std::set<unsigned int>> f_linked;
+
+        //         unsigned short Pixel_Matrix_Arr[COLUMNS][ROWS];
+        //         unsigned short Pixel_Matrix_Labels[COLUMNS][ROWS];
         
         int no_MPA_light;
         std::vector<bool> pixelMask;
@@ -277,12 +293,12 @@ namespace PRODUCER{
         std::vector<std::vector<TH2*> >   hists_2d;
         std::vector<std::vector<TGraph> > tgraphs;
         TFile* prod_root_file;
-
+        
         std::vector<GlobalClusterHit> Event_GlobalClusterHit_vec;
-        std::vector<GlobalHit>        Event_GlobalHit_vec;
+        std::vector<LocalHitCor>        Event_GlobalHit_vec;
         
         std::vector<GlobalClusterHit> GlobalClusterHit_vec;
-        std::vector<GlobalHit>        GlobalHit_vec;
+        std::vector<LocalHitCor>        GlobalHit_vec;
         TMap Map;
         
         Strip_Coordinate MapCounterLocal(int Channel_f);
@@ -292,14 +308,14 @@ namespace PRODUCER{
         Strip_Coordinate MapMemoryLocal(int Channel_f);
         int MapMemoryLocal_X(int Channel_f);
         int MapMemoryLocal_Y(int Channel_f);
-
+        
         
         Strip_Coordinate MapGlobal(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_X(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         int MapGlobal_Y(const Strip_Coordinate& LocCoord_f,int MPA_no_x, int MPA_no_y);
         
         Strip_Coordinate MapGeometry(int MPA_no);
-
+        
         
         bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
         void InitializeHists();
@@ -311,8 +327,9 @@ namespace PRODUCER{
         void ResetPixelMatrix();
         void ResetMemoryEfficiency();
         void GetMemoryEfficiency(unsigned int total_counter_hits);
-        void ProduceCluster();
+        void ProduceCluster(int MPA_no, int hits_per_event, UShort_t BX_ID);
         MaskCases GetCase(int x, int y);
+        
         
     protected:
     };

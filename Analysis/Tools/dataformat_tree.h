@@ -17,6 +17,23 @@ static constexpr int ROWS=3;
 static constexpr int ASSEMBLY=2;
 static constexpr int TIMESTAMP_RANGE=65536;
 static constexpr int THRESHOLD_RANGE=256;
+
+static constexpr float PITCH_STD__X=100E-6;
+static constexpr float PITCH_EDGE_X=200E-6;
+static constexpr float PITCH_STD_Y=1746E-6;
+static constexpr float PITCH_STD_EDGE_Y=1446E-6;
+// Weights for COG calculation
+static constexpr float WEIGHT_DEFAULT=1446;
+static constexpr float WEIGHT_STD_EDGE=2892;
+static constexpr float WEIGHT_LOWER_ROW=1746;
+static constexpr float WEIGHT_LOWER_CORNER=3492;
+
+static constexpr float LOWER_ROW=873E-6;
+static constexpr float ROW_1=1446E-6;
+static constexpr float ROW_2=2892E-6;
+
+
+
 // 
 struct MemoryNoProcessingBranch_t {
    ULong64_t       pixelMatrix[MEMORY];

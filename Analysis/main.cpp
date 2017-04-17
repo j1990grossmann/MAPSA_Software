@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
             return 0;
         }else
         {
-//              std::cout << desc << "\n";
+            //              std::cout << desc << "\n";
             const std::string line(40, '-');
             std::cout<<std::left<<"\nOptions:\n";
             std::cout<<line<<std::endl;
@@ -112,9 +112,9 @@ int main(int argc, char **argv) {
         std::cout << e.what()<<std::endl;
         return 0;
     }
-
+    
     PRODUCER::Producer t(out_file);
-// Read Geo File
+    // Read Geo File
     std::vector<bool> geom_vec(6,false);
     fs::path geo_f,mask_f;
     if(check_file_path(geo_file,geo_f)){
@@ -126,13 +126,13 @@ int main(int argc, char **argv) {
                 for(auto i = 0; i < line.length(); ++i)
                     if(i<3 && line[i]=='1')
                         geom_vec.at(i+line_c*3)=true;
-            line_c++;
+                    line_c++;
         }
         std::cout<<"set geometry"<<std::endl;
         t.SetGeometry(geom_vec);
         input.close();
     }
-//     Read Mask Files
+    //     Read Mask Files
     if(check_file_path(mask_file,mask_f)){
         std::ifstream input( mask_f.string());
         int line_c=0;
@@ -151,30 +151,30 @@ int main(int argc, char **argv) {
     t.Print_PixelMaskMPA();
     filenames=get_list_of_files(run_file,path);
     std::cout<<"Files for processing:\n";
-
-//     ThreadPool pool(4);
-//     std::vector< std::future<int> > results;
-//     int thread_no=0;
-//     for(auto it(filenames.begin()); it != filenames.end(); ++it)
-//     {
-//         thread_no++;
-//         auto outfile_tmp=out_file+std::to_string(thread_no);
-//         pool.enqueue([outfile_tmp,it,geom_vec] {
-//             PRODUCER::Producer t1(outfile_tmp);
-//             t1.SetGeometry(geom_vec);
-//             std::cout<<*it<<std::endl;
-//             t1.SetFile(*it);
-//             t1.SaveResetHists(fs::path(*it).stem().c_str());
-//         });
-//     }
-// 
-//     for(auto && result: results)
-//         std::cout << result.get() << ' ';
-//     std::cout << std::endl;
-
+    
+    //     ThreadPool pool(4);
+    //     std::vector< std::future<int> > results;
+    //     int thread_no=0;
+    //     for(auto it(filenames.begin()); it != filenames.end(); ++it)
+    //     {
+    //         thread_no++;
+    //         auto outfile_tmp=out_file+std::to_string(thread_no);
+    //         pool.enqueue([outfile_tmp,it,geom_vec] {
+    //             PRODUCER::Producer t1(outfile_tmp);
+    //             t1.SetGeometry(geom_vec);
+    //             std::cout<<*it<<std::endl;
+    //             t1.SetFile(*it);
+    //             t1.SaveResetHists(fs::path(*it).stem().c_str());
+    //         });
+    //     }
+    // 
+    //     for(auto && result: results)
+    //         std::cout << result.get() << ' ';
+    //     std::cout << std::endl;
+    
     SafeCounter ScanResults;
     for(auto it(filenames.begin()); it != filenames.end(); ++it)
-//     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
+        //     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
     {
         std::cout<<*it<<"\n";
         Counter tmpcounter;
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
         t.SaveResetHists(fs::path(*it).stem().c_str(),out_file);
     }
     std::flush(std::cout);    
-//     t.~Producer();
+    //     t.~Producer();
     TFile * result = new TFile("Results.root","RECREATE");
     result->mkdir("Results");
     result->cd("Results");
@@ -195,12 +195,12 @@ int main(int argc, char **argv) {
     {
         Counter tmp=Counter(*it);
         Glob_Hits_vs_Treshold->Fill(tmp.threshold,tmp.mean_hits);
-//         Glob_Hits_vs_Treshold->SetBinError(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.stdev_hits);
+        //         Glob_Hits_vs_Treshold->SetBinError(Glob_Hits_vs_Treshold->FindBin(tmp.threshold),tmp.stdev_hits);
         for(int i=0; i<CHANNELS*ASSEMBLY+2; i++)
         {
             Glob_Hits_vs_Channel_vs_Treshold->Fill(i-1,tmp.threshold,tmp.pixel_counter[i]/tmp.no_shutter);
             Glob_Hits_vs_Channel_vs_Treshold_MEM->Fill(i-1,tmp.threshold,tmp.pixel_memory[i]/tmp.no_shutter);
-//             Glob_Hits_vs_Channel_vs_Treshold->SetBinError(Glob_Hits_vs_Channel_vs_Treshold->FindBin(i-1,tmp.threshold),1/TMath::Sqrt(tmp.pixel_counter[i]));
+            //             Glob_Hits_vs_Channel_vs_Treshold->SetBinError(Glob_Hits_vs_Channel_vs_Treshold->FindBin(i-1,tmp.threshold),1/TMath::Sqrt(tmp.pixel_counter[i]));
         }
     }
     Glob_Hits_vs_Channel_vs_Treshold->Write();
@@ -217,7 +217,7 @@ bool check_file_path(const std::string& file_path_str, fs::path& p){
         if (exists(p))    // does p actually exist?
         {
             if (is_regular_file(p)){        // is p a regular file?
-//                 std::cout << p << " size is " << fs::file_size(p) << '\n';
+                //                 std::cout << p << " size is " << fs::file_size(p) << '\n';
                 return true;
             }
             else{
