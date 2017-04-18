@@ -24,6 +24,8 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <set>
+#include <cmath>
 
 #include "Riostream.h"
 #include "TApplication.h"
@@ -214,25 +216,25 @@ namespace PRODUCER{
         std::vector<unsigned char>  Header;
         std::vector<unsigned char>  NumEvents;
     };
-    struct CounterCluster{
-        Float_t cog_x;
-        Float_t cog_y;
-        Float_t size_x;
-        Float_t size_y;
-        UShort_t clustersize;
-        Short_t Chip_Position_Mask;
-        Short_t IntraChipPosition;
-    };
-    struct MemoryCluster{
-        Float_t cog_x;
-        Float_t cog_y;
-        UShort_t size_x;
-        UShort_t size_y;
-        UShort_t clustersize;
-        Int_t Chip_Position_Mask;
-        Int_t IntraChipPosition;
-        unsigned short BX_ID;
-    };
+//     struct CounterCluster{
+//         Float_t cog_x;
+//         Float_t cog_y;
+//         Float_t size_x;
+//         Float_t size_y;
+//         UShort_t clustersize;
+//         Short_t Chip_Position_Mask;
+//         Short_t IntraChipPosition;
+//     };
+//     struct MemoryCluster{
+//         Float_t cog_x;
+//         Float_t cog_y;
+//         UShort_t size_x;
+//         UShort_t size_y;
+//         UShort_t clustersize;
+//         Int_t Chip_Position_Mask;
+//         Int_t IntraChipPosition;
+//         unsigned short BX_ID;
+//     };
     class Producer
     {
     public:
@@ -252,6 +254,8 @@ namespace PRODUCER{
         {
             DeleteHists();
             prod_root_file->Close();
+            delete MemorClusterVec_MPA_0;
+            delete MemorClusterVec_MPA_1;
         };
         
         Strip_Coordinate GetStripCoordinate(int channel, int mpa_no);
@@ -261,8 +265,8 @@ namespace PRODUCER{
         void Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f);
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
-        void SetFile(const std::string& root_file_f, Counter& counter);
-        void SaveResetHists(const std::string& in_file_f, const std::string& path);
+        void SetFile(const std::string& root_file_f, Counter& counter, const std::string& in_file_f, const std::string& path);
+        void SaveResetHists();
         
         void ProduceGlobalHit();
         
@@ -327,9 +331,12 @@ namespace PRODUCER{
         void ResetPixelMatrix();
         void ResetMemoryEfficiency();
         void GetMemoryEfficiency(unsigned int total_counter_hits);
-        void ProduceCluster(int MPA_no, int hits_per_event, UShort_t BX_ID);
+        std::vector<MemoryCluster> ProduceCluster(int MPA_no, int hits_per_event, UShort_t BX_ID);
         MaskCases GetCase(int x, int y);
-        
+//         File output
+        TTree* f_Clustertree;
+        std::vector<MemoryCluster> *MemorClusterVec_MPA_0;
+        std::vector<MemoryCluster> *MemorClusterVec_MPA_1;
         
     protected:
     };

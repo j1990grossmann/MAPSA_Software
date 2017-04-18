@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <set>
+#include <vector>
 
 // Root
 #include "TObject.h"
@@ -49,37 +51,67 @@ struct RippleCounterBranch_t{
  UShort_t pixel[CHANNELS];
 };
 //! my_utilities class
-// class MemoryNoProcessingBranch: public TObject {
-//  public:
-//    ULong64_t       pixelMatrix[MEMORY];
-//    UShort_t        bunchCrossingId[MEMORY];
-//    UChar_t         header[MEMORY];
-//    UChar_t         numEvents;
-//    UChar_t         corrupt;
-//   //! my_utilities constructor
-//   MemoryNoProcessingBranch();
-//   //! my_utilities destructor
-//   ~MemoryNoProcessingBranch();
-// 
-//   //! my return
-// //   Float_t myReturn(Float_t input);
-//   
-//   ClassDef(MemoryNoProcessingBranch,1)  
-// 
-// };
-// class RippleCounterBranch: public TObject {
-// public:
-//  UInt_t   header;
-//  UShort_t pixel[CHANNELS];
-//   //! my_utilities constructor
-//  RippleCounterBranch();
-//   //! my_utilities destructor
-//  ~RippleCounterBranch();
-// 
-//   //! my return
-// //   Float_t myReturn(Float_t input);
-//   
-//  ClassDef(RippleCounterBranch,1)  
-// 
-// };
+class MemoryCluster: public TObject {
+ public:
+     Float_t cog_x;
+     Float_t cog_y;
+     Float_t area;
+     UShort_t size_x;
+     UShort_t size_y;
+     UShort_t clustersize;
+     Int_t Chip_Position_Mask;
+     Int_t IntraChipPosition;
+     unsigned short BX_ID;
+     std::set<unsigned int> x_pixel;
+     std::set<unsigned int> y_pixel;
+  //! my_utilities constructor
+  MemoryCluster():
+  cog_x(0),
+  cog_y(0),
+  area(0),
+  size_x(0),
+  size_y(0),
+  clustersize(0),
+  Chip_Position_Mask(0),
+  IntraChipPosition(0),
+  BX_ID(0)
+  {};
+  ~MemoryCluster(){};
+  ClassDef(MemoryCluster,1)
+};
+class MemoryClusterVec: public TObject {
+ public:
+     std::vector<MemoryCluster> ClusterVec;
+  //! my_utilities constructor
+  MemoryClusterVec()
+  {
+      this->ClusterVec=std::vector<MemoryCluster>({MemoryCluster()});
+  };
+  ~MemoryClusterVec(){};
+  ClassDef(MemoryClusterVec,1)
+};
+
+class CounterCluster: public TObject {
+ public:
+     Float_t cog_x;
+     Float_t cog_y;
+     Float_t size_x;
+     Float_t size_y;
+     UShort_t clustersize;
+     Short_t Chip_Position_Mask;
+     Short_t IntraChipPosition;
+
+  //! my_utilities constructor
+  CounterCluster():
+  cog_x(0),
+  cog_y(0),
+  size_x(0),
+  size_y(0),
+  clustersize(0),
+  Chip_Position_Mask(0),
+  IntraChipPosition(0)
+  {};
+  ~CounterCluster(){};
+  ClassDef(CounterCluster,1)
+};
 #endif // MY_UTILITIES_H

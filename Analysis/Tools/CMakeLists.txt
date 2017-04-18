@@ -15,6 +15,8 @@ target_include_directories (Scan PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library (Producer Producer.cpp)
 target_include_directories (Producer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries( Producer dataformat_tree ${ROOT_LIBRARIES})
+
 
 set(lib_thread_pool
     ThreadPool.cpp

@@ -51,9 +51,9 @@
 #include "TArray.h"
 #include "TArrayI.h"
 
+#include "../Tools/dataformat_tree.h"
 #include "../Tools/Producer.h"
 #include "../Tools/ThreadPool.cpp"
-#include "../Tools/dataformat_tree.h"
 #include "../Tools/Scan.h"
 
 
@@ -178,9 +178,9 @@ int main(int argc, char **argv) {
     {
         std::cout<<*it<<"\n";
         Counter tmpcounter;
-        t.SetFile(*it, tmpcounter);
+        t.SetFile(*it, tmpcounter,fs::path(*it).stem().c_str(),out_file);
         ScanResults.append(tmpcounter);
-        t.SaveResetHists(fs::path(*it).stem().c_str(),out_file);
+        t.SaveResetHists();
     }
     std::flush(std::cout);    
     //     t.~Producer();
