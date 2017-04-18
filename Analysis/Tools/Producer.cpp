@@ -59,7 +59,6 @@ namespace PRODUCER{
                 std::cout<<"This is not a forseen case retriving a local hit coordinate"<<std::endl;
         }
     }
-    
     void Producer::Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f)
     {
         if(MPA_no<MaPSAMask.size())
@@ -111,8 +110,6 @@ namespace PRODUCER{
                         //                 auto tmp(MapCounterLocal(j));
                         MPA_GEO_GLOB[tmp_cor.x][tmp_cor.y]=true;
                         //                 std::cout<<j<<" ";
-                        //                 std::cout<<tmp.x<<" "<<tmp.y<<"  ";
-                        //                 std::cout<<tmp.x<<"_"<<tmp.y<<"  ";
                     }
                     //             else
                     //                 std::cout<<"  ";
@@ -134,7 +131,6 @@ namespace PRODUCER{
                 std::cout<<"\n";
         }
         std::flush(std::cout);
-        
     }
     std::vector<MemoryCluster> Producer::ProduceCluster(int MPA_no, int hits_per_event, UShort_t BX_ID)
     {
@@ -208,19 +204,19 @@ namespace PRODUCER{
                     }
                 }
             }
-            if(NumberOfCluster>2)
-            {
-                std::cout<<"Number of cluster"<<NumberOfCluster<<std::endl;
-                for(auto j1=1; j1<ROWS+1; j1++)
-                {
-                    for(auto i1=1; i1<COLUMNS+1; i1++)
-                    {
-                        std::cout<<Pixel_Matrix_Labels[i1][j1];
-                    }
-                    std::cout<<std::endl;
-                }
-                std::cout<<std::endl;
-            }
+//             if(NumberOfCluster>2)
+//             {
+//                 std::cout<<"Number of cluster"<<NumberOfCluster<<std::endl;
+//                 for(auto j1=1; j1<ROWS+1; j1++)
+//                 {
+//                     for(auto i1=1; i1<COLUMNS+1; i1++)
+//                     {
+//                         std::cout<<Pixel_Matrix_Labels[i1][j1];
+//                     }
+//                     std::cout<<std::endl;
+//                 }
+//                 std::cout<<std::endl;
+//             }
             //     Finally calculate all clusters
             std::vector<MemoryCluster> clustervec;
             clustervec.resize(NumberOfCluster,MemoryCluster());
@@ -419,7 +415,7 @@ namespace PRODUCER{
         RecreateRootFile(tmp);
         this->prod_root_file->cd();
         f_Clustertree= new TTree("Clustertree","Clustertree");
-        f_Clustertree->Branch("Mapsa_0","std::vector<MemoryCluster>", &MemorClusterVec_MPA_0);
+        f_Clustertree->Branch("Mapsa_0","std::vector<MemoryCluster>", &MemorClusterVec_MPA_0,32000,2);
         f_Clustertree->Branch("Mapsa_1","std::vector<MemoryCluster>", &MemorClusterVec_MPA_1);
         TTree* const tree = static_cast<TTree* const>(file->TDirectoryFile::Get("Tree"));
         MemoryNoProcessingBranch_t memory_arr[ASSEMBLY];
@@ -541,9 +537,9 @@ namespace PRODUCER{
                 hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
                 hists_1d[1][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_1);
                 hists_1d[2][k_counter_Hits_per_Event]->Fill(counter_hits_per_event);
-                this->FillMemoryHists(memory_arr[0],0);
-                this->FillMemoryHists(memory_arr[1],1);
-//                 f_Clustertree->Fill();
+                FillMemoryHists(memory_arr[0],0);
+                FillMemoryHists(memory_arr[1],1);
+                f_Clustertree->Fill();
                 //             GetMemoryEfficiency(counter_hits_per_event);
             }
             
@@ -552,6 +548,7 @@ namespace PRODUCER{
             tgraphs[2][Mapsa_TGraph::TGraph_Hits_vs_Event].SetPoint(event,event,counter_hits_per_event);
             if(event%500==0)
                 std::cout<<"Progress:\t"<<std::setw(5)<<std::setprecision(1)<<std::fixed<<100*(float)(event)/(float)(nEntries)<<" % of\t "<<nEntries<<" events \r"<<std::flush;
+//                 std::cout<<"Progress:\t"<<std::setw(5)<<std::setprecision(1)<<std::fixed<<100*(float)(event)/(float)(nEntries)<<" % of\t "<<nEntries<<" events \n"<<std::flush;
         }
         std::cout<<std::endl;
         #endif
@@ -569,6 +566,8 @@ namespace PRODUCER{
             //     counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
         }
         file->Close();
+        delete MemorClusterVec_MPA_0;
+        delete MemorClusterVec_MPA_1;
     }
     Strip_Coordinate Producer::MapGeometry ( int MPA_no )
     {
@@ -745,9 +744,12 @@ namespace PRODUCER{
                 j.Set(0);
             }
         }
-//         f_Clustertree->Write();
-        prod_root_file->Close();
-//         delete f_Clustertree;
+        prod_root_file->cd();
+        f_Clustertree->Write("Clustertree");
+        this->prod_root_file->Close();
+//         delete MemorClusterVec_MPA_0;
+//         delete MemorClusterVec_MPA_1;
+        //         delete f_Clustertree;
         //     return 0;
     }
     void Producer::DeleteHists()

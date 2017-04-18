@@ -216,25 +216,6 @@ namespace PRODUCER{
         std::vector<unsigned char>  Header;
         std::vector<unsigned char>  NumEvents;
     };
-//     struct CounterCluster{
-//         Float_t cog_x;
-//         Float_t cog_y;
-//         Float_t size_x;
-//         Float_t size_y;
-//         UShort_t clustersize;
-//         Short_t Chip_Position_Mask;
-//         Short_t IntraChipPosition;
-//     };
-//     struct MemoryCluster{
-//         Float_t cog_x;
-//         Float_t cog_y;
-//         UShort_t size_x;
-//         UShort_t size_y;
-//         UShort_t clustersize;
-//         Int_t Chip_Position_Mask;
-//         Int_t IntraChipPosition;
-//         unsigned short BX_ID;
-//     };
     class Producer
     {
     public:
@@ -253,9 +234,9 @@ namespace PRODUCER{
         ~Producer()
         {
             DeleteHists();
-            prod_root_file->Close();
-            delete MemorClusterVec_MPA_0;
-            delete MemorClusterVec_MPA_1;
+//             prod_root_file->Close();
+//             delete MemorClusterVec_MPA_0;
+//             delete MemorClusterVec_MPA_1;
         };
         
         Strip_Coordinate GetStripCoordinate(int channel, int mpa_no);

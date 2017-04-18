@@ -8,6 +8,7 @@ include(${ROOT_USE_FILE})
 ROOT_GENERATE_DICTIONARY(dataformat_treelib_Dict dataformat_tree.h LINKDEF dataformat_tree_LinkDef.h)
 
 add_library(dataformat_tree SHARED dataformat_tree.cpp dataformat_treelib_Dict.cxx)
+set_target_properties(dataformat_tree PROPERTIES OUTPUT_NAME dataformat_treelib_Dict)
 target_link_libraries(dataformat_tree ${ROOT_LIBRARIES})
 # target_link_libraries(roottest my ${ROOT_LIBRARIES})
 add_library (Scan Scan.cpp)

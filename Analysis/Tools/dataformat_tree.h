@@ -79,17 +79,18 @@ class MemoryCluster: public TObject {
   ~MemoryCluster(){};
   ClassDef(MemoryCluster,1)
 };
-class MemoryClusterVec: public TObject {
- public:
-     std::vector<MemoryCluster> ClusterVec;
-  //! my_utilities constructor
-  MemoryClusterVec()
-  {
-      this->ClusterVec=std::vector<MemoryCluster>({MemoryCluster()});
-  };
-  ~MemoryClusterVec(){};
-  ClassDef(MemoryClusterVec,1)
-};
+// class MemoryClusterVec: public TObject {
+//  public:
+//      std::vector<MemoryCluster> ClusterVec;
+//   //! my_utilities constructor
+//   MemoryClusterVec()
+//   {
+//       this->ClusterVec=std::vector<MemoryCluster>({});
+//   };
+//   ~MemoryClusterVec(){};
+//   ClassDef(MemoryClusterVec,1)
+// };
+// ClassDef(std::vector<MemoryCluster>,1)
 
 class CounterCluster: public TObject {
  public:

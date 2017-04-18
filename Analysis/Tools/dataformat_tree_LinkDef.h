@@ -7,8 +7,9 @@
 // #pragma link C++ class MemoryNoProcessingBranch+;
 // #pragma link C++ class RippleCounterBranch+;
 #pragma link C++ class MemoryCluster+;
-#pragma link C++ class MemoryClusterVec+;
+// #pragma link C++ class MemoryClusterVec+;
 #pragma link C++ class CounterCluster+;
+#pragma link C++ class std::vector<MemoryCluster>+;
 
 #endif // __CINT__
 
