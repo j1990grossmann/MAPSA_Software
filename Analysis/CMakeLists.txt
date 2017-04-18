@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(bt_analysis)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 11)
@@ -12,6 +11,7 @@ list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package (Threads REQUIRED)
 find_package(Boost COMPONENTS program_options filesystem REQUIRED )
 find_package(ROOT REQUIRED COMPONENTS MathCore RIO Net Hist Tree TreePlayer RooFit REQUIRED)
+add_definitions("--std=c++11")
 
 message(${ROOT_INCLUDE_DIRS})
 message(${Boost_VERSION})

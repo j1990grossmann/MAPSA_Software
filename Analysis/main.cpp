@@ -47,7 +47,6 @@
 #include "TString.h"
 #include "TTree.h"
 #include "TBits.h"
-#include "TProcPool.h"
 #include "TArray.h"
 #include "TArrayI.h"
 
@@ -66,7 +65,6 @@ bool check_file_path(const std::string& file_path_str, fs::path& p);
 std::vector<std::string>get_list_of_files(std::string const& run_file, std::string const& path);
 
 int main(int argc, char **argv) {
-    ROOT::EnableThreadSafety();
     std::string path;
     std::string run_file;
     std::string out_file;

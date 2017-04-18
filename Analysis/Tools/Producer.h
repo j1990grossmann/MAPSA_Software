@@ -57,7 +57,6 @@
 // #include "TMultiGraph.h"
 // #include "TObject.h"
 // #include "TPad.h"
-#include "TProcPool.h"
 #include "TRandom3.h"
 #include "TROOT.h"
 #include "TROOT.h"
@@ -65,9 +64,6 @@
 // #include "TStyle.h"
 #include "TSystem.h"
 #include "TTree.h"
-#include "TTreeReader.h"
-#include "TTreeReaderValue.h"
-#include "TTreeReaderArray.h"
 #include "TMap.h"
 #include "TObject.h"
 #include "TDirectoryFile.h"
@@ -228,7 +224,6 @@ namespace PRODUCER{
         Pixel_Matrix_Arr({{0}}),
         Pixel_Matrix_Labels({{0}})
         {
-            ROOT::EnableThreadSafety();
             //          ResetPixelMatrix();
         }
         ~Producer()
@@ -302,7 +297,6 @@ namespace PRODUCER{
         Strip_Coordinate MapGeometry(int MPA_no);
         
         
-        bool CheckValue(ROOT::Internal::TTreeReaderValueBase& value);
         void InitializeHists();
         void FillCounterHists_Run();
         void FillMemoryHists_Run();

@@ -588,16 +588,7 @@ namespace PRODUCER{
         }
         return tmp;
     }
-    bool Producer::CheckValue (ROOT::Internal::TTreeReaderValueBase& value)
-    {
-        if (value.GetSetupStatus() != 0 && value.GetSetupStatus() != -7) {
-            std::cerr << "Error " << value.GetSetupStatus()
-            << "setting up reader for " << value.GetBranchName() << '\n';
-            return false;
-        }
-        return true;
-    }
-    
+   
     void Producer::InitializeHists()
     {
         hists_1d.resize((no_MPA_light+1));
