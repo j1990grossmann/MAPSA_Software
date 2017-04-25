@@ -183,55 +183,61 @@ namespace PRODUCER{
             }
         }
         //         Second Pass
-        if(hits_per_event>1)
+        std::set<unsigned int> clusterlabelmap;
+        if(hits_per_event>1){
             for(auto j1=1; j1<ROWS+1; j1++)
             {
                 for(auto i1=1; i1<COLUMNS+1; i1++)
                 {
                     if(Pixel_Matrix_Arr[i1][j1]){
                         Pixel_Matrix_Labels[i1][j1] = *f_linked.at(Pixel_Matrix_Labels[i1][j1]-1).begin();
-                        NumberOfCluster=std::max(Pixel_Matrix_Labels[i1][j1],NumberOfCluster);
+                        clusterlabelmap.insert(Pixel_Matrix_Labels[i1][j1]);
                     }
                 }
             }
-            //     Finally calculate all cluster properties
-            std::vector<MemoryCluster> clustervec;
-            clustervec.resize(NumberOfCluster,MemoryCluster());
-            for(unsigned int j1=1; j1<ROWS+1; j1++)
+            NumberOfCluster=clusterlabelmap.size();
+        }
+        //     Finally calculate all cluster properties
+        std::vector<MemoryCluster> clustervec;
+        clustervec.resize(NumberOfCluster,MemoryCluster());
+        for(unsigned int j1=1; j1<ROWS+1; j1++)
+        {
+            for(unsigned int i1=1; i1<COLUMNS+1; i1++)
             {
-                for(unsigned int i1=1; i1<COLUMNS+1; i1++)
+                if(Pixel_Matrix_Labels[i1][j1])
                 {
-                    if(Pixel_Matrix_Labels[i1][j1])
-                    {
-                        auto index = Pixel_Matrix_Labels[i1][j1]-1;
-                        //                 Calculate pixel coordinate and weight
-                        clustervec.at(index).clustersize+=1;
-                        clustervec.at(index).Chip_Position_Mask=MPA_no;
-                        auto edge = GetCase(j1-1,i1-1);
-                        clustervec.at(index).IntraChipPosition|=edge;
-                        LocalHitCor tmp = GetHitCoordinate(i1-1, edge);
-                        clustervec.at(index).BX_ID=BX_ID;
-                        clustervec.at(index).cog_x+=tmp.x*tmp.area;
-                        clustervec.at(index).cog_y+=tmp.y*tmp.area;
-                        clustervec.at(index).x_pixel.insert(i1);
-                        clustervec.at(index).y_pixel.insert(j1);
-                        clustervec.at(index).area+=tmp.area;
+                    auto index = std::distance(clusterlabelmap.begin(),std::find(clusterlabelmap.begin(), clusterlabelmap.end(),Pixel_Matrix_Labels[i1][j1]));
+                    //                 Calculate pixel coordinate and weight
+                    clustervec.at(index).clustersize+=1;
+                    clustervec.at(index).Chip_Position_Mask=MPA_no;
+                    auto edge = GetCase(j1-1,i1-1);
+                    clustervec.at(index).IntraChipPosition|=edge;
+                    LocalHitCor tmp = GetHitCoordinate(i1-1, edge);
+                    clustervec.at(index).BX_ID=BX_ID;
+                    clustervec.at(index).cog_x+=tmp.x*tmp.area;
+                    clustervec.at(index).cog_y+=tmp.y*tmp.area;
+                    clustervec.at(index).x_pixel.insert(i1);
+                    clustervec.at(index).y_pixel.insert(j1);
+                    clustervec.at(index).area+=tmp.area;
+                    if(hits_per_event==1){
+                        break;
                     }
                 }
             }
-            //     Normalize and calculate dimension
-            for (MemoryCluster cluster: clustervec)
-            {
-                cluster.cog_x=cluster.cog_x/cluster.area;
-                cluster.cog_y=cluster.cog_y/cluster.area;
-                cluster.size_x=*(--cluster.x_pixel.end())-*cluster.x_pixel.begin()+1;
-                cluster.size_y=*(--cluster.y_pixel.end())-*cluster.y_pixel.begin()+1;
-//                 if(cluster.clustersize>2){
-//                     Print_Memory_ClusterLabels();
-//                     Print_Cluster(cluster);
-//                 }
-            }
-            return clustervec;
+        }
+        //     Normalize and calculate dimension
+        for (MemoryCluster cluster: clustervec)
+        {
+            cluster.cog_x=cluster.cog_x/cluster.area;
+            cluster.cog_y=cluster.cog_y/cluster.area;
+            cluster.size_x=*(--cluster.x_pixel.end())-*cluster.x_pixel.begin()+1;
+            cluster.size_y=*(--cluster.y_pixel.end())-*cluster.y_pixel.begin()+1;
+            //                 if(cluster.clustersize>2){
+            //                     Print_Memory_ClusterLabels();
+            //                     Print_Cluster(cluster);
+            //                 }
+        }
+        return clustervec;
     }
     MaskCases Producer::GetCase(int x, int y)
     {
