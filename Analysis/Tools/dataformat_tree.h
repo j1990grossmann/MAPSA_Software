@@ -20,19 +20,19 @@ static const int ASSEMBLY=2;
 static const int TIMESTAMP_RANGE=65536;
 static const int THRESHOLD_RANGE=256;
 
-static const float PITCH_STD__X=100E-6;
-static const float PITCH_EDGE_X=200E-6;
-static const float PITCH_STD_Y=1746E-6;
-static const float PITCH_STD_EDGE_Y=1446E-6;
+static const float PITCH_STD__X=100;
+static const float PITCH_EDGE_X=200;
+static const float PITCH_STD_Y=1746;
+static const float PITCH_STD_EDGE_Y=1446;
 // Weights for COG calculation
-static const float WEIGHT_DEFAULT=1446;
-static const float WEIGHT_STD_EDGE=2892;
-static const float WEIGHT_LOWER_ROW=1746;
-static const float WEIGHT_LOWER_CORNER=3492;
+static const float WEIGHT_DEFAULT=144600;
+static const float WEIGHT_STD_EDGE=289200;
+static const float WEIGHT_LOWER_ROW=174600;
+static const float WEIGHT_LOWER_CORNER=349200;
 
-static const float LOWER_ROW=873E-6;
-static const float ROW_1=1446E-6;
-static const float ROW_2=2892E-6;
+static const float LOWER_ROW=873;
+static const float ROW_1=1446;
+static const float ROW_2=2892;
 
 
 
@@ -53,14 +53,14 @@ struct RippleCounterBranch_t{
 //! my_utilities class
 class MemoryCluster: public TObject {
  public:
-     Float_t cog_x;
-     Float_t cog_y;
-     Float_t area;
-     UShort_t size_x;
-     UShort_t size_y;
-     UShort_t clustersize;
-     Int_t Chip_Position_Mask;
-     Int_t IntraChipPosition;
+     float cog_x;
+     float cog_y;
+     float area;
+     unsigned int size_x;
+     unsigned int size_y;
+     unsigned int clustersize;
+     int Chip_Position_Mask;
+     int IntraChipPosition;
      unsigned short BX_ID;
      std::set<unsigned int> x_pixel;
      std::set<unsigned int> y_pixel;

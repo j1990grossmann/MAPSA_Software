@@ -27,36 +27,37 @@ namespace PRODUCER{
         switch (mask) {
             case MaskCases::limit_bottom:
                 tmp.area=WEIGHT_LOWER_ROW;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=LOWER_ROW;
                 return tmp;              //execution of subsequent statements is terminated
             case MaskCases::corner_lower_left: case MaskCases::corner_lower_right:
                 tmp.area=WEIGHT_LOWER_CORNER;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=LOWER_ROW;
                 return tmp;              //execution of subsequent statements is terminated
             case MaskCases::no_edge:
                 tmp.area=WEIGHT_DEFAULT;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=ROW_1;
                 return tmp;              //execution of subsequent statements is terminated
             case MaskCases::limit_left: case MaskCases::limit_right:
                 tmp.area=WEIGHT_STD_EDGE;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=ROW_1;
                 return tmp;              //execution of subsequent statements is terminated
             case MaskCases::limit_top:
                 tmp.area=WEIGHT_DEFAULT;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=ROW_2;
                 return tmp;
             case MaskCases::corner_upper_left: case MaskCases::corner_upper_right:
                 tmp.area=WEIGHT_STD_EDGE;
-                tmp.x=PITCH_STD__X*x*PITCH_STD__X;
+                tmp.x=PITCH_STD__X*x+PITCH_STD__X;
                 tmp.y=ROW_2;
                 return tmp;
             default:
-                std::cout<<"This is not a forseen case retriving a local hit coordinate"<<std::endl;
+                std::cout<<"This is not a forseen case retriving a local MPA hit coordinate"<<std::endl;
+                exit(1);
         }
     }
     void Producer::Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f)
@@ -81,7 +82,7 @@ namespace PRODUCER{
     }
     void Producer::Print_GeometryMaskMPA()
     {
-        std::cout<<"Geometry Mask:";    
+        std::cout<<"Geometry Mask:";
         for(auto i = 0; i < geometryMask.size(); ++i){
             if(i%3==0)
                 std::cout<<"\n";
@@ -100,7 +101,6 @@ namespace PRODUCER{
             if(geometryMask.at(i)){
                 auto tmp=MapGeometry(i);
                 GeometryInfo.push_back(tmp);
-                std::cout<<tmp.x<<"-"<<tmp.y<<" Pushed_back";
                 for(auto j = 0; j < MaPSAMask[mpa_no].size(); ++j){
                     auto tmp_cor(MapGlobal(MapCounterLocal(j),tmp.x,tmp.y));
                     //                 auto tmp_cor(MapCounterLocal(j));
@@ -134,20 +134,10 @@ namespace PRODUCER{
     }
     std::vector<MemoryCluster> Producer::ProduceCluster(int MPA_no, int hits_per_event, UShort_t BX_ID)
     {
-        //         Print the current event zero padded
-        //             std::cout<<"pixelmatrix"<<std::endl;
-        //             for(auto j=0; j<ROWS+2; j++){
-        //                 for(auto i=0; i<COLUMNS+2; i++){
-        //                     std::cout<<Pixel_Matrix_Arr[i][j];
-        //                 }
-        //                 std::cout<<std::endl;
-        //             }
-        //             std::cout<<std::endl;
         //    Two pass connected component labeling
         f_linked.clear();
         unsigned short NumberOfCluster=0;
         unsigned int NextLabel=1;
-        unsigned int LabelMin=0;
         for(auto j=1; j<ROWS+1; j++){
             for(auto i=1; i<COLUMNS+1; i++){
                 if(Pixel_Matrix_Arr[i][j])
@@ -162,7 +152,7 @@ namespace PRODUCER{
                         //                         std::set<unsigned int> labels = {Pixel_Matrix_Labels[i-1][j], Pixel_Matrix_Labels[i][j-1]};
                         if(*labels.begin()<1)
                             labels.erase(labels.begin());
-                        Pixel_Matrix_Labels[i][j]=*labels.begin();;
+                        Pixel_Matrix_Labels[i][j]=*labels.begin();
                         for(auto label : labels)
                         {
                             f_linked.at(label-1).insert(labels.begin(),labels.end());
@@ -204,25 +194,12 @@ namespace PRODUCER{
                     }
                 }
             }
-//             if(NumberOfCluster>2)
-//             {
-//                 std::cout<<"Number of cluster"<<NumberOfCluster<<std::endl;
-//                 for(auto j1=1; j1<ROWS+1; j1++)
-//                 {
-//                     for(auto i1=1; i1<COLUMNS+1; i1++)
-//                     {
-//                         std::cout<<Pixel_Matrix_Labels[i1][j1];
-//                     }
-//                     std::cout<<std::endl;
-//                 }
-//                 std::cout<<std::endl;
-//             }
-            //     Finally calculate all clusters
+            //     Finally calculate all cluster properties
             std::vector<MemoryCluster> clustervec;
             clustervec.resize(NumberOfCluster,MemoryCluster());
-            for(auto j1=1; j1<ROWS+1; j1++)
+            for(unsigned int j1=1; j1<ROWS+1; j1++)
             {
-                for(auto i1=1; i1<COLUMNS+1; i1++)
+                for(unsigned int i1=1; i1<COLUMNS+1; i1++)
                 {
                     if(Pixel_Matrix_Labels[i1][j1])
                     {
@@ -239,8 +216,6 @@ namespace PRODUCER{
                         clustervec.at(index).x_pixel.insert(i1);
                         clustervec.at(index).y_pixel.insert(j1);
                         clustervec.at(index).area+=tmp.area;
-                        if(index==NumberOfCluster-1)
-                            break;
                     }
                 }
             }
@@ -249,16 +224,12 @@ namespace PRODUCER{
             {
                 cluster.cog_x=cluster.cog_x/cluster.area;
                 cluster.cog_y=cluster.cog_y/cluster.area;
-                cluster.size_x=*cluster.x_pixel.end()-*cluster.x_pixel.begin()+1;
-                cluster.size_y=*cluster.y_pixel.end()-*cluster.y_pixel.begin()+1;
-                //         std::cout<<"Clustersize\t"<<std::fixed<<std::setw(5)<<cluster.clustersize<<"\n";
-                //         std::cout<<"BXID\t"<<std::fixed<<std::setw(5)<<cluster.BX_ID<<"\n";
-                //         std::cout<<"Chip_Position_Mask\t"<<std::fixed<<std::setw(5)<<cluster.Chip_Position_Mask<<"\n";
-                //         std::cout<<"CoGx\t"<<std::scientific<<std::setw(5)<<cluster.cog_x<<"\n";
-                //         std::cout<<"CoGy\t"<<std::scientific<<std::setw(5)<<cluster.cog_y<<"\n";
-                //         std::cout<<"IntraChipPosition\t"<<std::fixed<<std::setw(5)<<cluster.IntraChipPosition<<"\n";
-                //         std::cout<<"Size_x\t"<<std::fixed<<std::setw(5)<<cluster.size_x<<"\n";
-                //         std::cout<<"Size_y\t"<<std::fixed<<std::setw(5)<<cluster.size_x<<"\n";
+                cluster.size_x=*(--cluster.x_pixel.end())-*cluster.x_pixel.begin()+1;
+                cluster.size_y=*(--cluster.y_pixel.end())-*cluster.y_pixel.begin()+1;
+//                 if(cluster.clustersize>2){
+//                     Print_Memory_ClusterLabels();
+//                     Print_Cluster(cluster);
+//                 }
             }
             return clustervec;
     }
@@ -282,22 +253,10 @@ namespace PRODUCER{
             return MaskCases::corner_lower_right;
         else if(x==(ROWS-1) && y==0)
             return MaskCases::corner_lower_left;
-        else
+        else{
             std::cout<<"Did not provide a valid case for GetCase"<<std::endl;
-        exit(1);
-    }
-    
-    void Producer::ProduceDQM_Cluster_Hits()
-    {
-        
-    }
-    void Producer::ProduceDQM_Hits()
-    {
-        
-    }
-    void Producer::ProduceGlobalHit()
-    {
-        
+            exit(1);
+        }
     }
     Strip_Coordinate Producer::MapMemoryLocal(int Channel_f)
     {
@@ -316,15 +275,6 @@ namespace PRODUCER{
             exit(1);
         }
     }
-    int Producer::MapMemoryLocal_X(int Channel_f)
-    {
-        return 0;
-    }
-    int Producer::MapMemoryLocal_Y(int Channel_f)
-    {
-        return 0;
-    }
-    
     Strip_Coordinate Producer::MapCounterLocal(int Channel_f)
     {
         //         1. Row 3: From Pixel 48 to Pixel 33.
@@ -373,7 +323,7 @@ namespace PRODUCER{
         }else if (32<=Channel_f && Channel_f<48){
             return 2;
         }else{ 
-            std::cout<<"no valid loc coordinate\n";
+            std::cout<<"no valid loc y coordinate\n";
             exit(1);
         }
     }
@@ -539,6 +489,19 @@ namespace PRODUCER{
                 hists_1d[2][k_counter_Hits_per_Event]->Fill(counter_hits_per_event);
                 FillMemoryHists(memory_arr[0],0);
                 FillMemoryHists(memory_arr[1],1);
+                for(MemoryCluster a: *MemorClusterVec_MPA_0)
+                {
+                    hists_1d[0][Mapsa_TH1::k_memory_Cluster_size]->Fill(a.clustersize);
+                    hists_1d[2][Mapsa_TH1::k_memory_Cluster_size]->Fill(a.clustersize);
+                }
+                hists_1d[0][Mapsa_TH1::k_memory_Cluster_per_Event]->Fill(MemorClusterVec_MPA_0->size());
+                for(MemoryCluster a: *MemorClusterVec_MPA_1)
+                {
+                    hists_1d[1][Mapsa_TH1::k_memory_Cluster_size]->Fill(a.clustersize);
+                    hists_1d[2][Mapsa_TH1::k_memory_Cluster_size]->Fill(a.clustersize);
+                }
+                hists_1d[1][Mapsa_TH1::k_memory_Cluster_per_Event]->Fill(MemorClusterVec_MPA_0->size());
+                hists_1d[2][Mapsa_TH1::k_memory_Cluster_per_Event]->Fill(MemorClusterVec_MPA_0->size()+MemorClusterVec_MPA_1->size());
                 f_Clustertree->Fill();
                 //             GetMemoryEfficiency(counter_hits_per_event);
             }
@@ -864,5 +827,46 @@ namespace PRODUCER{
         }
         if(inefficient_memory=true && total_counter_hits==1)
             hists_1d[2][Mapsa_TH1::k_memory_vs_counter_Efficiency]->Fill(0);
+    }
+    void Producer::Print_Cluster(const MemoryCluster& cluster_f)
+    {
+        std::cout<<"-------------------------"<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Clustersize"       <<std::right<<std::setw(5)<<cluster_f.clustersize<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"BXID"              <<std::right<<std::setw(5)<<cluster_f.BX_ID<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Chip_Position_Mask"<<std::right<<std::setw(5)<<cluster_f.Chip_Position_Mask<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"CoGx"              <<std::right<<std::scientific<<std::setprecision(5)<<cluster_f.cog_x<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"CoGy"              <<std::right<<std::scientific<<std::setprecision(5)<<cluster_f.cog_y<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"IntraChipPosition" <<std::right<<std::setw(5)<<cluster_f.IntraChipPosition<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Size_x"            <<std::right<<std::setw(5)<<cluster_f.size_x<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Size_y"            <<std::right<<std::setw(5)<<cluster_f.size_y<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Envelope_x"        <<std::right<<std::setw(5)<<*cluster_f.x_pixel.begin()<<"\t"<<*(std::prev(cluster_f.x_pixel.end()))<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Envelope_y"        <<std::right<<std::setw(5)<<*cluster_f.y_pixel.begin()<<"\t"<<*(std::prev(cluster_f.y_pixel.end()))<<"\n";
+        std::cout<<"\n";
+    }
+    void Producer::Print_MemoryEvent()
+    {
+//                         Print the current event zero padded
+        std::cout<<"Current event\n";
+        for(auto j=1; j<ROWS+1; j++){
+            for(auto i=1; i<COLUMNS+1; i++){
+                std::cout<<Pixel_Matrix_Arr[i][j];
+            }
+            std::cout<<"\n";
+        }
+        std::cout<<"\n";
+    }
+    void Producer::Print_Memory_ClusterLabels()
+    {
+//         Print the event after cluster labeling
+        std::cout<<"Clusters labeled\n";
+        for(auto j1=1; j1<ROWS+1; j1++)
+        {
+            for(auto i1=1; i1<COLUMNS+1; i1++)
+            {
+                std::cout<<Pixel_Matrix_Labels[i1][j1];
+            }
+            std::cout<<"\n";
+        }
+        std::cout<<"\n";
     }
 }
