@@ -176,7 +176,7 @@ for i in range(0,len(Data)):
 
     #Data=
 hm_n       = LoG_Mask_histo.GetNbinsX()
-hm_data       = Convolve.GetNbinsX()
+hm_data    = Convolve.GetNbinsX()
 #Kernel = array.array( 'd', [0]*hm_n)
 #Data   = array.array( 'd', [0]*hm_n)
 #Data= ROOT.std.vector('double')(hm_data)
