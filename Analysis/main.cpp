@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
     std::string out_file;
     std::string mask_file;
     std::string geo_file;
+    std::string result_file;
     std::vector<std::string> filenames;
     bool mask_toggle;
     try{
@@ -82,6 +83,7 @@ int main(int argc, char **argv) {
         ("pixel_mask_file,m", po::value<std::string>(&mask_file)->default_value("pixel_mask.txt"), "Pixel mask file")
         ("geometry_file,g",   po::value<std::string>(&geo_file )->default_value("geo_file.txt"),   "Geometry   file")
         ("mask_toggle,t",     po::value<bool>(&mask_toggle)     ->default_value(false), "Toggle pixel mask")
+        ("result_file,r",     po::value<std::string>(&result_file)->default_value("Results.root"), "Result root file")
         ;
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -102,6 +104,7 @@ int main(int argc, char **argv) {
             std::cout<<std::setw(20)<<std::left<<"Pixel Mask  file:"<<std::right<<mask_file<<"\n";
             std::cout<<std::setw(20)<<std::left<<"Geometry    file:"<<std::right<<geo_file<<"\n";
             std::cout<<std::setw(20)<<std::left<<"Mask  toggle:"<<std::right<<mask_toggle<<"\n";
+            std::cout<<std::setw(20)<<std::left<<"Result root file:"<<std::right<<result_file<<"\n";
             std::cout<<line<<std::endl;
         }
     }
@@ -169,7 +172,6 @@ int main(int argc, char **argv) {
     //     for(auto && result: results)
     //         std::cout << result.get() << ' ';
     //     std::cout << std::endl;
-    
     SafeCounter ScanResults;
     for(auto it(filenames.begin()); it != filenames.end(); ++it)
         //     for(auto it(filenames.begin()+28); it != filenames.begin()+35; ++it)
@@ -182,13 +184,14 @@ int main(int argc, char **argv) {
     }
     std::flush(std::cout);    
     //     t.~Producer();
-    TFile * result = new TFile("Results.root","RECREATE");
+    TFile * result = new TFile(result_file.c_str(),"RECREATE");
     result->mkdir("Results");
     result->cd("Results");
     
     TH1F* Glob_Hits_vs_Treshold = new TH1F("Glob_Hits_vs_Treshold","Glob_Hits_vs_Treshold",THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
     TH2F* Glob_Hits_vs_Channel_vs_Treshold= new TH2F("Hits_vs_Channel_vs_Treshold","Hits_vs_Channel_vs_Treshold",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
     TH2F* Glob_Hits_vs_Channel_vs_Treshold_MEM= new TH2F("Hits_vs_Channel_vs_Treshold_MEM","Hits_vs_Channel_vs_Treshold_MEM",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
+    TH2I* TDC_vs_Channel_vs_Treshold= new TH2I("TDC_vs_Channel_vs_Treshold","TDC_vs_Channel_vs_Treshold",CHANNELS*ASSEMBLY,.5, CHANNELS*ASSEMBLY+.5,THRESHOLD_RANGE,-.5,THRESHOLD_RANGE-.5);
     for(auto it(ScanResults.count_vec.begin()); it != ScanResults.count_vec.end(); ++it)
     {
         Counter tmp=Counter(*it);

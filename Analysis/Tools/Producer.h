@@ -210,6 +210,7 @@ namespace PRODUCER{
         void Print_PixelMaskMPA();
         void Print_Cluster(const MemoryCluster& cluster_f);
         void Print_MemoryEvent();
+        void Print_CounterEvent();
         void Print_Memory_ClusterLabels();
         void SetFile(const std::string& root_file_f, Counter& counter, const std::string& in_file_f, const std::string& path);
         void SaveResetHists();

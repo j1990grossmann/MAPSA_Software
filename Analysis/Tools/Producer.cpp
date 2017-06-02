@@ -372,7 +372,7 @@ namespace PRODUCER{
         this->prod_root_file->cd();
         f_Clustertree= new TTree("Clustertree","Clustertree");
         f_Clustertree->Branch("Mapsa_0","std::vector<MemoryCluster>", &MemorClusterVec_MPA_0,32000,2);
-        f_Clustertree->Branch("Mapsa_1","std::vector<MemoryCluster>", &MemorClusterVec_MPA_1);
+        f_Clustertree->Branch("Mapsa_1","std::vector<MemoryCluster>", &MemorClusterVec_MPA_1,32000,2);
         TTree* const tree = static_cast<TTree* const>(file->TDirectoryFile::Get("Tree"));
         MemoryNoProcessingBranch_t memory_arr[ASSEMBLY];
         RippleCounterBranch_t ripplecounter_arr[ASSEMBLY];
@@ -420,22 +420,20 @@ namespace PRODUCER{
         tree->SetBranchAddress("TRIG_OFFSET_BEAM",&t_TRIG_OFFSET_BEAM);
         tree->SetBranchAddress("TRIG_OFFSET_MPA",&t_TRIG_OFFSET_MPA);
         #ifndef DEBUG
-        //     reader.GetTree()->Print();
-        // auto tree1=reader.GetTree();
-        
         std::cout<<"Processing "<<tree->GetEntries()<<" Events"<<std::endl;
         unsigned int event=0;
         unsigned int counter_hits_per_event=0;
         unsigned int counter_hits_per_event_0=0;
         unsigned int counter_hits_per_event_1=0;
         int nEntries = tree->GetEntries();                  // Get the number of entries in this tree
-        int cut_low =10;
-        int cut_up=10;
+        int cut_low =0;
+        int cut_up=0;
         int lower =( nEntries-cut_low> 0) ? cut_low : 0;
         int upper =( nEntries-cut_up> 0) ? (nEntries-cut_up) : nEntries;
         for (int event = 0; event< nEntries; event++) {
             //         for (int event = 0; event< 100; event++) {
             tree->GetEntry(event);
+            
             //     while (reader.Next()) {
             //         Conditions
             //             Reset all the arrays
@@ -447,7 +445,7 @@ namespace PRODUCER{
                 counter.no_shutter = tree->GetEntries();
                 //             counter.pos_x      = t_COND_X_POS;
                 //             counter.pos_y      = t_COND_Y_POS;
-                //             counter.pos_z      = t_COND_Z_POS;
+                counter.pos_z      = t_COND_Z_POS;
                 counter.threshold  = t_COND_THRESHOLD;
                 std::cout<<"Threshold"<<counter.threshold<<std::endl;
                 //             counter.timestamp  =;
@@ -464,7 +462,7 @@ namespace PRODUCER{
                     auto tmp = this->MapCounterLocal(i);
                     auto glob= this->MapGlobal(tmp,this->GeometryInfo.at(0).x-1,this->GeometryInfo.at(0).y);
                     Counter_Pixel_Matrix[glob.x][glob.y]+=(float)ripplecounter_arr[0].pixel[i];
-                    if(event>lower && event<upper)
+                    if(event>=lower && event<=upper)
                     {
                         hists_1d[0][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
                         hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[0].pixel[i]);
@@ -479,7 +477,7 @@ namespace PRODUCER{
                     auto tmp = this->MapCounterLocal(i);
                     auto glob= this->MapGlobal(tmp,this->GeometryInfo.at(1).x-1,this->GeometryInfo.at(1).y);
                     Counter_Pixel_Matrix[glob.x][glob.y]+=(float)ripplecounter_arr[1].pixel[i];
-                    if(event>lower && event<upper)
+                    if(event>=lower && event<=upper)
                     {
                         hists_1d[1][k_counter_Hits_vs_Channel]->Fill(i+1,(float)ripplecounter_arr[1].pixel[i]);
                         hists_1d[2][k_counter_Hits_vs_Channel]->Fill(i+1+CHANNELS,(float)ripplecounter_arr[1].pixel[i]);
@@ -488,7 +486,7 @@ namespace PRODUCER{
                     }
                 }
             }
-            if(event>lower && event<upper)
+            if(event>=lower && event<=upper)
             {
                 hists_1d[0][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_0);
                 hists_1d[1][k_counter_Hits_per_Event]->Fill(counter_hits_per_event_1);
@@ -531,7 +529,7 @@ namespace PRODUCER{
         counter.stdev_hits            =hists_1d[2][Mapsa_TH1::k_counter_Hits_per_Event]->GetStdDev(1);
         for(auto i=0; i<(CHANNELS*ASSEMBLY+2); i++){
             counter.pixel_counter[i]=hists_1d[2][Mapsa_TH1::k_counter_Hits_vs_Channel]->GetBinContent(i);
-            counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
+            counter.pixel_memory[i] =hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
             //     counter.pixel_memory[i]=hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->GetBinContent(i);
         }
         file->Close();
@@ -636,7 +634,7 @@ namespace PRODUCER{
                                                                            COLUMNS*ROWS,-.5,COLUMNS*ROWS-.5,COLUMNS*ROWS,-.5,COLUMNS*ROWS-.5);
                 hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2I(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_mpa_"+std::to_string(i).c_str(),
                                                                                  TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_mpa_"+std::to_string(i).c_str(),
-                                                                                 TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS,.5,CHANNELS+.5);
+                                                                                 CHANNELS,.5,CHANNELS+.5,TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
             } 
             if(i==no_MPA_light){
                 hists_2d[i][Mapsa_TH2::k_counter_Hits_vs_Channel_2d] = new TH2I(TString(th_names_2d[Mapsa_TH2::k_counter_Hits_vs_Channel_2d])+"_glob",
@@ -659,7 +657,7 @@ namespace PRODUCER{
                                                                                 COLUMNS,.5,COLUMNS+.5,ROWS*ASSEMBLY,.5,ROWS*ASSEMBLY+.5);
                 hists_2d[i][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d] = new TH2I(TString(th_names_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_glob",
                                                                                  TString(th_title_ax_2d[Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d])+"_glob",
-                                                                                 TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5,CHANNELS,.5,CHANNELS+.5);
+                                                                                 CHANNELS*ASSEMBLY,.5,CHANNELS*ASSEMBLY+.5,TIMESTAMP_RANGE,.5,TIMESTAMP_RANGE+.5);
             }
         }
     }
@@ -763,6 +761,7 @@ namespace PRODUCER{
                     Memory_Pixel_Matrix[glob.x][glob.y]+=1;
                     hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+1);
                     hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Channel]->Fill(j+MPA_no*CHANNELS+1);
+                    hists_2d[2][Mapsa_TH2::k_memory_Hits_vs_Timestamp_2d]->Fill(j+MPA_no*CHANNELS+1,MemoryNoProcessingBranch.bunchCrossingId[i]);
                     hists_2d[MPA_no][Mapsa_TH2::k_memory_Hits_vs_Channel_2d]->Fill(strip_cor.x+1,strip_cor.y+1);
                     hists_2d[2][Mapsa_TH2::k_memory_Hits_vs_Channel_2d]->Fill(glob.x+1,glob.y+1);
                 }
@@ -784,11 +783,11 @@ namespace PRODUCER{
                 }
                 hists_1d[MPA_no][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i],hits_per_event);
                 hists_1d[2][Mapsa_TH1::k_memory_Hits_vs_Timestamp]->Fill(MemoryNoProcessingBranch.bunchCrossingId[i],hits_per_event);
-                std::vector<MemoryCluster> tmp =ProduceCluster(MPA_no,hits_per_event, MemoryNoProcessingBranch.bunchCrossingId[i]);
-                if(MPA_no==0)
-                    MemorClusterVec_MPA_0->insert(MemorClusterVec_MPA_0->end(), tmp.begin(), tmp.end());
-                if(MPA_no==1)
-                    MemorClusterVec_MPA_1->insert(MemorClusterVec_MPA_1->end(), tmp.begin(), tmp.end());
+//                 std::vector<MemoryCluster> tmp =ProduceCluster(MPA_no,hits_per_event, MemoryNoProcessingBranch.bunchCrossingId[i]);
+//                 if(MPA_no==0)
+//                     MemorClusterVec_MPA_0->insert(MemorClusterVec_MPA_0->end(), tmp.begin(), tmp.end());
+//                 if(MPA_no==1)
+//                     MemorClusterVec_MPA_1->insert(MemorClusterVec_MPA_1->end(), tmp.begin(), tmp.end());
             }
         }
     }
@@ -851,11 +850,21 @@ namespace PRODUCER{
     }
     void Producer::Print_MemoryEvent()
     {
-//                         Print the current event zero padded
-        std::cout<<"Current event\n";
+        std::cout<<"Current Memory event\n";
         for(auto j=1; j<ROWS+1; j++){
             for(auto i=1; i<COLUMNS+1; i++){
                 std::cout<<Pixel_Matrix_Arr[i][j];
+            }
+            std::cout<<"\n";
+        }
+        std::cout<<"\n";
+    }
+    void Producer::Print_CounterEvent()
+    {
+        std::cout<<"Current counter event\n";
+        for(auto j=1; j<ROWS+1; j++){
+            for(auto i=1; i<COLUMNS+1; i++){
+                std::cout<<Counter_Pixel_Matrix[i][j]<<std::endl;
             }
             std::cout<<"\n";
         }

@@ -47,6 +47,7 @@ struct Counter {
     float stdev_centroid_cluster;
     float pixel_counter[CHANNELS*ASSEMBLY+2];
     float pixel_memory[CHANNELS*ASSEMBLY+2];
+    unsigned int tdc_memory[TIMESTAMP_RANGE];
     
 
     Counter() : 
@@ -68,7 +69,8 @@ struct Counter {
     mean_centroid_cluster(0),
     stdev_centroid_cluster(0),
     pixel_counter(),
-    pixel_memory()
+    pixel_memory(),
+    tdc_memory()
     {}
 };
 
@@ -82,7 +84,6 @@ struct SafeCounter {
     }
     void safe(const std::string& out_file){
 //      TFile* f  = new TFile(out_file.c_str(),"RECREATE");
-     
     }
 };
 
