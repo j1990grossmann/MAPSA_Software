@@ -35,7 +35,6 @@ static const float ROW_1=1446;
 static const float ROW_2=2892;
 
 
-
 // 
 struct MemoryNoProcessingBranch_t {
    ULong64_t       pixelMatrix[MEMORY];
@@ -94,18 +93,21 @@ class MemoryCluster: public TObject {
 
 class CounterCluster: public TObject {
  public:
-     Float_t cog_x;
-     Float_t cog_y;
-     Float_t size_x;
-     Float_t size_y;
-     UShort_t clustersize;
-     Short_t Chip_Position_Mask;
-     Short_t IntraChipPosition;
-
+     float cog_x;
+     float cog_y;
+     float area;
+     unsigned int size_x;
+     unsigned int size_y;
+     unsigned int clustersize;
+     int Chip_Position_Mask;
+     int IntraChipPosition;
+     std::set<unsigned int> x_pixel;
+     std::set<unsigned int> y_pixel;
   //! my_utilities constructor
   CounterCluster():
   cog_x(0),
   cog_y(0),
+  area(0),
   size_x(0),
   size_y(0),
   clustersize(0),

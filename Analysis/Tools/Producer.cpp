@@ -848,6 +848,20 @@ namespace PRODUCER{
         std::cout<<std::left<<std::setw(20)<<"Envelope_y"        <<std::right<<std::setw(5)<<*cluster_f.y_pixel.begin()<<"\t"<<*(std::prev(cluster_f.y_pixel.end()))<<"\n";
         std::cout<<"\n";
     }
+    void Producer::Print_Cluster(const CounterCluster& cluster_f)
+    {
+        std::cout<<"-------------------------"<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Clustersize"       <<std::right<<std::setw(5)<<cluster_f.clustersize<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Chip_Position_Mask"<<std::right<<std::setw(5)<<cluster_f.Chip_Position_Mask<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"CoGx"              <<std::right<<std::scientific<<std::setprecision(5)<<cluster_f.cog_x<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"CoGy"              <<std::right<<std::scientific<<std::setprecision(5)<<cluster_f.cog_y<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"IntraChipPosition" <<std::right<<std::setw(5)<<cluster_f.IntraChipPosition<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Size_x"            <<std::right<<std::setw(5)<<cluster_f.size_x<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Size_y"            <<std::right<<std::setw(5)<<cluster_f.size_y<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Envelope_x"        <<std::right<<std::setw(5)<<*cluster_f.x_pixel.begin()<<"\t"<<*(std::prev(cluster_f.x_pixel.end()))<<"\n";
+        std::cout<<std::left<<std::setw(20)<<"Envelope_y"        <<std::right<<std::setw(5)<<*cluster_f.y_pixel.begin()<<"\t"<<*(std::prev(cluster_f.y_pixel.end()))<<"\n";
+        std::cout<<"\n";
+    }
     void Producer::Print_MemoryEvent()
     {
         std::cout<<"Current Memory event\n";

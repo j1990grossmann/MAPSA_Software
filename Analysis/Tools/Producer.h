@@ -208,6 +208,7 @@ namespace PRODUCER{
         void Set_PixelMaskMPA(int MPA_no, const std::vector<bool>& pixelMask_f);
         void Print_GeometryMaskMPA();
         void Print_PixelMaskMPA();
+        void Print_Cluster(const CounterCluster& cluster_f);
         void Print_Cluster(const MemoryCluster& cluster_f);
         void Print_MemoryEvent();
         void Print_CounterEvent();

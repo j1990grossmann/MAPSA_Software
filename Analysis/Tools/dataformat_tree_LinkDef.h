@@ -10,6 +10,7 @@
 // #pragma link C++ class MemoryClusterVec+;
 #pragma link C++ class CounterCluster+;
 #pragma link C++ class std::vector<MemoryCluster>+;
+#pragma link C++ class std::vector<CounterCluster>+;
 
 #endif // __CINT__
 
